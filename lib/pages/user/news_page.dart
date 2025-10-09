@@ -42,14 +42,14 @@ class _UserNewsPageState extends State<UserNewsPage>
       appBar: AppBar(
         title: const Text("News"),
         backgroundColor: const Color(0xFFE53E3E),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildTrending(),
-          _buildTerbaru(),
-          _buildPopuler(),
-        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: "Trending"),
+            Tab(text: "Terbaru"),
+            Tab(text: "Populer"),
+          ],
+          ),
       ),
     );
   }

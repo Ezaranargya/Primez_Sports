@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class PurchaseOption {
   final double price;
   final String storeName;
@@ -30,6 +32,20 @@ class PurchaseOption {
       'link': link,
     };
   }
+
+  PurchaseOption copyWith({
+    double? price,
+    String? storeName,
+    String? logoUrl,
+    String? link,
+  }) {
+    return PurchaseOption(
+      price: price ?? this.price,
+      storeName: storeName ?? this.storeName,
+      logoUrl: logoUrl ?? this.logoUrl,
+      link: link ?? this.link,
+    );
+  }
 }
 
 class Product {
@@ -38,7 +54,8 @@ class Product {
   final double price;
   final String imageUrl;
   final String description;
-  final String category;
+  final String brand;
+  final List<String> categories;
   final List<PurchaseOption> purchaseOptions;
 
   Product({
@@ -47,17 +64,14 @@ class Product {
     required this.price,
     required this.imageUrl,
     required this.description,
-    required this.category,
+    required this.brand,
+    this.categories = const [],
     this.purchaseOptions = const [],
   });
 
   factory Product.fromMap(String id, Map<String, dynamic> data) {
-    List<PurchaseOption> optionsList = [];
-    if (data['options'] != null && data['options'] is List) {
-      optionsList = (data['options'] as List)
-          .map((option) => PurchaseOption.fromMap(option as Map<String, dynamic>))
-          .toList();
-    }
+    final List<dynamic> optionsData =
+        (data['options'] ?? data['purchaseOptions'] ?? []) as List<dynamic>;
 
     return Product(
       id: id,
@@ -67,9 +81,19 @@ class Product {
           : (data['price'] ?? 0).toDouble(),
       imageUrl: data['imageUrl'] ?? '',
       description: data['description'] ?? '',
-      category: data['category'] ?? '',
-      purchaseOptions: optionsList,
+      brand: data['brand'] ?? '',
+      categories: (data['categories'] is List)
+          ? List<String>.from(data['categories'])
+          : [],
+      purchaseOptions: optionsData
+          .map((e) => PurchaseOption.fromMap(Map<String, dynamic>.from(e)))
+          .toList(),
     );
+  }
+
+  factory Product.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Product.fromMap(doc.id, data);
   }
 
   Map<String, dynamic> toMap() {
@@ -78,12 +102,34 @@ class Product {
       'price': price,
       'imageUrl': imageUrl,
       'description': description,
-      'category': category,
-      'options': purchaseOptions.map((option) => option.toMap()).toList(),
+      'brand': brand,
+      'categories': categories,
+      'purchaseOptions':
+          purchaseOptions.map((option) => option.toMap()).toList(),
     };
   }
 
-  String get formattedPrice {
-    return price.toStringAsFixed(0);
+  String get formattedPrice => price.toStringAsFixed(0);
+
+  Product copyWith({
+    String? id,
+    String? name,
+    double? price,
+    String? imageUrl,
+    String? description,
+    String? brand,
+    List<String>? categories,
+    List<PurchaseOption>? purchaseOptions,
+  }) {
+    return Product(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      price: price ?? this.price,
+      imageUrl: imageUrl ?? this.imageUrl,
+      description: description ?? this.description,
+      brand: brand ?? this.brand,
+      categories: categories ?? this.categories,
+      purchaseOptions: purchaseOptions ?? this.purchaseOptions,
+    );
   }
 }

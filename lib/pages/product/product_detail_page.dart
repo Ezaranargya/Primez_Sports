@@ -1,8 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:my_app/models/product_model.dart';
+import 'package:my_app/utils/formatter.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../models/product_model.dart';
-import '../../utils/formatter.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+import 'widgets/product_image.dart';
+import 'widgets/product_info.dart';
+import 'widgets/action_buttons.dart';
+import 'purchase_options_list.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Product product;
@@ -19,243 +26,140 @@ class ProductDetailPage extends StatefulWidget {
 }
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
-  bool showOptions = false;
   bool isFavorite = false;
+  bool isLoadingFavorite = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorite();
+  }
+
+  Future<void> _checkIfFavorite() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final favDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('favorites')
+          .doc(widget.product.id)
+          .get();
+
+      if (mounted) setState(() => isFavorite = favDoc.exists);
+    } catch (e) {
+      debugPrint('Error checking favorite: $e');
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Silakan login terlebih dahulu")),
+        );
+      }
+      return;
+    }
+    if (isLoadingFavorite) return;
+
+    setState(() => isLoadingFavorite = true);
+
+    try {
+      final favRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('favorites')
+          .doc(widget.product.id);
+
+      if (isFavorite) {
+        await favRef.delete();
+        if (mounted) {
+          setState(() {
+            isFavorite = false;
+            isLoadingFavorite = false;
+          });
+          _showSnackBar("${widget.product.name} dihapus dari favorite");
+        }
+      } else {
+        await favRef.set({
+          'id': widget.product.id,
+          'name': widget.product.name,
+          'description': widget.product.description,
+          'price': widget.product.price,
+          'imageUrl': widget.product.imageUrl,
+          'addedAt': FieldValue.serverTimestamp(),
+        });
+        if (mounted) {
+          setState(() {
+            isFavorite = true;
+            isLoadingFavorite = false;
+          });
+          _showSnackBar("${widget.product.name} ditambahkan ke favorite");
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => isLoadingFavorite = false);
+        _showSnackBar("Gagal mengubah status favorite");
+      }
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        title: Text(
+          product.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 18.sp),
+        ),
         backgroundColor: const Color(0xFFE53E3E),
         actions: widget.isAdmin
             ? [
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  tooltip: "Edit Produk",
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  tooltip: "Hapus Produk",
-                  onPressed: () {},
-                ),
+                IconButton(icon: const Icon(Icons.edit), onPressed: () {}),
+                IconButton(icon: const Icon(Icons.delete), onPressed: () {}),
               ]
             : null,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(16),
-              alignment: Alignment.center,
-              child: product.imageUrl.isNotEmpty
-                  ? Image.network(
-                      product.imageUrl,
-                      height: 250,
-                      fit: BoxFit.contain,
-                    )
-                  : const Icon(Icons.image, size: 200, color: Colors.grey),
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Text(
-                  product.name,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  Formatter.currency(product.price),
-                  style: const TextStyle(
-                    fontSize: 20,
-                    color: Colors.redAccent,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Card(
-                  elevation: 1,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      product.description,
-                      style: const TextStyle(fontSize: 15, height: 1.5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            showOptions = !showOptions;
-                          });
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE53E3E),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                "Opsi pembelian bisa lewat link di Sini",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Icon(
-                                showOptions
-                                    ? Icons.expand_less
-                                    : Icons.expand_more,
-                                color: Colors.white,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (showOptions) ...[
-                        Column(
-                          children: product.purchaseOptions.map((option) {
-                            return GestureDetector(
-                              onTap: () async {
-                                final uri = Uri.parse(option.link);
-                                final messenger = ScaffoldMessenger.of(context);
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProductImage(imageUrl: product.imageUrl),
+            SizedBox(height: 16.h),
 
-                                if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri,
-                                      mode: LaunchMode.externalApplication
-                                      );
-                                } else {
-                                  if (!mounted) return;
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                        content:
-                                            Text("Tidak bisa membuka link")),
-                                  );
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 10, horizontal: 16),
-                                child: Row(
-                                  children: [
-                                    Image.network(
-                                      option.logoUrl,
-                                      width: 30,
-                                      height: 30,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        "${option.storeName} - ${Formatter.currency(option.price)}",
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    const Icon(Icons.arrow_forward_ios,
-                                        size: 16),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text(
-                            "*Harga dapat berubah sewaktu-waktu",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.red,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                      ]
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.white,
-                      child: IconButton(
-                        iconSize: 28,
-                        icon: Icon(
-                          isFavorite
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          color:
-                              isFavorite ? Colors.red : Colors.black,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            isFavorite = !isFavorite;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(isFavorite
-                                  ? "${product.name} ditambahkan ke favorite"
-                                  : "${product.name} dihapus dari favorite"),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.white,
-                      child: IconButton(
-                        iconSize: 28,
-                        icon:
-                            const Icon(Icons.share, color: Colors.black),
-                        onPressed: () {
-                          Share.share(
-                            "Cek produk ini: ${product.name}\nHarga: ${Formatter.currency(product.price)}",
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            ProductInfo(product: product),
+            SizedBox(height: 24.h),
+            if (product.purchaseOptions.isNotEmpty)
+              PurchaseOptionsList(options: product.purchaseOptions),
+
+            SizedBox(height: 24.h),
+            ActionButtons(
+              isFavorite: isFavorite,
+              isLoadingFavorite: isLoadingFavorite,
+              onFavoriteTap: _toggleFavorite,
+              onShareTap: () => Share.share(
+                "Cek produk ini: ${product.name}\nHarga: ${Formatter.currency(product.price)}",
+              ),
             ),
-          ),
-        ],
+            SizedBox(height: 24.h),
+          ],
+        ),
       ),
     );
   }

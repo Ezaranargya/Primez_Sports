@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/home_page.dart';
-import 'user/user_home_page.dart';
-import 'admin/admin_home_page.dart';
+import 'package:my_app/pages/user/user_home_page.dart';
+import 'package:my_app/admin/pages/admin_home_page.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -68,7 +68,7 @@ class AuthWrapper extends StatelessWidget {
             },
           );
         } else {
-          return const HomePage();
+          return const HomePage(title: 'Primez Sports',);
         }
       },
     );

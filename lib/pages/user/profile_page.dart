@@ -104,7 +104,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
       child: ListTile(
         leading: Icon(icon, color: const Color(0xFFE53E3E)),
         title: Text(title),
-        trailing: null,
         onTap: onTap,
       ),
     );

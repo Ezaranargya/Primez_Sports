@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/product_model.dart';
-import 'widgets/product_card.dart';
-import '../pages/product/product_detail_page.dart';
+import 'package:my_app/pages/user/widgets/product_card.dart';
+import 'package:my_app/pages/product/product_detail_page.dart';
 
 class BrandPage extends StatelessWidget {
   final String brandName;

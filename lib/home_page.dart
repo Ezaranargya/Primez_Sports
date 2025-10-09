@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'widgets/product_card.dart';
-import 'widgets/logo_card.dart';
+import 'package:my_app/pages/user/widgets/logo_card.dart';
+import 'package:my_app/pages/product/product_detail_page.dart';
 import 'brand_page.dart';
 
-import 'pages/product/product_detail_page.dart' as user;
+import 'package:my_app/pages/user/widgets/product_card.dart';
 
-import 'user/product_page.dart';
-import 'user/community_page.dart';
-import 'user/news_page.dart';
-import 'user/profile_page.dart';
+import 'package:my_app/pages/product/product_page.dart';
+import 'package:my_app/pages/user/community_page.dart';
+import 'package:my_app/pages/user/news_page.dart';
+import 'package:my_app/pages/user/profile_page.dart';
 
 import 'admin/product_page.dart';
 import 'admin/community_page.dart';
@@ -20,13 +20,15 @@ import 'models/product_model.dart';
 import 'data/dummy_products.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final String title;
+  const HomePage({super.key, required this.title});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
+  late final List<Product> productObjects;
   String searchQuery = "";
   String selectedBrands = "";
   int selectedIndex = 0;
@@ -37,38 +39,42 @@ class _HomePageState extends State<HomePage> {
    Product(
         id: "1", 
         name: "Nike Giannis Immortality4 EP",
+        brand: "Nike",
         price: 1499000,
         imageUrl: "https://i.ibb.co.com/DPr3vv4X/nike-giannis.png",
         description: "Sepatu basket terbaru",
-        category: "Trending",
+        categories: ["basketball","Trending"],
         ),
       Product(
         id: "2", 
         name: "Nike Zoom Mercurial Superfly 9 Academy",
+        brand: "Nike",
         price: 1549000,
         imageUrl: "https://i.ibb.co.com/JwWvQQ70/nike-zoom.png",
         description: "Sepatu sepak bola terbaik",
-        category: "Trending",
+        categories: ["Nike","Trending"],
         ),
       Product(
         id: "3" ,
         name: "Puma Ultra 5 Carbon LE FG White-Ultra Blue",
+        brand: "Nike",
         price: 1959440,
         imageUrl:"https://i.ibb.co.com/QvqRGh7X/Puma-Ultra-5-Carbon-LE-FG-White-Ultra-Blue.png",
       description: "Sepatu sepak bola populer saat ini",
-      category: "Terbaru"
+      categories: ["soccer","Terbaru"],
       ),
       Product(
         id: "4",
         name: "Adidas Crazyflight Bounce 3 Volleyball Shoes",
+        brand: "Adidas",
         price: 2290400,
         imageUrl:"https://i.ibb.co.com/nMm9Fkj7/Adidas-Crazyflight-Bounce-3-Volleyball-Shoes.png",
         description: "Sepatu voli terbaik Adidas",
-        category: "Terbaru",
+        categories: ["volleyball","Terbaru"],
         ),
   ];
 
-  final productObjects = dummyProducts;
+  late final List<Product> productsObject;
 
   @override
   void initState() {
@@ -255,7 +261,7 @@ class _HomePageState extends State<HomePage> {
                   context,
                   MaterialPageRoute(
                     builder: (_) =>
-                        user.ProductDetailPage(product: match),
+                        ProductDetailPage(product: match),
                   ),
                 );
               }
@@ -313,7 +319,7 @@ class _HomePageState extends State<HomePage> {
                         context,
                         MaterialPageRoute(
                           builder: (_) =>
-                              user.ProductDetailPage(product: product),
+                              ProductDetailPage(product: product),
                         ),
                       );
                     },
@@ -346,7 +352,7 @@ class _HomePageState extends State<HomePage> {
                         context,
                         MaterialPageRoute(
                           builder: (_) =>
-                              user.ProductDetailPage(product: product),
+                              ProductDetailPage(product: product),
                         ),
                       );
                     },
@@ -376,7 +382,7 @@ class _HomePageState extends State<HomePage> {
                         context,
                         MaterialPageRoute(
                           builder: (_) =>
-                              user.ProductDetailPage(product: product),
+                              ProductDetailPage(product: product),
                         ),
                       );
                     },
@@ -403,13 +409,13 @@ class _HomePageState extends State<HomePage> {
                   logoCard(
                     "https://i.ibb.co.com/pjvscvQR/logo-nike.png",
                     "Nike",
-                    (brands) {
+                    () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => BrandPage(
-                            brandName: "",
-                            brandLogo: "",
+                            brandName: "Nike",
+                            brandLogo: "https://i.ibb.co.com/pjvscvQR/logo-nike.png",
                             products: productObjects,
                           ),
                         ),
@@ -419,13 +425,13 @@ class _HomePageState extends State<HomePage> {
                   logoCard(
                     "https://i.ibb.co.com/zWkbN6gx/logo-jordan.png",
                     "Jordan",
-                    (brands) {
+                    () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => BrandPage(
-                            brandName: "",
-                            brandLogo: "",
+                            brandName: "Jordan",
+                            brandLogo: "https://i.ibb.co.com/zWkbN6gx/logo-jordan.png",
                             products: productObjects,
                           ),
                         ),
@@ -435,13 +441,13 @@ class _HomePageState extends State<HomePage> {
                   logoCard(
                     "https://i.ibb.co.com/8gP849Bm/logo-adidas.png",
                     "Adidas",
-                    (brands) {
+                    () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => BrandPage(
-                            brandName: "",
-                            brandLogo: "",
+                            brandName: "Adidas",
+                            brandLogo: "https://i.ibb.co.com/8gP849Bm/logo-adidas.png",
                             products: productObjects,
                           ),
                         ),
@@ -451,13 +457,13 @@ class _HomePageState extends State<HomePage> {
                   logoCard(
                     "https://i.ibb.co.com/fGpWwGDP/logo-under-armour.png",
                     "Under Armour",
-                    (brands) {
+                    () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => BrandPage(
-                            brandName: "",
-                            brandLogo: "",
+                            brandName: "Under Armour",
+                            brandLogo: "https://i.ibb.co.com/fGpWwGDP/logo-under-armour.png",
                             products: productObjects,
                           ),
                         ),
@@ -467,13 +473,13 @@ class _HomePageState extends State<HomePage> {
                   logoCard(
                     "https://i.ibb.co.com/mrSH0jfT/logo-puma.png",
                     "Puma",
-                    (brands) {
+                    () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => BrandPage(
-                            brandName: "",
-                            brandLogo: "",
+                            brandName: "Puma",
+                            brandLogo: "https://i.ibb.co.com/mrSH0jfT/logo-puma.png",
                             products: productObjects,
                           ),
                         ),
@@ -483,13 +489,13 @@ class _HomePageState extends State<HomePage> {
                   logoCard(
                     "https://i.ibb.co.com/TqYxvdLR/logo-mizuno.png",
                     "Mizuno",
-                    (brands) {
+                    () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => BrandPage(
-                            brandName: "",
-                            brandLogo: "",
+                            brandName: "Mizuno",
+                            brandLogo: "https://i.ibb.co.com/TqYxvdLR/logo-mizuno.png",
                             products: productObjects,
                           ),
                         ),

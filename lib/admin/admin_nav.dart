@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'admin_home_page.dart';
+import 'package:my_app/admin/pages/admin_home_page.dart';
 import 'product_page.dart';
 import 'community_page.dart';
 import 'news_page.dart';
@@ -20,18 +20,20 @@ class _AdminNavState extends State<AdminNav> {
     Product(
       id: "1",
       name: "Nike Giannis Immortality4 EP",
+      brand: "Nike",
       price: 1499000,
       imageUrl: "https://i.ibb.co.com/DPr3vv4X/nike-giannis.png",
       description: "Sepatu basket terbaru",
-      category: "Trending",
+      categories: ["basketball","Trending"],
     ),
     Product(
       id: "2",
       name: "Nike Zoom Mercurial Superfly 9 Academy",
+      brand: "Nike",
       price: 1549000,
       imageUrl: "https://i.ibb.co.com/JwWvQQ70/nike-zoom.png",
       description: "Sepatu sepak bola terbaik",
-      category: "Trending",
+      categories: ["soccer","Trending"],
     ),
   ];
 

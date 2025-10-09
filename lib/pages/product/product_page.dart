@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/product_model.dart';
-import '../pages/product/product_detail_page.dart';
-import '../widgets/product_card.dart';
+import 'package:my_app/pages/product/product_detail_page.dart';
+import 'package:my_app/pages/user/widgets/product_card.dart';
 
 class UserProductPage extends StatelessWidget {
   final List<Product> products;

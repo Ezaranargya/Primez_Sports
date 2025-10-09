@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../models/product_model.dart';
-import '../data/dummy_products.dart';
+import 'package:my_app/models/product_model.dart';
+import 'package:my_app/data/dummy_products.dart';
+import 'package:my_app/admin/product_detail_page.dart';
 
 class AdminProductPage extends StatefulWidget {
   final List<Product> initialProducts;
@@ -12,13 +13,13 @@ class AdminProductPage extends StatefulWidget {
 }
 
 class _AdminProductPageState extends State<AdminProductPage> {
-  late List<Product> products = List.from(dummyProducts);
+  late List<Product> products = List.from(AdminData.products);
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _imageController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
-  final TextEditingController _category = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
 
   @override
   void initState() {
@@ -40,10 +41,11 @@ class _AdminProductPageState extends State<AdminProductPage> {
                 Product(
                   id: DateTime.now().toString(),
                   name: _nameController.text,
-                  price: double.tryParse(_priceController.text) ??0,
+                  brand: "",
+                  price: double.tryParse(_priceController.text) ?? 0,
                   imageUrl: _imageController.text,
                   description: _descController.text,
-                  category: _category.text,
+                  categories: [_categoryController.text],
                 ),
               );
             });
@@ -61,6 +63,8 @@ class _AdminProductPageState extends State<AdminProductPage> {
     _priceController.text = product.price.toString();
     _imageController.text = product.imageUrl;
     _descController.text = product.description;
+    _categoryController.text =
+        product.categories.isNotEmpty ? product.categories.first : "";
 
     showDialog(
       context: context,
@@ -69,14 +73,15 @@ class _AdminProductPageState extends State<AdminProductPage> {
         onSave: () {
           if (_nameController.text.isNotEmpty) {
             setState(() {
-                products[index] = Product(
-                  id: product.id,
-                  name: _nameController.text,
-                  price: double.tryParse(_priceController.text) ?? 0,
-                  imageUrl: _imageController.text,
-                  description: _descController.text,
-                  category: _category.text,
-                );
+              products[index] = Product(
+                id: product.id,
+                name: _nameController.text,
+                brand: "",
+                price: double.tryParse(_priceController.text) ?? 0,
+                imageUrl: _imageController.text,
+                description: _descController.text,
+                categories: [_categoryController.text],
+              );
             });
             _clearControllers();
             Navigator.pop(context);
@@ -88,29 +93,51 @@ class _AdminProductPageState extends State<AdminProductPage> {
 
   Widget _productDialog({required String title, required VoidCallback onSave}) {
     return AlertDialog(
-      title: Text(title),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontFamily: "Poppins",
+          fontWeight: FontWeight.bold,
+        ),
+      ),
       content: SingleChildScrollView(
         child: Column(
           children: [
             TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: "Nama Produk")),
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: "Nama Produk"),
+            ),
             TextField(
-                controller: _priceController,
-                decoration: const InputDecoration(labelText: "Harga")),
+              controller: _priceController,
+              decoration: const InputDecoration(labelText: "Harga"),
+              keyboardType: TextInputType.number,
+            ),
             TextField(
-                controller: _imageController,
-                decoration: const InputDecoration(labelText: "URL Gambar")),
+              controller: _imageController,
+              decoration: const InputDecoration(labelText: "URL Gambar"),
+            ),
             TextField(
-                controller: _descController,
-                decoration: const InputDecoration(labelText: "Deskripsi")),
+              controller: _descController,
+              decoration: const InputDecoration(labelText: "Deskripsi"),
+              maxLines: 2,
+            ),
+            TextField(
+              controller: _categoryController,
+              decoration: const InputDecoration(labelText: "Kategori"),
+            ),
           ],
         ),
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context), child: const Text("Batal")),
-        ElevatedButton(onPressed: onSave, child: const Text("Simpan")),
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Batal"),
+        ),
+        ElevatedButton(
+          onPressed: onSave,
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+          child: const Text("Simpan"),
+        ),
       ],
     );
   }
@@ -120,97 +147,97 @@ class _AdminProductPageState extends State<AdminProductPage> {
     _priceController.clear();
     _imageController.clear();
     _descController.clear();
+    _categoryController.clear();
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Kelola Produk")),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addProduct,
-        child: const Icon(Icons.add),
-      ),
-      body: products.isEmpty
-          ? const Center(child: Text("Belum ada produk"))
-          : ListView.builder(
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                final p = products[index];
-                return ListTile(
-                  leading: p.imageUrl.isNotEmpty
-                      ? Image.network(p.imageUrl, width: 50, fit: BoxFit.cover)
-                      : const Icon(Icons.image,
-                          size: 50, color: Colors.grey),
-                  title: Text(p.name),
-                  subtitle: Text("Rp ${p.price.toStringAsFixed(0)}"),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ProductDetailPage(product: p, isAdmin: true),
-                    ),
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.red),
-                    onPressed: () => _editProduct(index),
-                  ),
-                );
-              },
-            ),
-    );
-  }
-}
-
-class ProductDetailPage extends StatelessWidget {
-  final Product product;
-  final bool isAdmin;
-
-  const ProductDetailPage({
-    super.key,
-    required this.product,
-    this.isAdmin = false,
-  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(product.name),
-        actions: isAdmin
-            ? [
-                IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () {
-                    }),
-                IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () {
-                    }),
-              ]
-            : null,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            product.imageUrl.isNotEmpty
-                ? Image.network(product.imageUrl,
-                    height: 200, fit: BoxFit.cover)
-                : const Icon(Icons.image, size: 200, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text(product.name,
-                style: const TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text("Rp ${product.price.toStringAsFixed(0)}",
-                style: const TextStyle(fontSize: 18, color: Colors.red)),
-            const SizedBox(height: 12),
-            Text(product.description,
-                style: const TextStyle(fontSize: 16)),
-          ],
+        title: const Text(
+          "Kelola Produk",
+          style: TextStyle(
+            fontFamily: "Poppins",
+            fontWeight: FontWeight.w600,
+          ),
         ),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addProduct,
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      body: products.isEmpty
+          ? const Center(
+              child: Text(
+                "Belum ada produk",
+                style: TextStyle(
+                  fontFamily: "Poppins",
+                  fontSize: 16,
+                ),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: products.length,
+              itemBuilder: (context, index) {
+                final p = products[index];
+                return Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  elevation: 2,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(8),
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: p.imageUrl.isNotEmpty
+                          ? Image.network(
+                              p.imageUrl,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                            )
+                          : Container(
+                              width: 60,
+                              height: 60,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.image, color: Colors.grey),
+                            ),
+                    ),
+                    title: Text(
+                      p.name,
+                      style: const TextStyle(
+                        fontFamily: "Poppins",
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      "Rp ${p.price.toStringAsFixed(0)}",
+                      style: const TextStyle(
+                        fontFamily: "Poppins",
+                        color: Colors.grey,
+                      ),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      onPressed: () => _editProduct(index),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AdminProductDetailPage(product: p),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
     );
   }
 }
