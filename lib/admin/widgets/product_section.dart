@@ -41,17 +41,6 @@ class ProductSection extends StatelessWidget {
                   fontFamily: "Poppins",
                 ),
               ),
-              TextButton(
-                onPressed: () {},
-                child: Text(
-                  "Lihat Semua",
-                  style: TextStyle(
-                    color: const Color(0xFFE53E3E),
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
             ],
           ),
         ),

@@ -49,9 +49,9 @@ class _HomeContentPageState extends State<HomeContentPage> {
   List<Product> loadedProducts = [];
 
   final List<Map<String, String>> categories = [
-    {"display": "Basketball Shoes", "filter": "basketball"},
-    {"display": "Soccer Shoes", "filter": "soccer"},
-    {"display": "Volleyball Shoes", "filter": "volleyball"},
+    {"display": "Basketball", "filter": "basketball"},
+    {"display": "Soccer", "filter": "soccer"},
+    {"display": "Volleyball", "filter": "volleyball"},
   ];
 
   List<Product> get currentProducts {
@@ -61,78 +61,64 @@ class _HomeContentPageState extends State<HomeContentPage> {
   List<Product> get filteredProducts {
     return currentProducts.where((product) {
       final name = product.name.toLowerCase();
-      final productCategories = product.categories
-          .map((c) => c.toLowerCase())
-          .toList();
+      final productCategories = product.categories.map((c) => c.toLowerCase()).toList();
 
       final matchesSearch = searchQuery.isEmpty ||
           name.contains(searchQuery.toLowerCase()) ||
-          productCategories.any((c) => 
-              c.contains(searchQuery.toLowerCase()));
+          productCategories.any((c) => c.contains(searchQuery.toLowerCase()));
 
       bool matchesCategory = true;
       if (selectedCategory.isNotEmpty) {
-        matchesCategory = _checkCategoryMatch(
-          selectedCategory,
-          name,
-          productCategories,
-        );
+        matchesCategory = _checkCategoryMatch(selectedCategory, name, productCategories);
       }
 
       return matchesSearch && matchesCategory;
     }).toList();
   }
 
-  bool _checkCategoryMatch(
-    String category,
-    String name,
-    List<String> productCategories,
-  ) {
+  bool _checkCategoryMatch(String category, String name, List<String> productCategories) {
     switch (category) {
       case 'basketball':
         return name.contains('basket') ||
             name.contains('basketball') ||
-            productCategories.any((c) => 
-                c.contains('basket') || c.contains('basketball'));
+            productCategories.any((c) => c.contains('basket') || c.contains('basketball'));
       case 'soccer':
         return name.contains('soccer') ||
             name.contains('football') ||
             name.contains('bola') ||
-            productCategories.any((c) =>
-                c.contains('soccer') ||
-                c.contains('football') ||
-                c.contains('bola'));
+            productCategories.any(
+                (c) => c.contains('soccer') || c.contains('football') || c.contains('bola'));
       case 'volleyball':
         return name.contains('volleyball') ||
             name.contains('voli') ||
             name.contains('volley') ||
-            productCategories.any((c) =>
-                c.contains('volleyball') ||
-                c.contains('voli') ||
-                c.contains('volley'));
+            productCategories.any(
+                (c) => c.contains('volleyball') || c.contains('voli') || c.contains('volley'));
       default:
-        return productCategories.any((c) => 
-                c.contains(category.toLowerCase())) ||
+        return productCategories.any((c) => c.contains(category.toLowerCase())) ||
             name.contains(category.toLowerCase());
     }
   }
 
   List<Product> get trendingProducts {
-    return currentProducts.where((p) => p.categories.any((c) =>
-        c.toLowerCase().contains("trending") ||
-        c.toLowerCase().contains("populer"))).toList();
+    return currentProducts
+        .where((p) => p.categories.any((c) =>
+            c.toLowerCase().contains("trending") ||
+            c.toLowerCase().contains("populer")))
+        .toList();
   }
 
   List<Product> get newProducts {
-    return currentProducts.where((p) => p.categories.any((c) =>
-        c.toLowerCase().contains("terbaru") ||
-        c.toLowerCase().contains("new"))).toList();
+    return currentProducts
+        .where((p) => p.categories.any(
+            (c) => c.toLowerCase().contains("terbaru") || c.toLowerCase().contains("new")))
+        .toList();
   }
 
   String getCategoryDisplayName(String categoryFilter) {
     for (final category in categories) {
       if (category["filter"] == categoryFilter) {
-        return category["display"] !;
+        return category["display"]!;
       }
     }
     return categoryFilter.toUpperCase();
@@ -141,6 +127,13 @@ class _HomeContentPageState extends State<HomeContentPage> {
   @override
   void initState() {
     super.initState();
+
+    for (var category in categories) {
+      if (!category["display"]!.toLowerCase().contains("shoes")) {
+        category["display"] = "${category["display"]} Shoes";
+      }
+    }
+
     _loadProducts();
   }
 
@@ -178,20 +171,18 @@ class _HomeContentPageState extends State<HomeContentPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.shopping_bag_outlined,
-                size: 64, 
-                color: Colors.grey),
-                const SizedBox(height: 16),
-                Text(
-                  "Tidak ada produk",
-                  style: TextStyle(fontSize: 18,color: Colors.grey),
-                ),
+              Icon(Icons.shopping_bag_outlined, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                "Tidak ada produk",
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
             ],
           ),
         ),
       );
     }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > 800;
@@ -199,63 +190,55 @@ class _HomeContentPageState extends State<HomeContentPage> {
         return Scaffold(
           backgroundColor: Colors.grey[100],
           appBar: PreferredSize(
-            preferredSize: const Size.fromHeight(160), 
+            preferredSize: const Size.fromHeight(160),
             child: HomeHeader(
-              userName: userName, 
-              searchQuery: searchQuery, 
-              selectedCategory: selectedCategory, 
+              userName: userName,
+              searchQuery: searchQuery,
+              selectedCategory: selectedCategory,
               categories: categories,
               onSearchChanged: (value) => setState(() => searchQuery = value),
               onCategorySelected: (category) => setState(() {
                 selectedCategory = selectedCategory == category ? "" : category;
               }),
-                ),
             ),
-            body: Padding(
-              padding: const EdgeInsets.all(16),
-              child: ListView(
-                children: [
-                  if (searchQuery.isNotEmpty || selectedCategory.isNotEmpty)
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: ListView(
+              children: [
+                if (searchQuery.isNotEmpty || selectedCategory.isNotEmpty)
                   ProductSection(
                     title: selectedCategory.isNotEmpty
-                    ? "${getCategoryDisplayName(selectedCategory)}"
-                    : "Hasil pencarian (${filteredProducts.length})", 
+                        ? getCategoryDisplayName(selectedCategory)
+                        : "Hasil pencarian (${filteredProducts.length})",
                     products: filteredProducts,
                     isWide: isWide,
-                    )
-                    else 
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const BannerCarousel(),
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const BannerCarousel(),
+                      const SizedBox(height: 20),
+                      if (trendingProducts.isNotEmpty) ...[
+                        TrendingSection(title: "Trending", produtcs: trendingProducts),
                         const SizedBox(height: 20),
-
-                        if (trendingProducts.isNotEmpty)...[
-                          TrendingSection(
-                            title: "Trending", 
-                            produtcs: trendingProducts,
-                            ),
-                            const SizedBox(height: 20),
-                        ],
-
-                        if (newProducts.isNotEmpty)...[
-                          NewSection(
-                            title: "Terbaru", 
-                            products: newProducts,
-                            ),
-                        ],
-
-                        BrandSection(products: currentProducts),
-                        const SizedBox(height: 80),
-                ],
-              ),
+                      ],
+                      if (newProducts.isNotEmpty) ...[
+                        NewSection(title: "Terbaru", products: newProducts),
+                      ],
+                      BrandSection(products: currentProducts),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
               ],
-              ),
             ),
+          ),
         );
       },
-      );
+    );
   }
+
   Widget _buildBannerImage() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12.r),
@@ -264,7 +247,7 @@ class _HomeContentPageState extends State<HomeContentPage> {
         height: 120,
         width: double.infinity,
         fit: BoxFit.cover,
-        errorBuilder: (context,error,stackTrace) {
+        errorBuilder: (context, error, stackTrace) {
           return Container(
             height: 120.h,
             width: double.infinity,

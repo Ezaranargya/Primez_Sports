@@ -33,7 +33,7 @@ class NewSection extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: backgroundColor ?? Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(12.r),
             boxShadow: const [
               BoxShadow(
                 color: Colors.black12,
@@ -92,7 +92,13 @@ class NewSection extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: displayProducts.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 12),
+        separatorBuilder: (context, index) => Container(
+          margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 20.h),
+          width: 1.5,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade400,
+          ),
+        ),
         itemBuilder: (context, index) {
           final product = displayProducts[index];
           return _NewProductCard(product: product);
@@ -109,11 +115,13 @@ class _NewProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 150,
-      margin: const EdgeInsets.only(right: 12),
-      child: GestureDetector(
-        onTap: () => _navigateToDetail(context),
+    return GestureDetector(
+      onTap: () => _navigateToDetail(context),
+      child: Container(
+        width: 150,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

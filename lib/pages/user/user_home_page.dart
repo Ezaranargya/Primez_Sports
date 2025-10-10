@@ -9,7 +9,7 @@ import 'package:my_app/data/dummy_products.dart';
 import 'favorite_page.dart';
 import 'community_page.dart';
 import 'news_page.dart';
-import 'profile_page.dart';
+import 'package:my_app/pages/profile/profile_page.dart';
 import 'package:my_app/pages/product/product_page.dart';
 
 class UserHomePage extends StatefulWidget {

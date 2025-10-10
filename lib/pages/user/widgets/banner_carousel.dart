@@ -6,17 +6,17 @@ class BannerCarousel extends StatefulWidget {
   const BannerCarousel({super.key});
 
   @override
-  State<BannerCarousel> createState () => _BannerCarouselState ();
+  State<BannerCarousel> createState() => _BannerCarouselState();
 }
 
-class _BannerCarouselState extends State <BannerCarousel> {
+class _BannerCarouselState extends State<BannerCarousel> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  
+
   final List<String> bannerImages = [
-    "https://i.ibb.co.com/VcjykBpb/image.png",
-    "https://i.ibb.co.com/1f4Y6TyV/image.png",
-    "https://i.ibb.co.com/Ndw69tp9/image.png",
+    "https://i.ibb.co.com/0Rg1KRyF/image.png",
+    "https://i.ibb.co.com/99fFsCvB/image.png",
+    "https://i.ibb.co.com/Y7M9X4xD/image.png",
   ];
 
   @override
@@ -27,15 +27,13 @@ class _BannerCarouselState extends State <BannerCarousel> {
 
   void _autoSlide() {
     if (!mounted) return;
-
     final nextPage = (_currentPage + 1) % bannerImages.length;
     _pageController.animateToPage(
-      nextPage, 
-      duration: const Duration(milliseconds: 400), 
+      nextPage,
+      duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOut,
-      );
-
-      Future.delayed(const Duration(seconds: 3), _autoSlide);
+    );
+    Future.delayed(const Duration(seconds: 3), _autoSlide);
   }
 
   @override
@@ -86,9 +84,9 @@ class _BannerCarouselState extends State <BannerCarousel> {
                         child: Center(
                           child: CircularProgressIndicator(
                             value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                            : null,
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
                             color: AppColors.primary,
                           ),
                         ),
@@ -96,9 +94,30 @@ class _BannerCarouselState extends State <BannerCarousel> {
                     },
                   ),
                 ),
-                );
+              );
             },
-            ),
+          ),
+        ),
+
+        SizedBox(height: 10.h),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(bannerImages.length, (index) {
+            bool isActive = index == _currentPage;
+            return Container(
+              margin: EdgeInsets.symmetric(horizontal: 4.w),
+              height: 10.w,
+              width: 10.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isActive ? AppColors.primary : Colors.transparent,
+                border: Border.all(
+                  color: AppColors.primary,
+                  width: 1.5,
+                ),
+              ),
+            );
+          }),
         )
       ],
     );

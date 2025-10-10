@@ -5,17 +5,18 @@ import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/pages/user/widgets/product_card.dart';
 import 'package:my_app/theme/app_colors.dart';
 
-
 class ProductSection extends StatelessWidget {
   final String title;
   final List<Product> products;
   final bool isWide;
+  final VoidCallback? onSeeAll;
 
   const ProductSection({
     super.key,
     required this.title,
     required this.products,
     this.isWide = false,
+    this.onSeeAll,
   });
 
   @override
@@ -25,14 +26,16 @@ class ProductSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader(),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          child: _buildHeader(),
+        ),
         SizedBox(height: 12.h),
-        _buildContent(),
+        _buildContent(context),
         SizedBox(height: 24.h),
       ],
     );
   }
-
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -48,14 +51,16 @@ class ProductSection extends StatelessWidget {
             ),
           ),
         ),
-        if (products.length > 2)
+        if (products.length > 4)
           TextButton(
-            onPressed: () {
-            },
+            onPressed: onSeeAll,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            ),
             child: Text(
               "Lihat Semua",
               style: TextStyle(
-                color: const Color(0xFFE53E3E),
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
               ),
@@ -65,18 +70,15 @@ class ProductSection extends StatelessWidget {
     );
   }
 
-  Widget _buildContent() {
-    if (isWide) {
-      return _buildGridView();
-    }
-    return _buildHorizontalList();
+  Widget _buildContent(BuildContext context) {
+    return isWide ? _buildGridView(context) : _buildHorizontalList(context);
   }
-
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
         padding: EdgeInsets.all(32.w),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.inventory_2_outlined,
@@ -96,50 +98,43 @@ class ProductSection extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildGridView() {
+  Widget _buildGridView(BuildContext context) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: isWide ? 4 : 2,
-        crossAxisSpacing: 16.w,
-        mainAxisSpacing: 16.h,
-        childAspectRatio: 2 / 3,
+        crossAxisSpacing: 14.w,
+        mainAxisSpacing: 14.h,
+        childAspectRatio: 0.68, 
       ),
       itemCount: products.length,
       itemBuilder: (context, index) {
         final product = products[index];
         return GestureDetector(
           onTap: () => _navigateToDetail(context, product),
-          child: ProductCard(
-            product: product,
-            isHorizontal: false,
-          ),
+          child: ProductCard(product: product),
         );
       },
     );
   }
 
-  Widget _buildHorizontalList() {
+  Widget _buildHorizontalList(BuildContext context) {
     return SizedBox(
-      height: 230.h,
+      height: 240.h,
       child: ListView.separated(
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
         scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
         itemCount: products.length,
         separatorBuilder: (_, __) => SizedBox(width: 12.w),
         itemBuilder: (context, index) {
           final product = products[index];
           return SizedBox(
-            width: 140.w,
+            width: 160.w,
             child: GestureDetector(
               onTap: () => _navigateToDetail(context, product),
-              child: ProductCard(
-                product: product,
-                isHorizontal: false,
-              ),
+              child: ProductCard(product: product),
             ),
           );
         },
@@ -151,7 +146,7 @@ class ProductSection extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ProductDetailPage(product: product),
+        builder: (_) => ProductDetailPage(product: product),
       ),
     );
   }

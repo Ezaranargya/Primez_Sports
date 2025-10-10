@@ -49,7 +49,13 @@ class TrendingSection extends StatelessWidget{
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: produtcs.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 12),
+              separatorBuilder: (context, index) => Container(
+                margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 20.h),
+                width: 1.5,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                ),
+              ),
               itemBuilder: (context, index) {
                 final product = produtcs[index];
                 return _productCard(product: product);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:my_app/pages/user/home_content_page.dart';
 
 class HomeHeader extends StatelessWidget {
   final String userName;
@@ -80,7 +81,7 @@ class HomeHeader extends StatelessWidget {
           const SizedBox(height: 8),
           Container(
             decoration: const BoxDecoration(color: Color(0xFFE53E3E)),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
+            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 2), 
             child: Row(
               children: List.generate(categories.length, (index) {
                 final category = categories[index];
@@ -90,18 +91,18 @@ class HomeHeader extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () => onCategorySelected(category["filter"]!),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), 
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                       child: Text(
                         category["display"]!,
                         textAlign: TextAlign.center,
-                        maxLines: 1,
+                        maxLines: 2,
                         style: TextStyle(
                           color: isSelected ? Colors.yellow : Colors.white,
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w500,
-                          fontSize: 15,
+                          fontSize: 13,
                           fontFamily: "Poppins",
-                          height: 1.5,
+                          height: 1.2,
                         ),
                       ),
                     ),

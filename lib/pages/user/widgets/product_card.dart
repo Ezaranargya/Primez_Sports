@@ -13,8 +13,8 @@ class ProductCard extends StatelessWidget {
   const ProductCard({
     super.key,
     required this.product,
-    this.onTap,
     this.isHorizontal = false,
+    this.onTap,
   });
 
   @override
@@ -31,12 +31,12 @@ class ProductCard extends StatelessWidget {
         width: 160.w,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8.r),
+          borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
             ),
           ],
           border: Border.all(
@@ -48,7 +48,7 @@ class ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(8.r)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
               child: Image.network(
                 product.imageUrl,
                 height: 140.h,
@@ -60,8 +60,8 @@ class ProductCard extends StatelessWidget {
                     color: Colors.grey[200],
                     child: Center(
                       child: Icon(
-                        Icons.image,
-                        size: 60.sp,
+                        Icons.image_not_supported_outlined,
+                        size: 48.sp,
                         color: Colors.grey,
                       ),
                     ),
@@ -69,15 +69,16 @@ class ProductCard extends StatelessWidget {
                 },
               ),
             ),
+
             Padding(
-              padding: EdgeInsets.all(12.w),
+              padding: EdgeInsets.all(10.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     Formatter.currency(product.price),
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 15.sp,
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
                     ),
@@ -85,7 +86,6 @@ class ProductCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: 4.h),
-
                   Text(
                     product.name,
                     style: TextStyle(
@@ -137,12 +137,12 @@ class ProductHorizontalList extends StatelessWidget {
                 ),
               ),
               if (onSeeAll != null)
-                TextButton(
-                  onPressed: onSeeAll,
+                GestureDetector(
+                  onTap: onSeeAll,
                   child: Text(
                     "Lihat Semua",
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 13.sp,
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
@@ -151,8 +151,9 @@ class ProductHorizontalList extends StatelessWidget {
             ],
           ),
         ),
+
         Padding(
-          padding: EdgeInsets.only(left: 16.w, right: 16.w, top: 4.h),
+          padding: EdgeInsets.only(left: 16.w, top: 4.h),
           child: Container(
             height: 2.h,
             width: 60.w,
@@ -161,19 +162,14 @@ class ProductHorizontalList extends StatelessWidget {
         ),
 
         SizedBox(height: 12.h),
+
         SizedBox(
           height: 240.h,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 16.w),
-            clipBehavior: Clip.none,
             itemCount: products.length,
-            separatorBuilder: (context, index) => Container(
-              width: 10.w,
-              height: 200.h,
-              color: Colors.grey.shade300,
-              margin: EdgeInsets.symmetric(horizontal: 6.w),
-            ),
+            separatorBuilder: (_, __) => SizedBox(width: 12.w),
             itemBuilder: (context, index) {
               return ProductCard(product: products[index]);
             },

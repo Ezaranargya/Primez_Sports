@@ -1,4 +1,5 @@
 import 'package:my_app/models/product_model.dart';
+import 'package:my_app/pages/user/widgets/brand_section.dart';
 
 class AdminData {
   static final List<Product> products = [
@@ -82,7 +83,7 @@ class AdminData {
     ),
     Product(
       id: "3",
-      name: "Wave Momentum 3",
+      name: "Mizuno Wave Momentum 3",
       brand: "Mizuno",
       price: 1241047.0,
       imageUrl: "https://i.ibb.co.com/LX0rjVch/image.png",
@@ -169,6 +170,49 @@ class AdminData {
     ),
     Product(
       id: "5",
+      name: "Nike Giannis Immortality 4 EP",
+      brand: "Nike",
+      price: 1499000.0,
+      imageUrl: "https://i.ibb.co.com/DPr3vv4X/nike-giannis.png",
+      description:
+          "Nike Giannis Immortality 4 EP (NIKFQ3681301) adalah sepatu basket low-top ringan dengan midsole empuk untuk kenyamanan, outsole karet berpola multidireksi untuk grip maksimal, serta upper mesh yang menjaga sirkulasi udara. Stabil dan fleksibel, cocok bagi pemain cepat yang mengejar performa optimal.",
+      categories: ["basketball", "terbaru"],
+      purchaseOptions: [
+        PurchaseOption(
+          storeName: "Shopee",
+          price: 839300.0,
+          logoUrl:
+              "https://i.ibb.co.com/mFDsdnqf/2417d27bc0514b4d5c79025f47163c42.jpg",
+          link:
+              "https://shopee.co.id/-BEST-SELLER-Sepatu-Basket-Nike-giannis-immortality-4-ep-ORIGINAL-FQ3681-500-FQ3681-002-i.10262456.22351075298",
+        ),
+        PurchaseOption(
+          storeName: "Tokopedia",
+          price: 899150.0,
+          logoUrl:
+              "https://i.ibb.co.com/SXd39JB3/logo-tokopedia-brand-online-shopping-shopee-png-favpng-Us-Ut-Dw2-F9hy3n1-APHVC37k-Wr-P.jpg",
+          link:
+              "https://www.tokopedia.com/indohypesneakers/nike-giannis-immortality-4-ep-halloween-xdr-1730194039838377455?extParam=ivf%3Dfalse%26keyword%3Dnike+giannis+immortality+4%26src%3Dsearch",
+        ),
+        PurchaseOption(
+          storeName: "Blibli",
+          price: 1079000.0,
+          logoUrl:
+              "https://i.ibb.co.com/pBZ5KV1V/f760162c99d81ac7bd0e7462ace7da8f.jpg",
+          link:
+              "https://www.blibli.com/p/nike-men-basketball-giannis-immortality-4-halloween-ep-shoes-sepatu-basket-pria-fq3681-301/is--NIE-12227-12368-00012?pickupPointCode=PP-3537944",
+        ),
+        PurchaseOption(
+          storeName: "Nike Official",
+          price: 958000.0,
+          logoUrl: "https://i.ibb.co.com/TB1Wb1s4/logo-nike.png",
+          link:
+              "https://www.nike.com/id/t/giannis-immortality-4-ep-basketball-shoes-4MTsCH",
+        ),
+      ],
+    ),
+    Product(
+      id: "6",
       name: "Nike Giannis Immortality 4 EP",
       brand: "Nike",
       price: 1499000.0,

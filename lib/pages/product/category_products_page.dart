@@ -18,47 +18,72 @@ class CategoryProductsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFE53E3E),
+        foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.chevron_left,
+            size: 32,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           category,
           style: TextStyle(
+            fontFamily: "Poppins",
             fontSize: 18.sp,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
           ),
         ),
         centerTitle: true,
       ),
       body: products.isEmpty
-          ? Center(
-              child: Text(
-                "Belum ada produk di kategori ini",
-                style: TextStyle(fontSize: 14.sp, color: Colors.grey),
-              ),
-            )
-          : SingleChildScrollView(
-              child: Padding(
-                padding: EdgeInsets.all(12.w),
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.65,
-                    crossAxisSpacing: 8.w,
-                    mainAxisSpacing: 8.h,
-                  ),
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final product = products[index];
-                    return _CategoryProductCard(product: product);
-                  },
-                ),
-              ),
+          ? _buildEmptyState()
+          : _buildProductGrid(),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 80.sp,
+            color: Colors.grey,
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            'Belum ada produk di kategori ini',
+            style: TextStyle(
+              fontFamily: "Poppins",
+              fontSize: 16.sp,
+              color: Colors.grey[600],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductGrid() {
+    return GridView.builder(
+      padding: EdgeInsets.all(16.w),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12.w,
+        mainAxisSpacing: 12.h,
+        childAspectRatio: 0.65,
+      ),
+      itemCount: products.length,
+      itemBuilder: (context, index) {
+        final product = products[index];
+        return _CategoryProductCard(product: product);
+      },
     );
   }
 }
@@ -71,104 +96,124 @@ class _CategoryProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => ProductDetailPage(product: product)),
-      ),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailPage(product: product),
+          ),
+        );
+      },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black12,
-              blurRadius: 4,
-              offset: Offset(0, 2),
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 6.r,
+              offset: Offset(0, 3.h),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildImage(),
-            Padding(
-              padding: EdgeInsets.all(8.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: TextStyle(fontSize: 12.sp, color: Colors.black87),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    Formatter.currency(product.price),
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
+            // Product Image
+            Expanded(
+              flex: 5,
+              child: ClipRRect(
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(12.r),
+                ),
+                child: product.imageUrl.isNotEmpty
+                    ? Image.network(
+                        product.imageUrl,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: SizedBox(
+                              width: 30.w,
+                              height: 30.h,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                                value: loadingProgress.expectedTotalBytes !=
+                                        null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[200],
+                            child: Center(
+                              child: Icon(
+                                Icons.image_outlined,
+                                size: 40.sp,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : Container(
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: Icon(
+                            Icons.image_outlined,
+                            size: 40.sp,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+
+            // Product Info
+            Expanded(
+              flex: 3,
+              child: Padding(
+                padding: EdgeInsets.all(10.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Product Name
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+
+                    Text(
+                      Formatter.currency(product.price),
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildImage() {
-    return Stack(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
-          child: product.imageUrl.isNotEmpty
-              ? Image.network(
-                  product.imageUrl,
-                  height: 140.h,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 140.h,
-                      color: Colors.grey[200],
-                      child: Center(
-                        child: Icon(Icons.image, size: 50, color: Colors.grey),
-                      ),
-                    );
-                  },
-                )
-              : Container(
-                  height: 140.h,
-                  color: Colors.grey[200],
-                  child: Center(
-                    child: Icon(Icons.image, size: 50, color: Colors.grey),
-                  ),
-                ),
-        ),
-        Positioned(
-          top: 6,
-          right: 6,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.red,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              "70%",
-              style: TextStyle(
-                fontSize: 11.sp,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

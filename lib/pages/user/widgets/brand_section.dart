@@ -43,47 +43,58 @@ class BrandSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Brand",
-          style: TextStyle(
-            fontFamily: "Poppins",
-            fontSize: 22.sp,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
+          child: Text(
+            "Brand",
+            style: TextStyle(
+              fontFamily: "Poppins",
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
         ),
         SizedBox(height: 12.h),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 12.w,
-            mainAxisSpacing: 12.h,
-            childAspectRatio: 79.w / 51.h,
+        
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 12.w,
+              mainAxisSpacing: 12.h,
+              childAspectRatio: 1.3, 
+            ),
+            itemCount: _brands.length,
+            itemBuilder: (context, index) {
+              final brand = _brands[index];
+              return _BrandCard(
+                logoUrl: brand["logo"]!,
+                brandName: brand["name"]!,
+                onTap: () => _navigateToBrand(context, brand),
+              );
+            },
           ),
-          itemCount: _brands.length,
-          itemBuilder: (context, index) {
-            final brand = _brands[index];
-            return _BrandCard(
-              logoUrl: brand["logo"]!,
-              brandName: brand["name"]!,
-              onTap: () => _navigateToBrand(context, brand),
-            );
-          },
         ),
       ],
     );
   }
 
   void _navigateToBrand(BuildContext context, Map<String, String> brand) {
+    final brandProducts = products
+        .where((p) => p.brand.toLowerCase() == brand["name"]!.toLowerCase())
+        .toList();
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => BrandPage(
           brandName: brand["name"]!,
           brandLogo: brand["logo"]!,
-          products: products,
+          products: brandProducts,
         ),
       ),
     );
@@ -106,30 +117,82 @@ class _BrandCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 79.w,
-        height: 51.h,
-        padding: EdgeInsets.all(8.w),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 6.r,
+              color: Colors.grey[350]!,
+              blurRadius: 8.r,
               offset: Offset(0, 3.h),
             ),
           ],
         ),
-        child: Image.network(
-          logoUrl,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) {
-            return Icon(
-              Icons.image,
-              size: 40.sp,
-              color: Colors.grey,
-            );
-          },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12.r),
+          child: Stack(
+            children: [
+              Center(
+                child: Padding(
+                  padding: EdgeInsets.all(15.w),
+                  child: Image.network(
+                    logoUrl,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: SizedBox(
+                          width: 24.w,
+                          height: 24.h,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.grey,
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.image_not_supported_outlined,
+                              size: 32.sp,
+                              color: Colors.grey,
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              brandName,
+                              style: TextStyle(
+                                fontSize: 10.sp,
+                                color: Colors.grey,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(12.r),
+                  splashColor: Colors.black.withOpacity(0.05),
+                  highlightColor: Colors.black.withOpacity(0.02),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
