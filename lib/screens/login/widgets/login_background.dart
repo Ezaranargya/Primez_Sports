@@ -8,12 +8,12 @@ class LoginBackground extends StatelessWidget{
     return Stack(
       children: [
         Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: NetworkImage("https://i.ibb.co.com/6RBt2GGH/login2.jpg"),
-              fit: BoxFit.cover, 
-              ),
-          ),
+          width: double.infinity,
+          height: double.infinity,
+          child: Image(
+            image: AssetImage("assets/login2.jpg"),
+            fit: BoxFit.cover,
+            ),
         ),
           Container(color: Colors.black54),
       ],

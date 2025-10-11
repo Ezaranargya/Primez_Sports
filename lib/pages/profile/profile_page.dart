@@ -58,21 +58,29 @@ class _UserProfilePageState extends State<UserProfilePage> {
         children: [
           Container(
             width: double.infinity,
-            color: const Color(0xFFE53E3E),
-            child: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.h),
-                child: Text(
-                  "Profile",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+            margin: EdgeInsets.symmetric(horizontal: 0.w,vertical: 0.h),
+            padding: EdgeInsets.symmetric(vertical: 20.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE53E3E),
+              borderRadius: BorderRadius.circular(0.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
                 ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                "Profile",
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
                 ),
               ),
+            ),
           ),
           Container(
             margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),

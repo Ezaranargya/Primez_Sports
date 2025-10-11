@@ -42,7 +42,7 @@ class CategoryProductsPage extends StatelessWidget {
       ),
       body: products.isEmpty
           ? _buildEmptyState()
-          : _buildProductGrid(),
+          : _buildProductList(),
     );
   }
 
@@ -70,16 +70,11 @@ class CategoryProductsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildProductGrid() {
-    return GridView.builder(
+  Widget _buildProductList() {
+    return ListView.separated(
       padding: EdgeInsets.all(16.w),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12.w,
-        mainAxisSpacing: 12.h,
-        childAspectRatio: 0.65,
-      ),
       itemCount: products.length,
+      separatorBuilder: (context, index) => SizedBox(height: 12.h),
       itemBuilder: (context, index) {
         final product = products[index];
         return _CategoryProductCard(product: product);
@@ -105,6 +100,7 @@ class _CategoryProductCard extends StatelessWidget {
         );
       },
       child: Container(
+        height: 120.h,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.r),
@@ -116,24 +112,23 @@ class _CategoryProductCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            // Product Image
-            Expanded(
-              flex: 5,
-              child: ClipRRect(
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(12.r),
-                ),
-                child: product.imageUrl.isNotEmpty
-                    ? Image.network(
-                        product.imageUrl,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Center(
+            ClipRRect(
+              borderRadius: BorderRadius.horizontal(
+                left: Radius.circular(12.r),
+              ),
+              child: product.imageUrl.isNotEmpty
+                  ? Image.network(
+                      product.imageUrl,
+                      width: 120.w,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          width: 120.w,
+                          child: Center(
                             child: SizedBox(
                               width: 30.w,
                               height: 30.h,
@@ -147,60 +142,59 @@ class _CategoryProductCard extends StatelessWidget {
                                     : null,
                               ),
                             ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[200],
-                            child: Center(
-                              child: Icon(
-                                Icons.image_outlined,
-                                size: 40.sp,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          );
-                        },
-                      )
-                    : Container(
-                        color: Colors.grey[200],
-                        child: Center(
-                          child: Icon(
-                            Icons.image_outlined,
-                            size: 40.sp,
-                            color: Colors.grey,
                           ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 120.w,
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: Icon(
+                              Icons.image_outlined,
+                              size: 40.sp,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                  : Container(
+                      width: 120.w,
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: Icon(
+                          Icons.image_outlined,
+                          size: 40.sp,
+                          color: Colors.grey,
                         ),
                       ),
-              ),
+                    ),
             ),
 
-            // Product Info
             Expanded(
-              flex: 3,
               child: Padding(
-                padding: EdgeInsets.all(10.w),
+                padding: EdgeInsets.all(12.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Product Name
                     Text(
                       product.name,
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
                         color: Colors.black87,
-                        height: 1.2,
+                        height: 1.3,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-
+                    SizedBox(height: 8.h),
                     Text(
                       Formatter.currency(product.price),
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
                       ),

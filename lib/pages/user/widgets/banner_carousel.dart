@@ -14,9 +14,9 @@ class _BannerCarouselState extends State<BannerCarousel> {
   int _currentPage = 0;
 
   final List<String> bannerImages = [
-    "https://i.ibb.co.com/0Rg1KRyF/image.png",
-    "https://i.ibb.co.com/99fFsCvB/image.png",
-    "https://i.ibb.co.com/Y7M9X4xD/image.png",
+    "assets/sepatu_awal1.jpg",
+    "assets/sepatu_dua.png",
+    "assets/sepatu_tiga.jpg",
   ];
 
   @override
@@ -61,37 +61,10 @@ class _BannerCarouselState extends State<BannerCarousel> {
                 padding: EdgeInsets.symmetric(horizontal: 4.w),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12.r),
-                  child: Image.network(
+                  child: Image.asset(
                     bannerImages[index],
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[300],
-                        child: Center(
-                          child: Icon(
-                            Icons.image,
-                            size: 50.sp,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        color: Colors.grey[300],
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      );
-                    },
                   ),
                 ),
               );

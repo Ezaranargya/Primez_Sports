@@ -110,16 +110,22 @@ class ProductHorizontalList extends StatelessWidget {
   final String title;
   final List<Product> products;
   final VoidCallback? onSeeAll;
+  final int maxItems;
 
   const ProductHorizontalList({
     super.key,
     required this.title,
     required this.products,
     this.onSeeAll,
+    this.maxItems = 2,
   });
 
   @override
   Widget build(BuildContext context) {
+    final displayProducts = products.length > maxItems
+        ? products.sublist(0, maxItems)
+        : products;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -136,7 +142,7 @@ class ProductHorizontalList extends StatelessWidget {
                   color: Colors.black87,
                 ),
               ),
-              if (onSeeAll != null)
+              if (products.length > maxItems || onSeeAll != null)
                 GestureDetector(
                   onTap: onSeeAll,
                   child: Text(
@@ -168,10 +174,10 @@ class ProductHorizontalList extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 16.w),
-            itemCount: products.length,
+            itemCount: displayProducts.length,
             separatorBuilder: (_, __) => SizedBox(width: 12.w),
             itemBuilder: (context, index) {
-              return ProductCard(product: products[index]);
+              return ProductCard(product: displayProducts[index]);
             },
           ),
         ),
