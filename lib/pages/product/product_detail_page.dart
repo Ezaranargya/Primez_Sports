@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/utils/formatter.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'widgets/product_image.dart';
 import 'widgets/product_info.dart';
 import 'widgets/action_buttons.dart';
 import 'purchase_options_list.dart';
+import 'package:my_app/providers/favorite_provider.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Product product;
@@ -26,91 +28,54 @@ class ProductDetailPage extends StatefulWidget {
 }
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
-  bool isFavorite = false;
-  bool isLoadingFavorite = false;
+  bool _isLoadingFavorite = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _checkIfFavorite();
-  }
+  Future<void> _toggleFavorite(BuildContext context) async {
+    if (_isLoadingFavorite) return;
 
-  Future<void> _checkIfFavorite() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    setState(() => _isLoadingFavorite = true);
 
     try {
-      final favDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('favorites')
-          .doc(widget.product.id)
-          .get();
+      final favoriteProvider = context.read<FavoriteProvider>();
+      final wasFavorite = favoriteProvider.isFavorite(widget.product.id);
 
-      if (mounted) setState(() => isFavorite = favDoc.exists);
+      await favoriteProvider.toggleFavorite(widget.product);
+
+      if (!mounted) return;
+
+      _showSnackBar(
+        wasFavorite
+            ? '${widget.product.name} dihapus dari favorite'
+            : '${widget.product.name} ditambahkan ke favorite',
+      );
     } catch (e) {
-      debugPrint('Error checking favorite: $e');
-    }
-  }
-
-  Future<void> _toggleFavorite() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Silakan login terlebih dahulu")),
-        );
-      }
-      return;
-    }
-    if (isLoadingFavorite) return;
-
-    setState(() => isLoadingFavorite = true);
-
-    try {
-      final favRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('favorites')
-          .doc(widget.product.id);
-
-      if (isFavorite) {
-        await favRef.delete();
-        if (mounted) {
-          setState(() {
-            isFavorite = false;
-            isLoadingFavorite = false;
-          });
-          _showSnackBar("${widget.product.name} dihapus dari favorite");
-        }
-      } else {
-        await favRef.set({
-          'id': widget.product.id,
-          'name': widget.product.name,
-          'description': widget.product.description,
-          'price': widget.product.price,
-          'imageUrl': widget.product.imageUrl,
-          'addedAt': FieldValue.serverTimestamp(),
-        });
-        if (mounted) {
-          setState(() {
-            isFavorite = true;
-            isLoadingFavorite = false;
-          });
-          _showSnackBar("${widget.product.name} ditambahkan ke favorite");
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => isLoadingFavorite = false);
-        _showSnackBar("Gagal mengubah status favorite");
-      }
+      if (!mounted) return;
+      _showSnackBar('Gagal mengubah status favorite');
+    } finally {
+      if (mounted) setState(() => _isLoadingFavorite = false);
     }
   }
 
   void _showSnackBar(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+      ),
+    );
+  }
+
+  void _shareProduct() {
+    final product = widget.product;
+    Share.share(
+      'Cek produk ini di Primez Sports!\n\n'
+      '${product.name}\nHarga: ${Formatter.currency(product.price)}',
     );
   }
 
@@ -125,13 +90,31 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           product.name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 18.sp),
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w600,
+          ),
         ),
         backgroundColor: const Color(0xFFE53E3E),
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: widget.isAdmin
             ? [
-                IconButton(icon: const Icon(Icons.edit), onPressed: () {}),
-                IconButton(icon: const Icon(Icons.delete), onPressed: () {}),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  tooltip: 'Edit Produk',
+                  onPressed: () {
+                    // TODO: Implement edit functionality
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  tooltip: 'Hapus Produk',
+                  onPressed: () {
+                    // TODO: Implement delete functionality
+                  },
+                ),
               ]
             : null,
       ),
@@ -140,23 +123,33 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            /// 🔹 Product Image
             ProductImage(imageUrl: product.imageUrl),
             SizedBox(height: 16.h),
 
+            /// 🔹 Product Info
             ProductInfo(product: product),
             SizedBox(height: 24.h),
-            if (product.purchaseOptions.isNotEmpty)
-              PurchaseOptionsList(options: product.purchaseOptions),
 
-            SizedBox(height: 24.h),
-            ActionButtons(
-              isFavorite: isFavorite,
-              isLoadingFavorite: isLoadingFavorite,
-              onFavoriteTap: _toggleFavorite,
-              onShareTap: () => Share.share(
-                "Cek produk ini: ${product.name}\nHarga: ${Formatter.currency(product.price)}",
-              ),
+            /// 🔹 Purchase Options
+            if (product.purchaseOptions.isNotEmpty) ...[
+              PurchaseOptionsList(options: product.purchaseOptions),
+              SizedBox(height: 24.h),
+            ],
+
+            /// 🔹 Favorite & Share Buttons
+            Consumer<FavoriteProvider>(
+              builder: (context, favoriteProvider, _) {
+                final isFavorite = favoriteProvider.isFavorite(product.id);
+                return ActionButtons(
+                  isFavorite: isFavorite,
+                  isLoadingFavorite: _isLoadingFavorite,
+                  onFavoriteTap: () => _toggleFavorite(context),
+                  onShareTap: _shareProduct,
+                );
+              },
             ),
+
             SizedBox(height: 24.h),
           ],
         ),

@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
-import 'package:my_app/pages/user/widgets/product_card.dart';
+import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/utils/formatter.dart';
-import 'package:my_app/pages/product/product_detail_page.dart';
 
-class TrendingSection extends StatelessWidget{
+class TrendingSection extends StatelessWidget {
   final String title;
-  final List<Product> produtcs;
+  final List<Product> products;
 
   const TrendingSection({
     super.key,
     required this.title,
-    required this.produtcs,
+    required this.products,
   });
 
-  @override 
+  @override
   Widget build(BuildContext context) {
-    if (produtcs.isEmpty) return const SizedBox.shrink();
+    if (products.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,7 +26,12 @@ class TrendingSection extends StatelessWidget{
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             title,
-            style: TextStyle(fontFamily: 'Poppins',fontSize: 20,fontWeight: FontWeight.bold,color: Colors.black87),
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -39,7 +43,7 @@ class TrendingSection extends StatelessWidget{
               BoxShadow(
                 color: Colors.black12,
                 blurRadius: 6,
-                offset: Offset(0, 3),
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -48,17 +52,15 @@ class TrendingSection extends StatelessWidget{
             height: 220,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: produtcs.length,
+              itemCount: products.length,
               separatorBuilder: (context, index) => Container(
                 margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 20.h),
                 width: 1.5,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade400,
-                ),
+                color: Colors.grey.shade400,
               ),
               itemBuilder: (context, index) {
-                final product = produtcs[index];
-                return _productCard(product: product);
+                final product = products[index];
+                return ProductCard(product: product);
               },
             ),
           ),
@@ -68,16 +70,16 @@ class TrendingSection extends StatelessWidget{
   }
 }
 
-class _productCard extends StatelessWidget {
+class ProductCard extends StatelessWidget {
   final Product product;
 
-  const _productCard({super.key, required this.product});
+  const ProductCard({super.key, required this.product});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.push(
-        context, 
+        context,
         MaterialPageRoute(builder: (_) => ProductDetailPage(product: product)),
       ),
       child: Container(
@@ -120,40 +122,48 @@ class _productCard extends StatelessWidget {
     );
   }
 
+  /// ✅ Gambar otomatis menyesuaikan: network / asset
   Widget _buildImageWithBadge() {
+    final bool isNetworkImage = product.imageUrl.startsWith('http');
+
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       child: product.imageUrl.isNotEmpty
-          ? Image.network(
-              product.imageUrl,
-              height: 120,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
+          ? (isNetworkImage
+              ? Image.network(
+                  product.imageUrl,
                   height: 120,
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: Icon(
-                      Icons.image,
-                      size: 60,
-                      color: Colors.grey,
-                    ),
-                  ),
-                );
-              },
-            )
-          : Container(
-              height: 120,
-              color: Colors.grey[200],
-              child: const Center(
-                child: Icon(
-                  Icons.image,
-                  size: 60,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _placeholderImage();
+                  },
+                )
+              : Image.asset(
+                  product.imageUrl,
+                  height: 120,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _placeholderImage();
+                  },
+                ))
+          : _placeholderImage(),
+    );
+  }
+
+  /// ✅ Placeholder fallback
+  Widget _placeholderImage() {
+    return Container(
+      height: 120,
+      color: Colors.grey[200],
+      child: const Center(
+        child: Icon(
+          Icons.image,
+          size: 60,
+          color: Colors.grey,
+        ),
+      ),
     );
   }
 }

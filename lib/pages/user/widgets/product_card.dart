@@ -49,22 +49,19 @@ class ProductCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
-              child: Image.network(
-                product.imageUrl,
-                height: 140.h,
+              child: Image(
+                image: product.imageUrl.startsWith('http')
+                    ? NetworkImage(product.imageUrl)
+                    : AssetImage(product.imageUrl) as ImageProvider,
+                height: 120,
                 width: double.infinity,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) {
+                  print('❌ Error load gambar: $error');
                   return Container(
-                    height: 140.h,
-                    color: Colors.grey[200],
-                    child: Center(
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        size: 48.sp,
-                        color: Colors.grey,
-                      ),
-                    ),
+                    height: 120,
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.broken_image, size: 80, color: Colors.grey),
                   );
                 },
               ),

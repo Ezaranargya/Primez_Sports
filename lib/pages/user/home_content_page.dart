@@ -221,7 +221,7 @@ class _HomeContentPageState extends State<HomeContentPage> {
                       const BannerCarousel(),
                       const SizedBox(height: 20),
                       if (trendingProducts.isNotEmpty) ...[
-                        TrendingSection(title: "Trending", produtcs: trendingProducts),
+                        TrendingSection(title: "Trending", products: trendingProducts),
                         const SizedBox(height: 20),
                       ],
                       if (newProducts.isNotEmpty) ...[
