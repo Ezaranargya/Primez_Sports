@@ -7,7 +7,7 @@ import 'package:my_app/data/dummy_products.dart';
 import 'package:my_app/pages/user/widgets/product_card.dart';
 import 'package:my_app/pages/product/product_page.dart';
 import 'package:my_app/pages/community/community_page.dart';
-import 'package:my_app/pages/News/news_page.dart';
+import 'package:my_app/pages/news/news_page.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
 import 'admin/product_page.dart';
 import 'admin/community_page.dart';

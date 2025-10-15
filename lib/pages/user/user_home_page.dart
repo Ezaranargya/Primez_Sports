@@ -8,7 +8,7 @@ import '../../brand_page.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/pages/favorite/favorite_page.dart';
 import 'package:my_app/pages/community/community_page.dart';
-import 'package:my_app/pages/News/news_page.dart';
+import 'package:my_app/pages/news/news_page.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
 import 'package:my_app/pages/product/product_page.dart';
 import 'package:my_app/providers/favorite_provider.dart';
