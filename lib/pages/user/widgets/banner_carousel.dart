@@ -1,9 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:my_app/theme/app_colors.dart';
+import 'package:my_app/models/product_model.dart';
 
 class BannerCarousel extends StatefulWidget {
-  const BannerCarousel({super.key});
+  /// Setiap banner berisi map:
+  /// {
+  ///   'image': 'assets/sepatu.jpg',
+  ///   'product': Product(...)
+  /// }
+  final List<Map<String, dynamic>> banners;
+
+  final double height;
+  final double borderRadius;
+  final Color activeColor;
+  final Color inactiveColor;
+  final bool autoPlay;
+  final Duration autoPlayInterval;
+  final Function(Product product)? onBannerTap;
+
+  const BannerCarousel({
+    super.key,
+    required this.banners,
+    this.height = 160,
+    this.borderRadius = 12,
+    this.activeColor = Colors.redAccent,
+    this.inactiveColor = Colors.grey,
+    this.autoPlay = true,
+    this.autoPlayInterval = const Duration(seconds: 3),
+    this.onBannerTap,
+  });
 
   @override
   State<BannerCarousel> createState() => _BannerCarouselState();
@@ -13,27 +38,25 @@ class _BannerCarouselState extends State<BannerCarousel> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<String> bannerImages = [
-    "assets/sepatu_awal1.jpg",
-    "assets/sepatu_dua.png",
-    "assets/sepatu_tiga.jpg",
-  ];
-
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), _autoSlide);
+    if (widget.autoPlay) {
+      Future.delayed(widget.autoPlayInterval, _autoSlide);
+    }
   }
 
   void _autoSlide() {
     if (!mounted) return;
-    final nextPage = (_currentPage + 1) % bannerImages.length;
+    final nextPage = (_currentPage + 1) % widget.banners.length;
     _pageController.animateToPage(
       nextPage,
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOut,
     );
-    Future.delayed(const Duration(seconds: 3), _autoSlide);
+    if (widget.autoPlay) {
+      Future.delayed(widget.autoPlayInterval, _autoSlide);
+    }
   }
 
   @override
@@ -46,52 +69,68 @@ class _BannerCarouselState extends State<BannerCarousel> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        SizedBox(
-          height: 160.h,
-          child: PageView.builder(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemCount: bannerImages.length,
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4.w),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12.r),
-                  child: Image.asset(
-                    bannerImages[index],
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              );
-            },
+        // === Gambar Banner dengan shadow ===
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.borderRadius.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(widget.borderRadius.r),
+            child: SizedBox(
+              height: widget.height.h,
+              width: double.infinity,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: widget.banners.length,
+                onPageChanged: (index) {
+                  setState(() => _currentPage = index);
+                },
+                itemBuilder: (context, index) {
+                  final banner = widget.banners[index];
+                  return GestureDetector(
+                    onTap: () {
+                      if (widget.onBannerTap != null &&
+                          banner['product'] != null) {
+                        widget.onBannerTap!(banner['product']);
+                      }
+                    },
+                    child: Image.asset(
+                      banner['image'],
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         ),
 
+        // === Indicator di luar gambar ===
         SizedBox(height: 10.h),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(bannerImages.length, (index) {
+          children: List.generate(widget.banners.length, (index) {
             bool isActive = index == _currentPage;
-            return Container(
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
               margin: EdgeInsets.symmetric(horizontal: 4.w),
-              height: 10.w,
-              width: 10.w,
+              height: isActive ? 10.w : 8.w,
+              width: isActive ? 10.w : 8.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isActive ? AppColors.primary : Colors.transparent,
-                border: Border.all(
-                  color: AppColors.primary,
-                  width: 1.5,
-                ),
+                color: isActive ? widget.activeColor : widget.inactiveColor,
               ),
             );
           }),
-        )
+        ),
       ],
     );
   }

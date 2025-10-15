@@ -94,7 +94,7 @@ class ProductCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                Formatter.currency(product.price),
+                Formatter.formatPrice(product.price),
                 style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.primary,
@@ -122,16 +122,15 @@ class ProductCard extends StatelessWidget {
     );
   }
 
-  /// ✅ Gambar otomatis menyesuaikan: network / asset
   Widget _buildImageWithBadge() {
-    final bool isNetworkImage = product.imageUrl.startsWith('http');
+    final bool isNetworkImage = product.imagePath.startsWith('http');
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      child: product.imageUrl.isNotEmpty
+      child: product.imagePath.isNotEmpty
           ? (isNetworkImage
-              ? Image.network(
-                  product.imageUrl,
+              ? Image.asset(
+                  product.imagePath,
                   height: 120,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -140,7 +139,7 @@ class ProductCard extends StatelessWidget {
                   },
                 )
               : Image.asset(
-                  product.imageUrl,
+                  product.imagePath,
                   height: 120,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -152,7 +151,6 @@ class ProductCard extends StatelessWidget {
     );
   }
 
-  /// ✅ Placeholder fallback
   Widget _placeholderImage() {
     return Container(
       height: 120,

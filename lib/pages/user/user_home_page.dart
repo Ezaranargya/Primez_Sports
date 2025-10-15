@@ -8,7 +8,7 @@ import '../../brand_page.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/pages/favorite/favorite_page.dart';
 import 'package:my_app/pages/community/community_page.dart';
-import 'news_page.dart';
+import 'package:my_app/pages/News/news_page.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
 import 'package:my_app/pages/product/product_page.dart';
 import 'package:my_app/providers/favorite_provider.dart';
@@ -31,13 +31,10 @@ class _UserHomePageState extends State<UserHomePage>
   void initState() {
     super.initState();
     loadAllProducts();
-    // Load favorites saat app start
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<FavoriteProvider>().loadFavorites();
     });
   }
-
-  // ✅ Halaman yang ditampilkan di bottom nav
   List<Widget> get _pages {
     return [
       HomeContentPage(allProducts: allProducts),
@@ -48,7 +45,6 @@ class _UserHomePageState extends State<UserHomePage>
     ];
   }
 
-  // ✅ Ambil semua produk dari Firestore, fallback ke dummy bila gagal
   Future<void> loadAllProducts() async {
     try {
       final snapshot =
@@ -70,7 +66,6 @@ class _UserHomePageState extends State<UserHomePage>
     }
   }
 
-  // ✅ Filter berdasarkan kategori
   void filteredProductsByCategory(String category) {
     setState(() {
       selectedCategory = category;
@@ -85,7 +80,6 @@ class _UserHomePageState extends State<UserHomePage>
     });
   }
 
-  // ✅ Navigasi tab
   void onItemTapped(int index) {
     setState(() => selectedIndex = index);
   }

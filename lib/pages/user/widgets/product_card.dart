@@ -50,9 +50,9 @@ class ProductCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
               child: Image(
-                image: product.imageUrl.startsWith('http')
-                    ? NetworkImage(product.imageUrl)
-                    : AssetImage(product.imageUrl) as ImageProvider,
+                image: product.imagePath.startsWith('http')
+                    ? NetworkImage(product.imagePath)
+                    : AssetImage(product.imagePath) as ImageProvider,
                 height: 120,
                 width: double.infinity,
                 fit: BoxFit.contain,
@@ -73,7 +73,7 @@ class ProductCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    Formatter.currency(product.price),
+                    Formatter.formatPrice(product.price),
                     style: TextStyle(
                       fontSize: 15.sp,
                       color: AppColors.primary,

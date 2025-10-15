@@ -32,8 +32,8 @@ class AdminProductDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            product.imageUrl.isNotEmpty
-                ? Image.network(product.imageUrl,
+            product.imagePath.isNotEmpty
+                ? Image.network(product.imagePath,
                     height: 200, fit: BoxFit.cover)
                 : const Icon(Icons.image, size: 200, color: Colors.grey),
             const SizedBox(height: 16),

@@ -32,7 +32,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
   ];
 
   List<Product> get filteredProducts {
-    return AdminData.products.where((p) {
+    return AdminData.dummyProducts.where((p) {
       final matchesSearch =
           p.name.toLowerCase().contains(searchQuery.toLowerCase());
       final matchesCategory = selectedCategory.isEmpty ||
@@ -42,13 +42,13 @@ class _AdminHomePageState extends State<AdminHomePage> {
   }
 
   List<Product> get trendingProducts {
-    return AdminData.products
+    return AdminData.dummyProducts
         .where((p) => p.categories.map((e) => e.toLowerCase()).contains("trending"))
         .toList();
   }
 
   List<Product> get newProducts {
-    return AdminData.products
+    return AdminData.dummyProducts
         .where((p) => p.categories.map((e) => e.toLowerCase()).contains("terbaru"))
         .toList();
   }

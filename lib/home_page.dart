@@ -3,10 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/pages/user/widgets/logo_card.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
+import 'package:my_app/data/dummy_products.dart';
 import 'package:my_app/pages/user/widgets/product_card.dart';
 import 'package:my_app/pages/product/product_page.dart';
 import 'package:my_app/pages/community/community_page.dart';
-import 'package:my_app/pages/user/news_page.dart';
+import 'package:my_app/pages/News/news_page.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
 import 'admin/product_page.dart';
 import 'admin/community_page.dart';
@@ -31,49 +32,10 @@ class _HomePageState extends State<HomePage> {
   String? userRole;
   bool isLoadingRole = true;
 
-  final List<Product> dummyProducts = [
-    Product(
-      id: "1",
-      name: "Nike Giannis Immortality4 EP",
-      brand: "Nike",
-      price: 1499000,
-      imageUrl: "https://i.ibb.co/DPr3vv4X/nike-giannis.png",
-      description: "Sepatu basket terbaru",
-      categories: ["basketball", "Trending"],
-    ),
-    Product(
-      id: "2",
-      name: "Nike Zoom Mercurial Superfly 9 Academy",
-      brand: "Nike",
-      price: 1549000,
-      imageUrl: "https://i.ibb.co/JwWvQQ70/nike-zoom.png",
-      description: "Sepatu sepak bola terbaik",
-      categories: ["Nike", "Trending"],
-    ),
-    Product(
-      id: "3",
-      name: "Puma Ultra 5 Carbon LE FG White-Ultra Blue",
-      brand: "Puma",
-      price: 1959440,
-      imageUrl: "https://i.ibb.co/QvqRGh7X/Puma-Ultra-5-Carbon-LE-FG-White-Ultra-Blue.png",
-      description: "Sepatu sepak bola populer saat ini",
-      categories: ["soccer", "Terbaru"],
-    ),
-    Product(
-      id: "4",
-      name: "Adidas Crazyflight Bounce 3 Volleyball Shoes",
-      brand: "Adidas",
-      price: 2290400,
-      imageUrl: "https://i.ibb.co/nMm9Fkj7/Adidas-Crazyflight-Bounce-3-Volleyball-Shoes.png",
-      description: "Sepatu voli terbaik Adidas",
-      categories: ["volleyball", "Terbaru"],
-    ),
-  ];
-
   @override
   void initState() {
     super.initState();
-    productObjects = dummyProducts;
+    productObjects = AdminData.dummyProducts;
     _getUserRole();
   }
 

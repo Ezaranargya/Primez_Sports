@@ -13,7 +13,7 @@ class AdminProductPage extends StatefulWidget {
 }
 
 class _AdminProductPageState extends State<AdminProductPage> {
-  late List<Product> products = List.from(AdminData.products);
+  late List<Product> products = List.from(AdminData.dummyProducts);
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
@@ -43,7 +43,8 @@ class _AdminProductPageState extends State<AdminProductPage> {
                   name: _nameController.text,
                   brand: "",
                   price: double.tryParse(_priceController.text) ?? 0,
-                  imageUrl: _imageController.text,
+                  imagePath: _imageController.text,
+                  bannerImage: _imageController.text,
                   description: _descController.text,
                   categories: [_categoryController.text],
                 ),
@@ -61,7 +62,7 @@ class _AdminProductPageState extends State<AdminProductPage> {
     final product = products[index];
     _nameController.text = product.name;
     _priceController.text = product.price.toString();
-    _imageController.text = product.imageUrl;
+    _imageController.text = product.imagePath;
     _descController.text = product.description;
     _categoryController.text =
         product.categories.isNotEmpty ? product.categories.first : "";
@@ -78,7 +79,8 @@ class _AdminProductPageState extends State<AdminProductPage> {
                 name: _nameController.text,
                 brand: "",
                 price: double.tryParse(_priceController.text) ?? 0,
-                imageUrl: _imageController.text,
+                imagePath: _imageController.text,
+                bannerImage: _imageController.text,
                 description: _descController.text,
                 categories: [_categoryController.text],
               );
@@ -194,9 +196,9 @@ class _AdminProductPageState extends State<AdminProductPage> {
                     contentPadding: const EdgeInsets.all(8),
                     leading: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: p.imageUrl.isNotEmpty
-                          ? Image.network(
-                              p.imageUrl,
+                      child: p.imagePath.isNotEmpty
+                          ? Image.asset(
+                              p.imagePath,
                               width: 60,
                               height: 60,
                               fit: BoxFit.cover,

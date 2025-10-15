@@ -136,7 +136,7 @@ class _PurchaseOptionsListState extends State<PurchaseOptionsList> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    Formatter.currency(option.price),
+                                    Formatter.formatPrice(option.price),
                                     style: TextStyle(
                                       fontSize: 15.sp,
                                       fontWeight: FontWeight.bold,
@@ -151,9 +151,9 @@ class _PurchaseOptionsListState extends State<PurchaseOptionsList> {
                                       maxWidth: 50.w,
                                       minHeight: 20.h,
                                     ),
-                                    child: Image.network(
+                                    child: Image.asset(
                                       option.logoUrl,
-                                      height: 10.h,
+                                      height: 30.h,
                                       fit: BoxFit.contain,
                                       errorBuilder: (_, __, ___) =>
                                           _buildStoreBadge(option.storeName),
@@ -163,7 +163,6 @@ class _PurchaseOptionsListState extends State<PurchaseOptionsList> {
                                   _buildStoreBadge(option.storeName),
 
                                 SizedBox(width: 12.w),
-
                                 Container(
                                   padding: EdgeInsets.all(6.r),
                                   decoration: BoxDecoration(
@@ -181,6 +180,8 @@ class _PurchaseOptionsListState extends State<PurchaseOptionsList> {
                           ),
                         );
                       }).toList(),
+                      
+                      // Disclaimer
                       Container(
                         width: double.infinity,
                         padding: EdgeInsets.symmetric(vertical: 10.h),

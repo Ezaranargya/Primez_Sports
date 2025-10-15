@@ -12,9 +12,9 @@ class FavoriteHeader extends StatelessWidget {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent, // biar container kelihatan
-        statusBarIconBrightness: Brightness.light, // ikon putih
-        statusBarBrightness: Brightness.dark, // untuk iOS
+        statusBarColor: Colors.transparent, 
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
       ),
       child: Container(
         width: double.infinity,
@@ -29,7 +29,7 @@ class FavoriteHeader extends StatelessWidget {
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 16.sp,
-            letterSpacing: 0.3,
+            letterSpacing: 0.5,
           ),
         ),
       ),

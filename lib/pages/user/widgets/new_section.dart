@@ -66,8 +66,7 @@ class NewSection extends StatelessWidget {
           ),
           if (products.length > maxItems)
             TextButton(
-              onPressed: () {
-              },
+              onPressed: () {},
               child: const Text(
                 "Lihat Semua",
                 style: TextStyle(
@@ -139,25 +138,12 @@ class _NewProductCard extends StatelessWidget {
   Widget _buildImageWithBadge() {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      child: product.imageUrl.isNotEmpty
-          ? Image.network(
-              product.imageUrl,
+      child: product.imagePath.isNotEmpty
+          ? Image.asset(
+              product.imagePath,
               height: 120,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 120,
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: Icon(
-                      Icons.image,
-                      size: 60,
-                      color: Colors.grey,
-                    ),
-                  ),
-                );
-              },
             )
           : Container(
               height: 120,
@@ -177,7 +163,7 @@ class _NewProductCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Text(
-        Formatter.currency(product.price),
+        Formatter.formatPrice(product.price),
         style: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,

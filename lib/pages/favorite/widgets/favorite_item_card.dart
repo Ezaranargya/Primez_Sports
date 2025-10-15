@@ -74,9 +74,9 @@ class FavoriteItemCard extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8.r),
-                    child: (product!.imageUrl.isNotEmpty)
+                    child: (product!.imagePath.isNotEmpty)
                         ? Image.asset(
-                            product!.imageUrl,
+                            product!.imagePath,
                             width: 80.w,
                             height: 80.h,
                             fit: BoxFit.cover,
@@ -134,7 +134,7 @@ class FavoriteItemCard extends StatelessWidget {
                           ),
                         SizedBox(height: 6.h),
                         Text(
-                          Formatter.currency(product!.price),
+                          Formatter.formatPrice(product!.price),
                           style: TextStyle(
                             color: AppColors.primary,
                             fontSize: 15.sp,

@@ -1,58 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class PurchaseOption {
-  final double price;
-  final String storeName;
-  final String logoUrl;
-  final String link;
-
-  PurchaseOption({
-    required this.price,
-    required this.storeName,
-    required this.logoUrl,
-    required this.link,
-  });
-
-  factory PurchaseOption.fromMap(Map<String, dynamic> data) {
-    return PurchaseOption(
-      price: (data['price'] is int)
-          ? (data['price'] as int).toDouble()
-          : (data['price'] ?? 0).toDouble(),
-      storeName: data['storeName'] ?? '',
-      logoUrl: data['logoUrl'] ?? '',
-      link: data['link'] ?? '',
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'price': price,
-      'storeName': storeName,
-      'logoUrl': logoUrl,
-      'link': link,
-    };
-  }
-
-  PurchaseOption copyWith({
-    double? price,
-    String? storeName,
-    String? logoUrl,
-    String? link,
-  }) {
-    return PurchaseOption(
-      price: price ?? this.price,
-      storeName: storeName ?? this.storeName,
-      logoUrl: logoUrl ?? this.logoUrl,
-      link: link ?? this.link,
-    );
-  }
-}
-
 class Product {
   final String id;
   final String name;
   final double price;
-  final String imageUrl;
+  final String imagePath;
+  final String? bannerImage;
   final String description;
   final String brand;
   final List<String> categories;
@@ -62,7 +15,8 @@ class Product {
     required this.id,
     required this.name,
     required this.price,
-    required this.imageUrl,
+    required this.imagePath,
+    required this.bannerImage,
     required this.description,
     required this.brand,
     this.categories = const [],
@@ -79,14 +33,16 @@ class Product {
       price: (data['price'] is int)
           ? (data['price'] as int).toDouble()
           : (data['price'] ?? 0).toDouble(),
-      imageUrl: data['imageUrl'] ?? '',
+      imagePath: data['imagePath'] ?? data['imageUrl'] ?? '',
+      bannerImage: data['bannerImage'],
       description: data['description'] ?? '',
       brand: data['brand'] ?? '',
       categories: (data['categories'] is List)
           ? List<String>.from(data['categories'])
           : [],
       purchaseOptions: optionsData
-          .map((e) => PurchaseOption.fromMap(Map<String, dynamic>.from(e)))
+          .map((e) =>
+              PurchaseOption.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
     );
   }
@@ -100,7 +56,8 @@ class Product {
     return {
       'name': name,
       'price': price,
-      'imageUrl': imageUrl,
+      'imagePath': imagePath,
+      'bannerImage': bannerImage,
       'description': description,
       'brand': brand,
       'categories': categories,
@@ -115,7 +72,7 @@ class Product {
     String? id,
     String? name,
     double? price,
-    String? imageUrl,
+    String? imagePath,
     String? description,
     String? brand,
     List<String>? categories,
@@ -125,11 +82,52 @@ class Product {
       id: id ?? this.id,
       name: name ?? this.name,
       price: price ?? this.price,
-      imageUrl: imageUrl ?? this.imageUrl,
+      imagePath: imagePath ?? this.imagePath,
+      bannerImage: bannerImage ?? this.bannerImage,
       description: description ?? this.description,
       brand: brand ?? this.brand,
       categories: categories ?? this.categories,
       purchaseOptions: purchaseOptions ?? this.purchaseOptions,
     );
+  }
+}
+
+class PurchaseOption {
+  final String name;
+  final String storeName;   
+  final double price;       
+  final String logoUrl;     
+  final String link;        
+
+  const PurchaseOption({
+    required this.name,
+    required this.storeName,
+    required this.price,
+    required this.logoUrl,
+    required this.link,
+  });
+
+  bool get isAssetLogo => !logoUrl.startsWith('http');
+
+  factory PurchaseOption.fromMap(Map<String, dynamic> map) {
+    return PurchaseOption(
+      name: map['name'] ?? '',
+      storeName: map['storeName'] ?? '',
+      price: (map['price'] is int)
+          ? (map['price'] as int).toDouble()
+          : (map['price'] ?? 0.0),
+      logoUrl: map['logoUrl'] ?? '',
+      link: map['link'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'storeName': storeName,
+      'price': price,
+      'logoUrl': logoUrl,
+      'link': link,
+    };
   }
 }

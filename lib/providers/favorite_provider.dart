@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:my_app/models/product_model.dart';
+import 'package:my_app/data/dummy_products.dart';
 
 class FavoriteProvider extends ChangeNotifier {
   final List<Product> _favorites = [];
@@ -10,10 +11,12 @@ class FavoriteProvider extends ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// 🔹 Load favorites from Firestore for current user (called on app start)
   Future<void> loadFavorites() async {
     final user = _auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      if (kDebugMode) print('⚠️ User not logged in, skipping loadFavorites');
+      return;
+    }
 
     try {
       final snapshot = await _db
@@ -25,33 +28,78 @@ class FavoriteProvider extends ChangeNotifier {
 
       _favorites.clear();
 
+      if (kDebugMode) {
+        print('📦 Loading ${snapshot.docs.length} favorites from Firestore');
+      }
+
       for (var doc in snapshot.docs) {
         final data = doc.data();
-
-        // ✅ Pastikan data tidak null dan lengkap
         if (data.isEmpty) continue;
 
         try {
-          final product = Product(
-            id: (data['id'] ?? doc.id).toString(),
-            name: (data['name'] ?? '').toString(),
-            brand: (data['brand'] ?? '').toString(),
-            description: (data['description'] ?? '').toString(),
-            price: _parsePrice(data['price']),
-            imageUrl: (data['imageUrl'] ??
-                    data['image'] ??
-                    'https://via.placeholder.com/150')
-                .toString(),
-            categories: _safeStringList(data['categories']),
-            purchaseOptions: [], // bisa diisi nanti kalau ada data
-          );
+          final productId = data['productId']?.toString() ?? doc.id;
+          Product? product;
+          try {
+            product = AdminData.dummyProducts.firstWhere(
+              (p) => p.id == productId,
+            );
+            
+            if (kDebugMode) {
+              print('✅ Found product: ${product.name} with ${product.purchaseOptions.length} purchase options');
+            }
+          } catch (e) {
+            try {
+              product = UserData.products.firstWhere(
+                (p) => p.id == productId,
+              );
+              
+              if (kDebugMode) {
+                print('✅ Found product in UserData: ${product.name} with ${product.purchaseOptions.length} purchase options');
+              }
+            } catch (e) {
+              if (data.containsKey('name')) {
+                product = Product(
+                  id: productId,
+                  name: data['name']?.toString() ?? 'Produk Tidak Dikenal',
+                  brand: data['brand']?.toString() ?? 'Unknown',
+                  description: data['description']?.toString() ?? '',
+                  price: _parsePrice(data['price']),
+                  imagePath: data['imageUrl']?.toString() ?? 
+                           data['image']?.toString() ?? 
+                           'https://via.placeholder.com/150',
+                  bannerImage: data['bannerImage']?.toString()?.isNotEmpty == true
+                              ? data['bannerImage'].toString()
+                              : (data['imageUrl']?.toString() ??
+                                  data['image']?.toString() ??
+                                  'https://via.placeholder.com/150'),         
+                  categories: _safeStringList(data['categories']),
+                  purchaseOptions: _parsePurchaseOptions(data['purchaseOptions']),
+                );
+                
+                if (kDebugMode) {
+                  print('⚠️ Product $productId created from Firestore data (fallback)');
+                }
+              } else {
+                if (kDebugMode) {
+                  print('❌ Product $productId not found anywhere, skipping');
+                }
+                continue;
+              }
+            }
+          }
 
-          _favorites.add(product);
+          if (product != null) {
+            _favorites.add(product);
+          }
         } catch (e) {
           if (kDebugMode) {
-            print('⚠️ Error parsing favorite doc ${doc.id}: $e');
+            print('❌ Error parsing favorite doc ${doc.id}: $e');
           }
         }
+      }
+
+      if (kDebugMode) {
+        print('✅ Loaded ${_favorites.length} favorites successfully');
       }
 
       notifyListeners();
@@ -60,7 +108,6 @@ class FavoriteProvider extends ChangeNotifier {
     }
   }
 
-  /// 🔹 Helper: safely parse price (handle string, int, double, null)
   double _parsePrice(dynamic value) {
     if (value == null) return 0.0;
     if (value is num) return value.toDouble();
@@ -70,7 +117,6 @@ class FavoriteProvider extends ChangeNotifier {
     return 0.0;
   }
 
-  /// 🔹 Helper: safely convert categories to List<String>
   List<String> _safeStringList(dynamic value) {
     if (value == null) return [];
     if (value is List) {
@@ -79,14 +125,30 @@ class FavoriteProvider extends ChangeNotifier {
     return [];
   }
 
-  /// 🔹 Check if product id is in favorites
+  List<PurchaseOption> _parsePurchaseOptions(dynamic value) {
+    if (value == null) return [];
+    if (value is! List) return [];
+
+    return value
+        .map((opt) {
+          if (opt is! Map) return null;
+          return PurchaseOption(
+            name: opt['name']?.toString() ?? '',
+            storeName: opt['storeName']?.toString() ?? '',
+            price: _parsePrice(opt['price']),
+            logoUrl: opt['logoUrl']?.toString() ?? '',
+            link: opt['link']?.toString() ?? '',
+          );
+        })
+        .whereType<PurchaseOption>()
+        .toList();
+  }
+
   bool isFavorite(String id) => _favorites.any((p) => p.id == id);
 
-  /// 🔹 Add/remove favorite (sync to Firestore if logged in)
   Future<void> toggleFavorite(Product product) async {
     final user = _auth.currentUser;
-
-    // Kalau belum login → hanya update lokal
+    
     if (user == null) {
       if (isFavorite(product.id)) {
         _favorites.removeWhere((p) => p.id == product.id);
@@ -107,18 +169,20 @@ class FavoriteProvider extends ChangeNotifier {
       if (isFavorite(product.id)) {
         await favDocRef.delete();
         _favorites.removeWhere((p) => p.id == product.id);
+        
+        if (kDebugMode) {
+          print('🗑️ Removed ${product.name} from favorites');
+        }
       } else {
         await favDocRef.set({
-          'id': product.id,
-          'name': product.name,
-          'brand': product.brand,
-          'description': product.description,
-          'price': product.price,
-          'imageUrl': product.imageUrl,
-          'categories': product.categories,
+          'productId': product.id,
           'addedAt': FieldValue.serverTimestamp(),
         });
         _favorites.add(product);
+        
+        if (kDebugMode) {
+          print('❤️ Added ${product.name} to favorites with ${product.purchaseOptions.length} purchase options');
+        }
       }
       notifyListeners();
     } catch (e) {
@@ -127,7 +191,6 @@ class FavoriteProvider extends ChangeNotifier {
     }
   }
 
-  /// 🔹 Remove favorite by product id (local + Firestore)
   Future<void> removeFavorite(String productId) async {
     final user = _auth.currentUser;
 
@@ -144,8 +207,42 @@ class FavoriteProvider extends ChangeNotifier {
           .doc(productId);
 
       await favDocRef.delete();
+      
+      if (kDebugMode) {
+        print('🗑️ Removed product $productId from Firestore');
+      }
     } catch (e) {
       if (kDebugMode) print('❌ FavoriteProvider.removeFavorite error: $e');
+    }
+  }
+
+  Future<void> clearAllFavorites() async {
+    final user = _auth.currentUser;
+
+    _favorites.clear();
+    notifyListeners();
+
+    if (user == null) return;
+
+    try {
+      final batch = _db.batch();
+      final snapshot = await _db
+          .collection('users')
+          .doc(user.uid)
+          .collection('favorites')
+          .get();
+
+      for (var doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+      
+      if (kDebugMode) {
+        print('🗑️ Cleared all ${snapshot.docs.length} favorites');
+      }
+    } catch (e) {
+      if (kDebugMode) print('❌ FavoriteProvider.clearAllFavorites error: $e');
     }
   }
 }

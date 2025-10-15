@@ -21,7 +21,7 @@ class _UserFavoritePageState extends State<UserFavoritePage> {
 
     return Scaffold(
       backgroundColor: AppColors.secondary,
-      extendBodyBehindAppBar: true, // biar header bisa nutup status bar
+      extendBodyBehindAppBar: true, 
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
@@ -30,21 +30,20 @@ class _UserFavoritePageState extends State<UserFavoritePage> {
         ),
         child: Column(
           children: [
-            // 🔺 Header merah penuh sampai status bar
             Container(
               width: double.infinity,
-              height: statusBarHeight + 60.h,
+              height: statusBarHeight + 35.h,
               decoration: BoxDecoration(
                 color: AppColors.primary,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.25),
                     offset: const Offset(0, 3),
-                    blurRadius: 5,
+                    blurRadius: 1,
                   ),
                 ],
               ),
-              padding: EdgeInsets.only(top: statusBarHeight),
+              padding: EdgeInsets.only(top: statusBarHeight -25.h),
               alignment: Alignment.center,
               child: Text(
                 "Favorites",
@@ -59,10 +58,7 @@ class _UserFavoritePageState extends State<UserFavoritePage> {
               ),
             ),
 
-            // 🔹 Tambahkan jarak antara header dan daftar produk
             SizedBox(height: 12.h),
-
-            // 🔻 Daftar produk favorit
             Expanded(
               child: Consumer<FavoriteProvider>(
                 builder: (context, favoriteProvider, _) {

@@ -118,33 +118,12 @@ class _CategoryProductCard extends StatelessWidget {
               borderRadius: BorderRadius.horizontal(
                 left: Radius.circular(12.r),
               ),
-              child: product.imageUrl.isNotEmpty
-                  ? Image.network(
-                      product.imageUrl,
+              child: product.imagePath.isNotEmpty
+                  ? Image.asset(
+                      product.imagePath,
                       width: 120.w,
                       height: double.infinity,
                       fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          width: 120.w,
-                          child: Center(
-                            child: SizedBox(
-                              width: 30.w,
-                              height: 30.h,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.primary,
-                                value: loadingProgress.expectedTotalBytes !=
-                                        null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                    : null,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
                           width: 120.w,
@@ -192,7 +171,7 @@ class _CategoryProductCard extends StatelessWidget {
                     ),
                     SizedBox(height: 8.h),
                     Text(
-                      Formatter.currency(product.price),
+                      Formatter.formatPrice(product.price),
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.bold,

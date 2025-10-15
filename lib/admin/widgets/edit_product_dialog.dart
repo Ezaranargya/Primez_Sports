@@ -22,7 +22,7 @@ class _EditProductDialogState extends State<EditProductDialog> {
     _nameController = TextEditingController(text: widget.product.name);
     _priceController =
         TextEditingController(text: widget.product.price.toString());
-    _imageController = TextEditingController(text: widget.product.imageUrl);
+    _imageController = TextEditingController(text: widget.product.imagePath);
     _descController = TextEditingController(text: widget.product.description);
   }
 
@@ -62,7 +62,7 @@ class _EditProductDialogState extends State<EditProductDialog> {
             final updatedProduct = widget.product.copyWith(
               name: _nameController.text,
               price: double.tryParse(_priceController.text) ?? 0,
-              imageUrl: _imageController.text,
+              imagePath: _imageController.text,
               description: _descController.text,
             );
             Navigator.pop(context, updatedProduct);

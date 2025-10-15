@@ -4,6 +4,7 @@ import 'product_page.dart';
 import 'community_page.dart';
 import 'news_page.dart';
 import 'profile_page.dart';
+import 'package:my_app/data/dummy_products.dart';
 import '../models/product_model.dart'; 
 
 class AdminNav extends StatefulWidget {
@@ -16,27 +17,7 @@ class AdminNav extends StatefulWidget {
 class _AdminNavState extends State<AdminNav> {
   int _selectedIndex = 0;
 
-  final List<Product> dummyProducts= [
-    Product(
-      id: "1",
-      name: "Nike Giannis Immortality4 EP",
-      brand: "Nike",
-      price: 1499000,
-      imageUrl: "https://i.ibb.co.com/DPr3vv4X/nike-giannis.png",
-      description: "Sepatu basket terbaru",
-      categories: ["basketball","Trending"],
-    ),
-    Product(
-      id: "2",
-      name: "Nike Zoom Mercurial Superfly 9 Academy",
-      brand: "Nike",
-      price: 1549000,
-      imageUrl: "https://i.ibb.co.com/JwWvQQ70/nike-zoom.png",
-      description: "Sepatu sepak bola terbaik",
-      categories: ["soccer","Trending"],
-    ),
-  ];
-
+  
   late final List<Widget> _pages;
 
   @override
@@ -44,7 +25,6 @@ class _AdminNavState extends State<AdminNav> {
     super.initState();
     _pages = [
       const AdminHomePage(),
-      AdminProductPage(initialProducts: dummyProducts),
       const AdminCommunityPage(),
       const AdminNewsPage(),
       const AdminProfilePage(),

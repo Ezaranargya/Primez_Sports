@@ -12,30 +12,12 @@ class BrandSection extends StatelessWidget {
   });
 
   static const List<Map<String, String>> _brands = [
-    {
-      "logo": "https://i.ibb.co.com/pjvscvQR/logo-nike.png",
-      "name": "Nike"
-    },
-    {
-      "logo": "https://i.ibb.co.com/zWkbN6gx/logo-jordan.png",
-      "name": "Jordan"
-    },
-    {
-      "logo": "https://i.ibb.co.com/8gP849Bm/logo-adidas.png",
-      "name": "Adidas"
-    },
-    {
-      "logo": "https://i.ibb.co.com/fGpWwGDP/logo-under-armour.png",
-      "name": "Under Armour"
-    },
-    {
-      "logo": "https://i.ibb.co.com/mrSH0jfT/logo-puma.png",
-      "name": "Puma"
-    },
-    {
-      "logo": "https://i.ibb.co.com/TqYxvdLR/logo-mizuno.png",
-      "name": "Mizuno"
-    },
+    {"logo": "assets/logo_nike.png", "name": "Nike"},
+    {"logo": "assets/logo_jordan.png", "name": "Jordan"},
+    {"logo": "assets/logo_adidas.png", "name": "Adidas"},
+    {"logo": "assets/logo_under_armour.png", "name": "Under Armour"},
+    {"logo": "assets/logo_puma.png", "name": "Puma"},
+    {"logo": "assets/logo_mizuno.png", "name": "Mizuno"},
   ];
 
   @override
@@ -56,7 +38,7 @@ class BrandSection extends StatelessWidget {
           ),
         ),
         SizedBox(height: 12.h),
-        
+
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.w),
           child: GridView.builder(
@@ -66,13 +48,13 @@ class BrandSection extends StatelessWidget {
               crossAxisCount: 3,
               crossAxisSpacing: 12.w,
               mainAxisSpacing: 12.h,
-              childAspectRatio: 1.3, 
+              childAspectRatio: 1.3,
             ),
             itemCount: _brands.length,
             itemBuilder: (context, index) {
               final brand = _brands[index];
               return _BrandCard(
-                logoUrl: brand["logo"]!,
+                logoPath: brand["logo"]!,
                 brandName: brand["name"]!,
                 onTap: () => _navigateToBrand(context, brand),
               );
@@ -102,12 +84,12 @@ class BrandSection extends StatelessWidget {
 }
 
 class _BrandCard extends StatelessWidget {
-  final String logoUrl;
+  final String logoPath;
   final String brandName;
   final VoidCallback onTap;
 
   const _BrandCard({
-    required this.logoUrl,
+    required this.logoPath,
     required this.brandName,
     required this.onTap,
   });
@@ -135,26 +117,9 @@ class _BrandCard extends StatelessWidget {
               Center(
                 child: Padding(
                   padding: EdgeInsets.all(15.w),
-                  child: Image.network(
-                    logoUrl,
+                  child: Image.asset(
+                    logoPath,
                     fit: BoxFit.contain,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: SizedBox(
-                          width: 24.w,
-                          height: 24.h,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.grey,
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                          ),
-                        ),
-                      );
-                    },
                     errorBuilder: (context, error, stackTrace) {
                       return Center(
                         child: Column(
@@ -181,7 +146,7 @@ class _BrandCard extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               Material(
                 color: Colors.transparent,
                 child: InkWell(

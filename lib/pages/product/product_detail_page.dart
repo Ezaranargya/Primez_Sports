@@ -75,13 +75,35 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     final product = widget.product;
     Share.share(
       'Cek produk ini di Primez Sports!\n\n'
-      '${product.name}\nHarga: ${Formatter.currency(product.price)}',
+      '${product.name}\nHarga: ${Formatter.formatPrice(product.price)}',
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
+    print('=====================================');
+    print('🔍 PRODUCT DETAIL DEBUG');
+    print('ID: ${product.id}');
+    print('Name: ${product.name}');
+    print('Brand: ${product.brand}');
+    print('Price: ${product.price}');
+    print('Image URL: ${product.imagePath}');
+    print('Categories: ${product.categories.join(", ")}');
+    print('Purchase Options Count: ${product.purchaseOptions.length}');
+    
+    if (product.purchaseOptions.isEmpty) {
+      print('❌ NO PURCHASE OPTIONS!');
+      print('⚠️ This product will not show purchase options list');
+    } else {
+      print('✅ Purchase Options:');
+      for (var opt in product.purchaseOptions) {
+        print('   - ${opt.storeName}: ${Formatter.formatPrice(opt.price)}');
+        print('     Logo: ${opt.logoUrl}');
+        print('     Link: ${opt.link.isNotEmpty ? "Available" : "Empty"}');
+      }
+    }
+    print('=====================================');
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -105,14 +127,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   icon: const Icon(Icons.edit),
                   tooltip: 'Edit Produk',
                   onPressed: () {
-                    // TODO: Implement edit functionality
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),
                   tooltip: 'Hapus Produk',
                   onPressed: () {
-                    // TODO: Implement delete functionality
                   },
                 ),
               ]
@@ -123,21 +143,43 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// 🔹 Product Image
-            ProductImage(imageUrl: product.imageUrl),
+            ProductImage(imageUrl: product.imagePath),
             SizedBox(height: 16.h),
 
-            /// 🔹 Product Info
             ProductInfo(product: product),
             SizedBox(height: 24.h),
 
-            /// 🔹 Purchase Options
             if (product.purchaseOptions.isNotEmpty) ...[
               PurchaseOptionsList(options: product.purchaseOptions),
               SizedBox(height: 24.h),
+            ] else ...[
+              Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange.shade700),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Text(
+                        'Opsi pembelian tidak tersedia untuk produk ini',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: Colors.orange.shade700,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 24.h),
             ],
 
-            /// 🔹 Favorite & Share Buttons
             Consumer<FavoriteProvider>(
               builder: (context, favoriteProvider, _) {
                 final isFavorite = favoriteProvider.isFavorite(product.id);

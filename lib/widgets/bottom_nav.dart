@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_app/pages/user/user_home_page.dart';
 import 'package:my_app/pages/product/product_page.dart';
 import 'package:my_app/pages/community/community_page.dart';
-import 'package:my_app/pages/user/news_page.dart';
+import 'package:my_app/pages/News/news_page.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
 import 'package:my_app/pages/favorite/favorite_page.dart';
 

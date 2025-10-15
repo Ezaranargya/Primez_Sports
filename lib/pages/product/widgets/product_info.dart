@@ -18,7 +18,7 @@ class ProductInfo extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          Formatter.currency(product.price),
+          Formatter.formatPrice(product.price),
           style: const TextStyle(fontSize: 18, color: Color(0xFFE53E3E), fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),

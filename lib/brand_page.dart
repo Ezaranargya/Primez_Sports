@@ -48,21 +48,13 @@ class BrandPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: brandLogo.isNotEmpty
-                  ? (brandLogo.startsWith('http')
-                      ? Image.network(
-                          brandLogo,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(Icons.image, color: Colors.grey);
-                          },
-                        )
-                      : Image.asset(
-                          brandLogo,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(Icons.image, color: Colors.grey);
-                          },
-                        ))
+                  ? Image.asset(
+                      brandLogo,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.image, color: Colors.grey);
+                      },
+                    )
                   : const Icon(Icons.image, color: Colors.grey),
             ),
             SizedBox(width: 12.w),
@@ -119,7 +111,7 @@ class BrandPage extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12.w,
         mainAxisSpacing: 12.h,
-        childAspectRatio: 0.65, 
+        childAspectRatio: 0.65,
       ),
       itemCount: brandProducts.length,
       itemBuilder: (context, index) {
@@ -167,29 +159,11 @@ class _ProductCard extends StatelessWidget {
                 borderRadius: BorderRadius.vertical(
                   top: Radius.circular(12.r),
                 ),
-                child: product.imageUrl.isNotEmpty
-                    ? Image.network(
-                        product.imageUrl,
+                child: product.imagePath.isNotEmpty
+                    ? Image.asset(
+                        product.imagePath,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Center(
-                            child: SizedBox(
-                              width: 30.w,
-                              height: 30.h,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.primary,
-                                value: loadingProgress.expectedTotalBytes !=
-                                        null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                    : null,
-                              ),
-                            ),
-                          );
-                        },
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             color: Colors.grey[200],
@@ -236,7 +210,7 @@ class _ProductCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      Formatter.currency(product.price),
+                      Formatter.formatPrice(product.price),
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,

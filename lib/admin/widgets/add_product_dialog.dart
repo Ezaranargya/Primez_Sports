@@ -53,7 +53,8 @@ class _AddProductDialogState extends State<AddProductDialog> {
               name: _nameController.text,
               brand: '',
               price: double.tryParse(_priceController.text) ?? 0,
-              imageUrl: _imageController.text,
+              imagePath: _imageController.text,
+              bannerImage: _imageController.text,
               description: _descController.text,
               categories: const [],
             );

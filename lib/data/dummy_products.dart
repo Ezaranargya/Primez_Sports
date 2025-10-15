@@ -1,19 +1,20 @@
 import 'package:my_app/models/product_model.dart';
-import 'package:my_app/pages/user/widgets/brand_section.dart';
 
 class AdminData {
-  static final List<Product> products = [
+  static final List<Product> dummyProducts = [
     Product(
       id: "1",
       name: "Nike Giannis Immortality 4 EP",
       brand: "Nike",
       price: 1499000.0,
-      imageUrl: "assets/Nike_Giannis_Immortality_4.png",
+      imagePath: "assets/Nike_Giannis_Immortality_4.png",
+      bannerImage: "assets/Nike_Giannis_Immortality_4_1.png",
       description:
           "Nike Giannis Immortality 4 EP (NIKFQ3681301) adalah sepatu basket low-top ringan dengan midsole empuk untuk kenyamanan, outsole karet berpola multidireksi untuk grip maksimal, serta upper mesh yang menjaga sirkulasi udara. Stabil dan fleksibel, cocok bagi pemain cepat yang mengejar performa optimal.",
       categories: ["basketball", "trending"],
       purchaseOptions: [
         PurchaseOption(
+          name: "",
           storeName: "Shopee",
           price: 839300.0,
           logoUrl: "assets/logo_shopee.jpg",
@@ -21,62 +22,64 @@ class AdminData {
               "https://shopee.co.id/-BEST-SELLER-Sepatu-Basket-Nike-giannis-immortality-4-ep-ORIGINAL-FQ3681-500-FQ3681-002-i.10262456.22351075298",
         ),
         PurchaseOption(
+          name: "",
           storeName: "Tokopedia",
           price: 899150.0,
           logoUrl: "assets/logo_tokopedia.jpg",
           link:
-              "https://www.tokopedia.com/indohypesneakers/nike-giannis-immortality-4-ep-halloween-xdr-1730194039838377455?extParam=ivf%3Dfalse%26keyword%3Dnike+giannis+immortality+4%26src%3Dsearch",
+              "https://www.tokopedia.com/indohypesneakers/nike-giannis-immortality-4-ep-halloween-xdr-1730194039838377455",
         ),
         PurchaseOption(
+          name: "",
           storeName: "Blibli",
           price: 1079000.0,
           logoUrl: "assets/logo_blibli.jpg",
           link:
-              "https://www.blibli.com/p/nike-men-basketball-giannis-immortality-4-halloween-ep-shoes-sepatu-basket-pria-fq3681-301/is--NIE-12227-12368-00012?pickupPointCode=PP-3537944",
+              "https://www.blibli.com/p/nike-men-basketball-giannis-immortality-4-halloween-ep-shoes-sepatu-basket-pria-fq3681-301/is--NIE-12227-12368-00012",
         ),
         PurchaseOption(
+          name: "",
           storeName: "Nike Official",
           price: 958000.0,
           logoUrl: "assets/logo_nike.png",
-          link:
-              "https://www.nike.com/id/t/giannis-immortality-4-ep-basketball-shoes-4MTsCH",
+          link: "https://www.nike.com/id/t/giannis-immortality-4-ep-basketball-shoes-4MTsCH",
         ),
       ],
     ),
     Product(
       id: "2",
-      name: "Nike Zoom Mercurial Superfly 9 Academy",
-      brand: "Nike",
-      price: 1549000.0,
-      imageUrl: "assets/Nike_Mercurial_Superfly_9_Academy_CR7_AG_Blue_White.png",
+      name: "Adidas Jr X Speedportal + FG J - Aqua-Red-Blue",
+      brand: "Adidas",
+      price: 1906789.4,
+      imagePath: "assets/Adidas_X_Speedportal_3.png",
+      bannerImage: "",
       description:
-          "Sepatu sepak bola terbaik dengan desain aerodinamis dan bahan ringan untuk kecepatan maksimal di lapangan.",
+          "Adidas X Speedportal 3 adalah sepatu sepak bola premium dengan desain aerodinamis dan bahan ringan untuk kecepatan maksimal di lapangan.",
       categories: ["soccer", "trending"],
       purchaseOptions: [
         PurchaseOption(
+          name: "",
           storeName: "Shopee",
-          price: 1499000.0,
+          price: 450000.0,
           logoUrl: "assets/logo_shopee.jpg",
-          link: "",
-        ),
-        PurchaseOption(
-          storeName: "Tokopedia",
-          price: 1549000.0,
-          logoUrl: "assets/logo_tokopedia.jpg",
-          link: "",
-        ),
-        PurchaseOption(
-          storeName: "Blibli",
-          price: 1599000.0,
-          logoUrl: "assets/logo_blibli.jpg",
-          link: "",
-        ),
-        PurchaseOption(
-          storeName: "Nike",
-          price: 1549000.0,
-          logoUrl: "assets/logo_nike.png",
           link:
-              "https://www.nike.com/id/t/zoom-mercurial-superfly-9-academy-cr7-mg-multi-ground-football-boot-h8Xdz4",
+              "https://shopee.co.id/Soccer-Adidas-X-Speedportal.1-FG-Clear-Aqua-Solar-Red-Power-Blue-i.18086871.17289113402",
+        ),
+        PurchaseOption(
+          name: "",
+          storeName: "Tokopedia",
+          price: 1080000.0,
+          logoUrl: "assets/logo_tokopedia.jpg",
+          link:
+              "https://www.tokopedia.com/radarstore01/sepatu-bola-adidas-x-speedportal-3-fg-aqua-gw8456-original-bnib",
+        ),
+        PurchaseOption(
+          name: "",
+          storeName: "Adidas",
+          price: 1906789.4,
+          logoUrl: "assets/logo_adidas.png",
+          link:
+              "https://www.prosoccer.com/products/adidas-jr-x-speedportal-fg-j-aqua-red-blue?variant=43496926183679",
         ),
       ],
     ),
@@ -85,12 +88,14 @@ class AdminData {
       name: "Mizuno Wave Momentum 3",
       brand: "Mizuno",
       price: 1241047.0,
-      imageUrl: "assets/Mizuno_Wave_Momentum_3.png",
+      imagePath: "assets/Mizuno_Wave_Momentum_3.png",
+      bannerImage: "assets/Mizuno_Wave_Momentum_3_1.png",
       description:
-          "Mizuno Wave Momentum 3 adalah sepatu voli mid-cut premium yang menggabungkan stabilitas, kenyamanan, dan respons cepat. Dilengkapi dengan teknologi Mizuno Enerzy untuk bantalan maksimal dan sistem Wave Plate untuk kestabilan optimal saat mendarat. Outsole karet non-marking memberikan grip kuat di setiap gerakan, sementara upper mesh modern menjaga sirkulasi udara agar kaki tetap sejuk. Cocok bagi pemain yang aktif, agresif, dan mengutamakan performa tinggi di setiap rally.",
+          "Mizuno Wave Momentum 3 adalah sepatu voli mid-cut premium yang menggabungkan stabilitas, kenyamanan, dan respons cepat.",
       categories: ["volleyball", "trending"],
       purchaseOptions: [
         PurchaseOption(
+          name: "",
           storeName: "Shopee",
           price: 395000.0,
           logoUrl: "assets/logo_shopee.jpg",
@@ -98,150 +103,119 @@ class AdminData {
               "https://shopee.co.id/Sepatu-Volly-Mizuno-Wave-Momentum-3-Low-Sepatu-Mizuno-Momentum-2-Mizuno-Wlz-6-Mizuno-Wlz-7-i.13338465.23988737621",
         ),
         PurchaseOption(
-          storeName: "Tokopedia",
-          price: 399800.0,
-          logoUrl: "assets/logo_tokopedia.jpg",
-          link: "https://tk.tokopedia.com/ZSU67G499/",
-        ),
-        PurchaseOption(
-          storeName: "Blibli",
-          price: 1899000.0,
-          logoUrl: "assets/logo_blibli.jpg",
-          link:
-              "https://www.blibli.com/p/sepatu-voli-mizuno-wave-momentum-3-mid-original/ps--ORS-70108-00797?ds=ORS-70108-00797-00001&source=SEARCH&sid=bd29f439e940af29&cnc=false&pickupPointCode=PP-3381326&pid1=ORS-70108-00797",
-        ),
-        PurchaseOption(
+          name: "",
           storeName: "Mizuno Official",
           price: 1241047.0,
           logoUrl: "assets/logo_mizuno.png",
-          link:
-              "https://emea.mizuno.com/eu/en-gb/wave-momentum-3/V1GA231221.html",
+          link: "https://emea.mizuno.com/eu/en-gb/wave-momentum-3/V1GA231221.html",
         ),
       ],
     ),
     Product(
       id: "4",
-      name: "Adidas Dame 8",
-      brand: "Adidas",
-      price: 1599000.0,
-      imageUrl: "assets/images/adidas_dame_8.png",
+      name: "Air Jordan 40 The Classic",
+      brand: "Jordan",
+      price: 3169000.0,
+      imagePath: "assets/Air_Jordan_40_The_Classic.png",
+      bannerImage: "",
       description:
-          "Sepatu basket signature Damian Lillard dengan teknologi Bounce untuk respons cepat dan traksi maksimal.",
+          "Air Jordan 40 “The Classic” adalah sepatu basket performa tinggi dengan desain modern yang tetap membawa ciri khas Air Jordan.",
       categories: ["basketball", "terbaru"],
       purchaseOptions: [
         PurchaseOption(
+          name: "",
           storeName: "Shopee",
-          price: 1499000.0,
+          price: 3069000.0,
           logoUrl: "assets/logo_shopee.jpg",
-          link: "",
+          link:
+              "https://shopee.co.id/Sepatu-Basket-Pria-Air-Jordan-40-PF-The-Classic-HM9932-100-i.709446200.28488626684",
         ),
         PurchaseOption(
-          storeName: "Tokopedia",
-          price: 1599000.0,
-          logoUrl: "assets/logo_tokopedia.jpg",
-          link: "",
-        ),
-        PurchaseOption(
-          storeName: "Blibli",
-          price: 1649000.0,
-          logoUrl: "assets/logo_blibli.jpg",
-          link: "",
-        ),
-        PurchaseOption(
-          storeName: "Adidas Official",
-          price: 1599000.0,
-          logoUrl: "assets/logo_adidas.png",
-          link: "",
+          name: "",
+          storeName: "Nike Official",
+          price: 3169000.0,
+          logoUrl: "assets/logo_nike.png",
+          link:
+              "https://www.nike.com/id/t/air-jordan-40-pf-classic-basketball-shoes-jJIHTmH6",
         ),
       ],
     ),
     Product(
       id: "5",
-      name: "Nike Air Zoom GT Cut 2",
-      brand: "Nike",
-      price: 2399000.0,
-      imageUrl: "assets/images/nike_gt_cut_2.png",
+      name: "PUMA x NEYMAR JR FUTURE 7 ULTIMATE FG/AG",
+      brand: "Puma",
+      price: 1999500.0,
+      imagePath: "assets/Sepak_Bola_PUMA_x_NEYMAR_JR_FUTURE_7_ULTIMATE_FGAG.png",
+      bannerImage: "assets/Sepak_Bola_PUMA_x_NEYMAR_JR_FUTURE_7_ULTIMATE_FGAG_1.png",
       description:
-          "Sepatu basket premium dengan teknologi Air Zoom untuk responsivitas dan traksi multidirectional.",
-      categories: ["basketball", "terbaru"],
+          "Sepatu sepak bola PUMA x NEYMAR JR FUTURE 7 ULTIMATE FG/AG hadir dengan teknologi FusionFit+ dan NETFIT untuk penyesuaian kaki yang presisi.",
+      categories: ["soccer", "terbaru"],
       purchaseOptions: [
         PurchaseOption(
-          storeName: "Shopee",
-          price: 2299000.0,
-          logoUrl: "assets/logo_shopee.jpg",
-          link: "",
-        ),
-        PurchaseOption(
-          storeName: "Tokopedia",
-          price: 2399000.0,
-          logoUrl: "assets/logo_tokopedia.jpg",
-          link: "",
-        ),
-        PurchaseOption(
-          storeName: "Nike Official",
-          price: 2399000.0,
-          logoUrl: "assets/logo_nike.png",
-          link: "",
+          name: "",
+          storeName: "Puma Official",
+          price: 1999500.0,
+          logoUrl: "assets/logo_puma.png",
+          link:
+              "https://id.puma.com/in/pd/sepatu-sepak-bola-puma-x-neymar-jr-future-7-ultimate-fg%2Fag/107839.html",
         ),
       ],
     ),
     Product(
       id: "6",
-      name: "Puma Future Z 1.4",
-      brand: "Puma",
-      price: 1899000.0,
-      imageUrl: "assets/images/puma_future_z.png",
+      name: "UA Highlight Ace / UA HOVR Highlight Ace",
+      brand: "Under Armour",
+      price: 2654688.0,
+      imagePath: "assets/UA_Highlight_Ace_UA_HOVR_Highlight_Ace.png",
+      bannerImage: "",
       description:
-          "Sepatu sepak bola dengan FUZIONFIT+ compression band untuk support dan agility maksimal.",
-      categories: ["soccer", "terbaru"],
+          "Under Armour HOVR Highlight Ace adalah sepatu voli high-top dengan dukungan pergelangan ekstra dan bantalan UA HOVR responsif untuk kenyamanan serta dorongan energi maksimal.",
+      categories: ["volleyball", "terbaru"],
       purchaseOptions: [
         PurchaseOption(
-          storeName: "Shopee",
-          price: 1799000.0,
-          logoUrl: "assets/logo_shopee.jpg",
-          link: "",
-        ),
-        PurchaseOption(
-          storeName: "Tokopedia",
-          price: 1899000.0,
-          logoUrl: "assets/logo_tokopedia.jpg",
-          link: "",
-        ),
-        PurchaseOption(
-          storeName: "Puma Official",
-          price: 1899000.0,
-          logoUrl: "assets/logo_puma.png",
-          link: "",
+          name: "",
+          storeName: "Under Armour Official",
+          price: 2654688.0,
+          logoUrl: "assets/logo_under_armour.png",
+          link:
+              "https://www.underarmour.com/en-us/p/volleyball/ua_ace_highlight_womens_volleyball_shoes/3027083.html",
         ),
       ],
     ),
   ];
 
-  static void addProduct(Product product) {
-    products.add(product);
-  }
+  static void addProduct(Product product) => dummyProducts.add(product);
 
-  static List<Product> getAllProducts() => products;
+  static List<Product> getAllProducts() => dummyProducts;
 
   static void updateProduct(String id, Product updatedProduct) {
-    final index = products.indexWhere((p) => p.id == id);
+    final index = dummyProducts.indexWhere((p) => p.id == id);
     if (index != -1) {
-      products[index] = updatedProduct;
+      dummyProducts[index] = updatedProduct;
     }
   }
 
   static void deleteProduct(String id) {
-    products.removeWhere((p) => p.id == id);
+    dummyProducts.removeWhere((p) => p.id == id);
   }
 }
 
 class UserData {
-  static final List<Product> products = [...AdminData.products];
+  static final List<Product> products = [...AdminData.dummyProducts];
 
   static List<Product> getAllProducts() => products;
 
   static List<Product> getByCategory(String category) =>
       products.where((p) => p.categories.contains(category)).toList();
+
+  static List<Product> get trendingProducts =>
+      products.where((p) => p.categories.contains('trending')).toList();
+
+  static List<Product> get terbaruProducts =>
+      products.where((p) => p.categories.contains('terbaru')).toList();
+
+  static List<Product> get populerProducts =>
+      products.where((p) => p.categories.contains('populer')).toList();
 }
 
 class AppData {
