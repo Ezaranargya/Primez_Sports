@@ -1,8 +1,9 @@
 allprojects {
     repositories {
-        google()
-        mavenCentral()
-    }
+    google()
+    mavenCentral()
+    maven { setUrl("https://jitpack.io") }
+}
 }
 
 val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
