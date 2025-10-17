@@ -64,7 +64,6 @@ class _BannerCarouselState extends State<BannerCarousel> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // === Gambar Banner dengan shadow ===
         Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius.r),
@@ -108,7 +107,6 @@ class _BannerCarouselState extends State<BannerCarousel> {
           ),
         ),
 
-        // === Indicator di luar gambar ===
         SizedBox(height: 10.h),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,

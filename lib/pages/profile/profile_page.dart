@@ -16,30 +16,44 @@ class _UserProfilePageState extends State<UserProfilePage> {
   String userEmail = "ezar@gmail.com";
 
   Future<void> _handleLogout() async {
-    showDialog(
-      context: context, 
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFFE53E3E),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        title: const Text(
-          "Logout",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
-          "Apakah anda yakin ingin keluar?",
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), 
-            child: const Text("Batal", style: TextStyle(color: Colors.white)),
-            )
-        ],
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: const Color(0xFFE53E3E),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20.r),
       ),
-      );
-  }
+      title: const Text(
+        "Logout",
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      ),
+      content: const Text(
+        "Apakah anda yakin ingin keluar?",
+        style: TextStyle(color: Colors.white70),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context), // Tutup dialog tanpa logout
+          child: const Text("Batal", style: TextStyle(color: Colors.white70)),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(context); // Tutup dialog terlebih dahulu
+            await FirebaseAuth.instance.signOut(); // Logout dari Firebase
+            
+            // Arahkan user ke halaman login, hapus semua halaman sebelumnya
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginPage()),
+              (route) => false,
+            );
+          },
+          child: const Text("Iya", style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+}
 
   void _handleEmailTap() {
     Navigator.push(

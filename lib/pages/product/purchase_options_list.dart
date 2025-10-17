@@ -181,7 +181,6 @@ class _PurchaseOptionsListState extends State<PurchaseOptionsList> {
                         );
                       }).toList(),
                       
-                      // Disclaimer
                       Container(
                         width: double.infinity,
                         padding: EdgeInsets.symmetric(vertical: 10.h),

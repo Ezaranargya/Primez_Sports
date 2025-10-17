@@ -30,21 +30,9 @@ class ProductInfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Gambar Produk
           Container(
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              border: Border(
-                bottom: BorderSide(
-                  color: Colors.grey[200]!,
-                  width: 1,
-                ),
-              ),
-            ),
-          ),
-
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: 12.w),
+            margin: EdgeInsets.all(12.w),
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -72,6 +60,20 @@ class ProductInfoCard extends StatelessWidget {
                           height: 180.h,
                           width: double.infinity,
                           fit: BoxFit.contain,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              height: 180.h,
+                              alignment: Alignment.center,
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                                color: AppColors.primary,
+                              ),
+                            );
+                          },
                           errorBuilder: (context, error, stackTrace) {
                             return _buildImageErrorPlaceholder();
                           },
@@ -80,36 +82,99 @@ class ProductInfoCard extends StatelessWidget {
             ),
           ),
 
-          Padding(
-            padding: EdgeInsets.all(12.w),
-            child: Text(
-              product.description,
-              style: TextStyle(
-                fontSize: 12.sp,
-                fontFamily: 'Poppins',
-                color: Colors.black87,
-                height: 1.5,
+          // Deskripsi Produk
+          if (product.description.isNotEmpty) ...[
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Deskripsi",
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: "Poppins",
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    product.description,
+                    textAlign: TextAlign.justify,
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      height: 1.6,
+                      fontFamily: "Poppins",
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                ],
               ),
             ),
-          ),
+          ],
 
-          if (product.purchaseOptions.isNotEmpty)
+          // Purchase Options
+          if (product.purchaseOptions.isNotEmpty) ...[
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Opsi Pembelian",
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: "Poppins",
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                ],
+              ),
+            ),
             PurchaseOptionsList(options: product.purchaseOptions),
+            SizedBox(height: 12.h),
+          ],
 
+          // Note untuk admin
           Container(
+            margin: EdgeInsets.symmetric(horizontal: 12.w),
             padding: EdgeInsets.all(12.w),
-            child: Text(
-              'Note: *Hanya admin yang bisa mengirim pesan',
-              style: TextStyle(
-                fontSize: 11.sp,
-                fontFamily: 'Poppins',
-                color: Colors.grey[600],
-                fontStyle: FontStyle.italic,
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8.r),
+              border: Border.all(
+                color: Colors.blue.shade200,
+                width: 1,
               ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 16.sp,
+                  color: Colors.blue.shade700,
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Text(
+                    'Note: *Hanya admin yang bisa mengirim pesan',
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      fontFamily: 'Poppins',
+                      color: Colors.blue.shade700,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
-          SizedBox(height: 8.h),
+          SizedBox(height: 12.h),
         ],
       ),
     );
@@ -120,10 +185,24 @@ class ProductInfoCard extends StatelessWidget {
       height: 180.h,
       color: Colors.grey[100],
       child: Center(
-        child: Icon(
-          Icons.image_outlined,
-          size: 60.sp,
-          color: Colors.grey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.image_outlined,
+              size: 60.sp,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Gambar tidak tersedia',
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: Colors.grey,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -63,7 +63,7 @@ class CommunityChatPage extends StatelessWidget {
               final content = data['content']?.toString() ?? '';
               final description = data['description']?.toString() ?? '';
               final imagePath = data['imageUrl']?.toString() ?? '';
-            
+              
               final linksList = data['links'] as List<dynamic>? ?? [];
               
               final createdAt = data['createdAt'] is Timestamp
@@ -108,28 +108,6 @@ class CommunityChatPage extends StatelessWidget {
                       SizedBox(height: 6.h),
                     ],
 
-                    if (content.isNotEmpty)
-                      Text(
-                        content,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Colors.black87,
-                          height: 1.4,
-                        ),
-                      ),
-
-                    if (description.isNotEmpty) ...[
-                      SizedBox(height: 6.h),
-                      Text(
-                        description,
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          color: Colors.black54,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-
                     if (imagePath.isNotEmpty) ...[
                       SizedBox(height: 10.h),
                       ClipRRect(
@@ -148,6 +126,33 @@ class CommunityChatPage extends StatelessWidget {
                                   size: 40.sp, color: Colors.grey),
                             );
                           },
+                        ),
+                      ),
+                      SizedBox(height: 10.h),
+                    ],
+
+                    if (content.isNotEmpty)
+                      Text(
+                        content,
+                        textAlign: TextAlign.justify,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: Colors.black87,
+                          height: 1.6,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+
+                    if (description.isNotEmpty) ...[
+                      SizedBox(height: 6.h),
+                      Text(
+                        description,
+                        textAlign: TextAlign.justify,
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: Colors.black54,
+                          height: 1.6,
+                          fontFamily: 'Poppins',
                         ),
                       ),
                     ],

@@ -39,7 +39,7 @@ class _RegisterFormState extends State<RegisterForm> {
       await userCredential.user?.updateDisplayName(name);
 
       _showSnackbar("Registerasi berhasil, selamat datang $name!");
-      if (!mounted) {
+      if (mounted) {
         Navigator.pushReplacement(
           context, 
           MaterialPageRoute(builder: (_) => const LoginPage()),

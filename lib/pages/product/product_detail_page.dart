@@ -82,14 +82,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
-    
-    if (product.purchaseOptions.isEmpty) {
-
-    } else {
-      print('✅ Purchase Options:');
-      for (var opt in product.purchaseOptions) {
-      }
-    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -112,14 +104,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 IconButton(
                   icon: const Icon(Icons.edit),
                   tooltip: 'Edit Produk',
-                  onPressed: () {
-                  },
+                  onPressed: () {},
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),
                   tooltip: 'Hapus Produk',
-                  onPressed: () {
-                  },
+                  onPressed: () {},
                 ),
               ]
             : null,
@@ -132,14 +122,33 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             ProductImage(imageUrl: product.imagePath),
             SizedBox(height: 16.h),
 
-            ProductInfo(product: product),
+            ProductInfo(
+              product: product,
+              showDescription: false,
+            ),
             SizedBox(height: 24.h),
 
+            if (product.description.isNotEmpty) ...[
+              SizedBox(height: 12.h),
+              
+              Text(
+                product.description,
+                textAlign: TextAlign.justify,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  height: 1.6,
+                  fontFamily: "Poppins",
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              SizedBox(height: 24.h),
+            ],
             if (product.purchaseOptions.isNotEmpty) ...[
               PurchaseOptionsList(options: product.purchaseOptions),
               SizedBox(height: 24.h),
             ] else ...[
               Container(
+                width: double.infinity,
                 padding: EdgeInsets.all(16.w),
                 decoration: BoxDecoration(
                   color: Colors.orange.shade50,
@@ -165,7 +174,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
               SizedBox(height: 24.h),
             ],
-
             Consumer<FavoriteProvider>(
               builder: (context, favoriteProvider, _) {
                 final isFavorite = favoriteProvider.isFavorite(product.id);

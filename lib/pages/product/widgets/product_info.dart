@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
+import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/utils/formatter.dart';
 
 class ProductInfo extends StatelessWidget {
   final Product product;
+  final bool showDescription;
 
-  const ProductInfo({super.key, required this.product});
+  const ProductInfo({
+    super.key,
+    required this.product,
+    this.showDescription = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -14,18 +21,36 @@ class ProductInfo extends StatelessWidget {
       children: [
         Text(
           product.name,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+          style: TextStyle(
+            fontSize: 20.sp,
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Poppins',
+            color: Colors.black,
+          ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8.h),
         Text(
           Formatter.formatPrice(product.price),
-          style: const TextStyle(fontSize: 18, color: Color(0xFFE53E3E), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 18.sp,
+            color: AppColors.primary,
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Poppins',
+          ),
         ),
-        const SizedBox(height: 16),
-        Text(
-          product.description,
-          style: const TextStyle(fontSize: 14, height: 1.5, color: Colors.black87),
-        ),
+
+        if (showDescription && product.description.isNotEmpty) ...[
+          SizedBox(height: 16.h),
+          Text(
+            product.description,
+            style: TextStyle(
+              fontSize: 14.sp,
+              height: 1.5,
+              fontFamily: 'Poppins',
+              color: Colors.black87,
+            ),
+          ),
+        ],
       ],
     );
   }
