@@ -3,11 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
 
 class BannerCarousel extends StatefulWidget {
-  /// Setiap banner berisi map:
-  /// {
-  ///   'image': 'assets/sepatu.jpg',
-  ///   'product': Product(...)
-  /// }
   final List<Map<String, dynamic>> banners;
 
   final double height;

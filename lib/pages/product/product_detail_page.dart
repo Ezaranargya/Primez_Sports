@@ -82,28 +82,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
-    print('=====================================');
-    print('🔍 PRODUCT DETAIL DEBUG');
-    print('ID: ${product.id}');
-    print('Name: ${product.name}');
-    print('Brand: ${product.brand}');
-    print('Price: ${product.price}');
-    print('Image URL: ${product.imagePath}');
-    print('Categories: ${product.categories.join(", ")}');
-    print('Purchase Options Count: ${product.purchaseOptions.length}');
     
     if (product.purchaseOptions.isEmpty) {
-      print('❌ NO PURCHASE OPTIONS!');
-      print('⚠️ This product will not show purchase options list');
+
     } else {
       print('✅ Purchase Options:');
       for (var opt in product.purchaseOptions) {
-        print('   - ${opt.storeName}: ${Formatter.formatPrice(opt.price)}');
-        print('     Logo: ${opt.logoUrl}');
-        print('     Link: ${opt.link.isNotEmpty ? "Available" : "Empty"}');
       }
     }
-    print('=====================================');
 
     return Scaffold(
       backgroundColor: Colors.white,

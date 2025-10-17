@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:my_app/models/product_model.dart';
-import 'package:my_app/data/dummy_products.dart';
 
 class FavoriteProvider extends ChangeNotifier {
   final List<Product> _favorites = [];
@@ -10,6 +9,16 @@ class FavoriteProvider extends ChangeNotifier {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<Product?> _getProductsFromFirestore(String productId) async {
+    try {
+      final doc = await _db.collection('products').doc(productId).get();
+      if (!doc.exists) return null;
+      return Product.fromFirestore(doc);
+    } catch (e) {
+      if (kDebugMode) print('❌ Error fetching product from Firestore: $e');
+    }
+  }
 
   Future<void> loadFavorites() async {
     final user = _auth.currentUser;
@@ -32,70 +41,19 @@ class FavoriteProvider extends ChangeNotifier {
         print('📦 Loading ${snapshot.docs.length} favorites from Firestore');
       }
 
-      for (var doc in snapshot.docs) {
+      for(var doc in snapshot.docs) {
         final data = doc.data();
         if (data.isEmpty) continue;
 
-        try {
           final productId = data['productId']?.toString() ?? doc.id;
-          Product? product;
-          try {
-            product = AdminData.dummyProducts.firstWhere(
-              (p) => p.id == productId,
-            );
-            
-            if (kDebugMode) {
-              print('✅ Found product: ${product.name} with ${product.purchaseOptions.length} purchase options');
-            }
-          } catch (e) {
-            try {
-              product = UserData.products.firstWhere(
-                (p) => p.id == productId,
-              );
-              
-              if (kDebugMode) {
-                print('✅ Found product in UserData: ${product.name} with ${product.purchaseOptions.length} purchase options');
-              }
-            } catch (e) {
-              if (data.containsKey('name')) {
-                product = Product(
-                  id: productId,
-                  name: data['name']?.toString() ?? 'Produk Tidak Dikenal',
-                  brand: data['brand']?.toString() ?? 'Unknown',
-                  description: data['description']?.toString() ?? '',
-                  price: _parsePrice(data['price']),
-                  imagePath: data['imageUrl']?.toString() ?? 
-                           data['image']?.toString() ?? 
-                           'https://via.placeholder.com/150',
-                  bannerImage: data['bannerImage']?.toString()?.isNotEmpty == true
-                              ? data['bannerImage'].toString()
-                              : (data['imageUrl']?.toString() ??
-                                  data['image']?.toString() ??
-                                  'https://via.placeholder.com/150'),         
-                  categories: _safeStringList(data['categories']),
-                  purchaseOptions: _parsePurchaseOptions(data['purchaseOptions']),
-                );
-                
-                if (kDebugMode) {
-                  print('⚠️ Product $productId created from Firestore data (fallback)');
-                }
-              } else {
-                if (kDebugMode) {
-                  print('❌ Product $productId not found anywhere, skipping');
-                }
-                continue;
-              }
-            }
-          }
-
+          final product = await _getProductsFromFirestore(productId);
+          
           if (product != null) {
             _favorites.add(product);
+            if (kDebugMode) print('✅ Loaded favorite: ${product.name}');
+          } else {
+            if (kDebugMode) print('⚠️ Product not found in Firestore: $productId');
           }
-        } catch (e) {
-          if (kDebugMode) {
-            print('❌ Error parsing favorite doc ${doc.id}: $e');
-          }
-        }
       }
 
       if (kDebugMode) {

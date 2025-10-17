@@ -10,8 +10,8 @@ import 'package:my_app/pages/user/widgets/home_header.dart';
 import 'package:my_app/pages/user/widgets/new_section.dart';
 import 'package:my_app/pages/user/widgets/trending_section.dart';
 import 'package:my_app/theme/app_colors.dart';
-import 'package:my_app/data/dummy_products.dart';
 import 'package:my_app/pages/product/category_products_page.dart';
+import 'package:my_app/models/purchase_option.dart';
 
 class BannerCarousel extends StatefulWidget {
   final List<Map<String, dynamic>> banners;
@@ -127,13 +127,34 @@ class _BannerCarouselState extends State<BannerCarousel> {
 }
 
 Future<List<Product>> fetchProducts() async {
-  final snapshot = await FirebaseFirestore.instance.collection('products').get();
-  return snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+  List<Product> products = [];
+  final userSnapshot = await FirebaseFirestore.instance.collection('users').get();
+
+  for (var userDoc in userSnapshot.docs) {
+    final productSnapshot = await userDoc.reference.collection('products').get();
+
+    for (var doc in productSnapshot.docs) {
+      try {
+        final rawData = doc.data();
+        final product = Product.fromFirestore(doc);
+        products.add(product);
+
+        if (product.brand.toLowerCase().contains('mizuno')) {
+          for (int i = 0; i < product.categories.length; i++) {
+          }
+        }
+      } catch (e, stackTrace) {
+      }
+    }
+  }
+
+  final mizunoCount =
+      products.where((p) => p.brand.toLowerCase().contains('mizuno')).length;
+  return products;
 }
 
 class HomeContentPage extends StatefulWidget {
   final List<Product> allProducts;
-
   const HomeContentPage({super.key, this.allProducts = const []});
 
   @override
@@ -143,7 +164,6 @@ class HomeContentPage extends StatefulWidget {
 class _HomeContentPageState extends State<HomeContentPage> {
   String searchQuery = "";
   String selectedCategory = "";
-  bool isLoading = false;
   List<Product> loadedProducts = [];
 
   final List<Map<String, String>> categories = [
@@ -153,18 +173,37 @@ class _HomeContentPageState extends State<HomeContentPage> {
   ];
 
   List<Product> get currentProducts =>
-      widget.allProducts.isNotEmpty ? widget.allProducts : UserData.products;
+      loadedProducts.isNotEmpty ? loadedProducts : widget.allProducts;
 
-  List<Product> get trendingProducts => currentProducts
-      .where((p) => p.categories.any((c) =>
-          c.toLowerCase().contains("trending") ||
-          c.toLowerCase().contains("populer")))
-      .toList();
+  List<Product> get trendingProducts {
+    final trending = currentProducts.where((p) {
+      final hasTrending = p.categories.any((c) {
+        final category = c.toLowerCase().trim();
+        return category.contains("trending") ||
+            category.contains("populer") ||
+            category.contains("popular");
+      });
+      if (hasTrending);
+      return hasTrending;
+    }).toList();
+    print('   Total: ${trending.length}');
+    return trending;
+  }
 
-  List<Product> get newProducts => currentProducts
-      .where((p) => p.categories
-          .any((c) => c.toLowerCase().contains("terbaru") || c.toLowerCase().contains("new")))
-      .toList();
+  List<Product> get newProducts {
+    final newProds = currentProducts.where((p) {
+      final isNew = p.categories.any((c) {
+        final category = c.toLowerCase().trim();
+        return category.contains("terbaru") ||
+            category.contains("new") ||
+            category.contains("baru");
+      });
+      if (isNew);
+      return isNew;
+    }).toList();
+    print('   Total: ${newProds.length}');
+    return newProds;
+  }
 
   @override
   void initState() {
@@ -174,34 +213,28 @@ class _HomeContentPageState extends State<HomeContentPage> {
 
   Future<void> _loadProducts() async {
     try {
-      setState(() => isLoading = true);
-      if (widget.allProducts.isEmpty) {
-        final products = await fetchProducts();
-        setState(() {
-          loadedProducts = products.isNotEmpty ? products : UserData.products;
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          loadedProducts = widget.allProducts;
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error loading products: $e');
-      setState(() {
-        loadedProducts = UserData.products;
-        isLoading = false;
-      });
+      final products = await fetchProducts();
+      setState(() => loadedProducts = products);
+    } catch (e, stackTrace) {
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    
     final List<Map<String, dynamic>> bannerData = [
-      {'image': 'assets/Nike_Giannis_Immortality_4_1.png', 'product': currentProducts.isNotEmpty ? currentProducts[0] : null},
-      {'image': 'assets/Sepak_Bola_PUMA_x_NEYMAR_JR_FUTURE_7_ULTIMATE_FGAG_1.png', 'product': currentProducts.length > 1 ? currentProducts[4] : null},
-      {'image': 'assets/Mizuno_Wave_Momentum_3_1.png', 'product': currentProducts.length > 2 ? currentProducts[2] : null},
+      {
+        'image': 'assets/Nike_Giannis_Immortality_4_1.png',
+        'product': currentProducts.length > 2 ? currentProducts[5] : null
+      },
+      {
+        'image': 'assets/Sepak_Bola_PUMA_x_NEYMAR_JR_FUTURE_7_ULTIMATE_FGAG_1.png',
+        'product': currentProducts.length > 3 ? currentProducts[2] : null
+      },
+      {
+        'image': 'assets/Mizuno_Wave_Momentum_3_1.png',
+        'product': currentProducts.length > 1 ? currentProducts[4] : null
+      },
     ];
 
     return Scaffold(
@@ -216,32 +249,49 @@ class _HomeContentPageState extends State<HomeContentPage> {
           onSearchChanged: (value) => setState(() => searchQuery = value),
           onCategorySelected: (category) {
             final filteredProducts = currentProducts
-            .where((p) => p.categories.any((c) => c.toLowerCase().contains(category.toLowerCase())))
-            .toList();
-
+                .where((p) => p.categories
+                    .any((c) => c.toLowerCase().contains(category.toLowerCase())))
+                .toList();
             Navigator.push(
-              context, 
-              MaterialPageRoute(builder: (_) => CategoryProductsPage(category: category, products: filteredProducts)),
-              );
-          }
+              context,
+              MaterialPageRoute(
+                builder: (_) => CategoryProductsPage(
+                  category: category,
+                  products: filteredProducts,
+                ),
+              ),
+            );
+          },
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: ListView(
-          children: [
-            BannerCarousel(banners: bannerData),
-            const SizedBox(height: 20),
-            if (trendingProducts.isNotEmpty)
-              TrendingSection(title: "Trending", products: trendingProducts),
-            const SizedBox(height: 20),
-            if (newProducts.isNotEmpty)
-              NewSection(title: "Terbaru", products: newProducts),
-            BrandSection(products: currentProducts),
-            const SizedBox(height: 80),
-          ],
-        ),
-      ),
+      body: loadedProducts.isEmpty
+          ? const Center(child: Text('Tidak ada produk'))
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: ListView(
+                children: [
+                  BannerCarousel(banners: bannerData),
+                  const SizedBox(height: 20),
+                  if (trendingProducts.isNotEmpty)
+                    TrendingSection(title: "Trending", products: trendingProducts)
+                  else
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('⚠️ No trending products found'),
+                    ),
+                  const SizedBox(height: 20),
+                  if (newProducts.isNotEmpty)
+                    NewSection(title: "Terbaru", products: newProducts)
+                  else
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('⚠️ No new products found'),
+                    ),
+                  BrandSection(products: currentProducts),
+                  const SizedBox(height: 80),
+                ],
+              ),
+            ),
     );
   }
 }

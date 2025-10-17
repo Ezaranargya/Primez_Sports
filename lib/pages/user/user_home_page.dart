@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:my_app/data/dummy_products.dart';
 import 'package:my_app/pages/user/home_content_page.dart';
 import '../../brand_page.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
@@ -58,11 +57,7 @@ class _UserHomePageState extends State<UserHomePage>
         filteredProducts = products;
       });
     } catch (e) {
-      print('Error loading products: $e');
-      setState(() {
-        allProducts = UserData.products;
-        filteredProducts = UserData.products;
-      });
+      print('❌ Error loading products: $e');
     }
   }
 

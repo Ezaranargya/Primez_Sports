@@ -65,4 +65,5 @@ class DefaultFirebaseOptions {
     projectId: 'primez-sportz-2025',
     storageBucket: 'primez-sportz-2025.firebasestorage.app',
   );
+
 }

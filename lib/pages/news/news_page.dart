@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:my_app/data/dummy_products.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/pages/news/widgets/news_header.dart';
 import 'package:my_app/pages/news/widgets/news_product_card.dart';
 import 'package:my_app/theme/app_colors.dart';
+import 'package:intl/intl.dart';
 
 class UserNewsPage extends StatefulWidget {
   const UserNewsPage({super.key});
@@ -17,29 +18,50 @@ class UserNewsPage extends StatefulWidget {
 class _UserNewsPageState extends State<UserNewsPage> {
   int _currentBanner = 0;
   final PageController _pageController = PageController();
-  Timer? _autoPlayTimer; 
+  Timer? _autoPlayTimer;
 
-  List<Product> get trendingProducts => AdminData.dummyProducts
+  List<Product> allProducts = [];
+  bool isLoading = true;
+
+  Future<void> fetchProducts() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('products').get();
+      final loadedProducts =
+          snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+
+      setState(() {
+        allProducts = loadedProducts;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading products: $e');
+      setState(() => isLoading = false);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchProducts();
+    _startAutoPlay();
+  }
+
+  List<Product> get trendingProducts => allProducts
       .where((p) => p.categories.any((c) => c.toLowerCase().contains('trending')))
       .toList();
 
-  List<Product> get newProducts => AdminData.dummyProducts
+  List<Product> get newProducts => allProducts
       .where((p) => p.categories.any((c) =>
           c.toLowerCase().contains('terbaru') ||
           c.toLowerCase().contains('new')))
       .toList();
 
-  List<Product> get popularProducts => AdminData.dummyProducts
+  List<Product> get popularProducts => allProducts
       .where((p) => p.categories.any((c) =>
           c.toLowerCase().contains('populer') ||
           c.toLowerCase().contains('popular')))
       .toList();
 
-  @override
-  void initState() {
-    super.initState();
-    _startAutoPlay();
-  }
 
   void _startAutoPlay() {
     _autoPlayTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
@@ -209,17 +231,62 @@ class _UserNewsPageState extends State<UserNewsPage> {
   }
 
   Widget _buildHorizontalList(List<Product> products) {
+    final formatCurrency = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp',
+      decimalDigits: 2,
+    );
     return SizedBox(
-      height: 200.h,
+      height: 180.h,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.symmetric(horizontal: 16.w),
-        itemCount: products.length > 4 ? 4 : products.length,
-        separatorBuilder: (_, __) => SizedBox(width: 12.w),
+        itemCount: products.length > 3 ? 3 : products.length,
+        separatorBuilder: (_, __) => Container(
+          width: 1.2,
+          height: 135.h,
+          color: Colors.grey.shade400,
+          margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 10.h),
+        ),
         itemBuilder: (context, index) {
+          final product = products[index];
           return SizedBox(
-            width: 160.w,
-            child: NewsProductCard(product: products[index]),
+            width: 135.w,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12.r),
+                  child: Image.asset(
+                    product.imagePath,
+                    fit: BoxFit.cover,
+                    height: 100.h,
+                    width: double.infinity,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  formatCurrency.format(product.price),
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp,
+                    fontFamily: "Poppins",
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  product.name,
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.black87,
+                    fontFamily: "Poppins",
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           );
         },
       ),

@@ -6,11 +6,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:my_app/firebase_options.dart';
 import 'package:my_app/providers/favorite_provider.dart';
-import 'package:my_app/data/dummy_products.dart';
 import 'package:my_app/screen/test_launcher_page.dart';
 import 'package:my_app/screens/register/register_page.dart';
 import 'package:my_app/screens/login/login_page.dart';
-import 'package:my_app/screens/splash/splash_screen.dart';
+import 'package:my_app/screens/splash/splash_screen.dart'; 
 import 'package:my_app/pages/user/home_content_page.dart';
 import 'package:my_app/home_page.dart';
 import 'package:my_app/pages/favorite/favorite_page.dart';

@@ -4,7 +4,6 @@ import 'product_page.dart';
 import 'community_page.dart';
 import 'news_page.dart';
 import 'profile_page.dart';
-import 'package:my_app/data/dummy_products.dart';
 import '../models/product_model.dart'; 
 
 class AdminNav extends StatefulWidget {

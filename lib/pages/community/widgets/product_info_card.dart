@@ -42,6 +42,7 @@ class ProductInfoCard extends StatelessWidget {
               ),
             ),
           ),
+
           Container(
             margin: EdgeInsets.symmetric(horizontal: 12.w),
             padding: EdgeInsets.all(12.w),
@@ -56,38 +57,29 @@ class ProductInfoCard extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8.r),
               child: product.imagePath.isNotEmpty
-                  ? Image.asset(
-                      product.imagePath,
-                      height: 180.h,
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
+                  ? (product.imagePath.startsWith('assets/')
+                      ? Image.asset(
+                          product.imagePath,
                           height: 180.h,
-                          color: Colors.grey[100],
-                          child: Center(
-                            child: Icon(
-                              Icons.image_outlined,
-                              size: 60.sp,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        );
-                      },
-                    )
-                  : Container(
-                      height: 180.h,
-                      color: Colors.grey[100],
-                      child: Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          size: 60.sp,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildImageErrorPlaceholder();
+                          },
+                        )
+                      : Image.network(
+                          product.imagePath,
+                          height: 180.h,
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildImageErrorPlaceholder();
+                          },
+                        ))
+                  : _buildImageErrorPlaceholder(),
             ),
           ),
+
           Padding(
             padding: EdgeInsets.all(12.w),
             child: Text(
@@ -103,10 +95,11 @@ class ProductInfoCard extends StatelessWidget {
 
           if (product.purchaseOptions.isNotEmpty)
             PurchaseOptionsList(options: product.purchaseOptions),
+
           Container(
             padding: EdgeInsets.all(12.w),
             child: Text(
-              'Note: *Hanya admin yang bisa mengrim pesan',
+              'Note: *Hanya admin yang bisa mengirim pesan',
               style: TextStyle(
                 fontSize: 11.sp,
                 fontFamily: 'Poppins',
@@ -118,6 +111,20 @@ class ProductInfoCard extends StatelessWidget {
 
           SizedBox(height: 8.h),
         ],
+      ),
+    );
+  }
+
+  Widget _buildImageErrorPlaceholder() {
+    return Container(
+      height: 180.h,
+      color: Colors.grey[100],
+      child: Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 60.sp,
+          color: Colors.grey,
+        ),
       ),
     );
   }

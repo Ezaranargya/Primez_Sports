@@ -4,52 +4,57 @@ class Product {
   final String id;
   final String name;
   final double price;
-  final String imagePath;
+  final String imagePath; 
   final String? bannerImage;
   final String description;
   final String brand;
   final List<String> categories;
   final List<PurchaseOption> purchaseOptions;
 
-  Product({
+  const Product({
     required this.id,
     required this.name,
     required this.price,
     required this.imagePath,
-    required this.bannerImage,
+    this.bannerImage,
     required this.description,
     required this.brand,
     this.categories = const [],
     this.purchaseOptions = const [],
   });
 
-  factory Product.fromMap(String id, Map<String, dynamic> data) {
-    final List<dynamic> optionsData =
-        (data['options'] ?? data['purchaseOptions'] ?? []) as List<dynamic>;
+  factory Product.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
 
     return Product(
-      id: id,
-      name: data['name'] ?? '',
-      price: (data['price'] is int)
-          ? (data['price'] as int).toDouble()
-          : (data['price'] ?? 0).toDouble(),
+      id: doc.id,
+      name: data['name'] ?? data['brandName'] ?? '',
+      price: _parsePrice(data['price']),
       imagePath: data['imagePath'] ?? data['imageUrl'] ?? '',
       bannerImage: data['bannerImage'],
       description: data['description'] ?? '',
-      brand: data['brand'] ?? '',
-      categories: (data['categories'] is List)
-          ? List<String>.from(data['categories'])
-          : [],
-      purchaseOptions: optionsData
-          .map((e) =>
-              PurchaseOption.fromMap(Map<String, dynamic>.from(e)))
-          .toList(),
+      brand: data['brand'] ?? data['brandName'] ?? '',
+      categories: _parseCategories(data['categories']),
+      purchaseOptions: _parseOptions(
+        data['purchaseOptions'] ?? data['options'] ?? data['links'],
+      ),
     );
   }
 
-  factory Product.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Product.fromMap(doc.id, data);
+  factory Product.fromMap(String id, Map<String, dynamic> data) {
+    return Product(
+      id: id,
+      name: data['name'] ?? data['brandName'] ?? '',
+      price: _parsePrice(data['price']),
+      imagePath: data['imagePath'] ?? data['imageUrl'] ?? '',
+      bannerImage: data['bannerImage'],
+      description: data['description'] ?? '',
+      brand: data['brand'] ?? data['brandName'] ?? '',
+      categories: _parseCategories(data['categories']),
+      purchaseOptions: _parseOptions(
+        data['purchaseOptions'] ?? data['options'] ?? data['links'],
+      ),
+    );
   }
 
   Map<String, dynamic> toMap() {
@@ -66,13 +71,37 @@ class Product {
     };
   }
 
-  String get formattedPrice => price.toStringAsFixed(0);
+  static double _parsePrice(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is int) return value.toDouble();
+    if (value is double) return value;
+    return double.tryParse(value.toString()) ?? 0.0;
+  }
+
+  static List<String> _parseCategories(dynamic value) {
+    if (value is List) {
+      return value.map((e) => e.toString()).toList();
+    }
+    return [];
+  }
+
+  static List<PurchaseOption> _parseOptions(dynamic value) {
+    if (value is List) {
+      return value
+          .map((e) => PurchaseOption.fromMap(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+    return [];
+  }
+
+  String get formattedPrice => 'Rp${price.toStringAsFixed(0)}';
 
   Product copyWith({
     String? id,
     String? name,
     double? price,
     String? imagePath,
+    String? bannerImage,
     String? description,
     String? brand,
     List<String>? categories,
@@ -94,10 +123,10 @@ class Product {
 
 class PurchaseOption {
   final String name;
-  final String storeName;   
-  final double price;       
-  final String logoUrl;     
-  final String link;        
+  final String storeName;
+  final double price;
+  final String logoUrl;
+  final String link;
 
   const PurchaseOption({
     required this.name,
@@ -111,13 +140,11 @@ class PurchaseOption {
 
   factory PurchaseOption.fromMap(Map<String, dynamic> map) {
     return PurchaseOption(
-      name: map['name'] ?? '',
-      storeName: map['storeName'] ?? '',
-      price: (map['price'] is int)
-          ? (map['price'] as int).toDouble()
-          : (map['price'] ?? 0.0),
-      logoUrl: map['logoUrl'] ?? '',
-      link: map['link'] ?? '',
+      name: map['name'] ?? map['platform'] ?? map['store'] ?? '',
+      storeName: map['storeName'] ?? map['store'] ?? '',
+      price: Product._parsePrice(map['price']),
+      logoUrl: map['logoUrl'] ?? map['logo'] ?? '',
+      link: map['link'] ?? map['url'] ?? '',
     );
   }
 

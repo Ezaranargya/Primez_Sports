@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:my_app/admin/widgets/add_product_dialog.dart';
-import 'package:my_app/admin/widgets/edit_product_dialog.dart';
-import 'package:my_app/admin/widgets/product_item.dart';
-import 'package:my_app/data/dummy_products.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/admin/widgets/header.dart';
 import '../widgets/banner_widget.dart';
 import '../widgets/product_section.dart';
 import '../widgets/brand_section.dart';
+import '../widgets/product_item.dart';
 import '../dialogs/add_product_dialog.dart';
 import '../dialogs/edit_product_dialog.dart';
-import '../widgets/action_button.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -24,6 +21,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
   int selectedIndex = 0;
   String searchQuery = "";
   String selectedCategory = "";
+  List<Product> products = [];
 
   final List<Map<String, String>> categories = [
     {"display": "Basketball", "filter": "basketball"},
@@ -31,24 +29,36 @@ class _AdminHomePageState extends State<AdminHomePage> {
     {"display": "Volleyball", "filter": "volleyball"},
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _fetchProducts();
+  }
+
+  Future<void> _fetchProducts() async {
+    final snapshot = await FirebaseFirestore.instance.collection('products').get();
+    setState(() {
+      products = snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+    });
+  }
+
   List<Product> get filteredProducts {
-    return AdminData.dummyProducts.where((p) {
-      final matchesSearch =
-          p.name.toLowerCase().contains(searchQuery.toLowerCase());
+    return products.where((p) {
+      final matchesSearch = p.name.toLowerCase().contains(searchQuery.toLowerCase());
       final matchesCategory = selectedCategory.isEmpty ||
-          p.categories.contains(selectedCategory.toLowerCase());
+          p.categories.map((e) => e.toLowerCase()).contains(selectedCategory.toLowerCase());
       return matchesSearch && matchesCategory;
     }).toList();
   }
 
   List<Product> get trendingProducts {
-    return AdminData.dummyProducts
+    return products
         .where((p) => p.categories.map((e) => e.toLowerCase()).contains("trending"))
         .toList();
   }
 
   List<Product> get newProducts {
-    return AdminData.dummyProducts
+    return products
         .where((p) => p.categories.map((e) => e.toLowerCase()).contains("terbaru"))
         .toList();
   }
@@ -60,10 +70,13 @@ class _AdminHomePageState extends State<AdminHomePage> {
     );
 
     if (newProduct != null) {
-      setState(() {
-        AdminData.addProduct(newProduct);
-      });
-      
+      await FirebaseFirestore.instance
+          .collection('products')
+          .doc(newProduct.id)
+          .set(newProduct.toMap());
+
+      setState(() => products.add(newProduct));
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -82,8 +95,14 @@ class _AdminHomePageState extends State<AdminHomePage> {
     );
 
     if (updatedProduct != null) {
+      await FirebaseFirestore.instance
+          .collection('products')
+          .doc(product.id)
+          .update(updatedProduct.toMap());
+
       setState(() {
-        AdminData.updateProduct(product.id, updatedProduct);
+        final index = products.indexWhere((p) => p.id == product.id);
+        if (index != -1) products[index] = updatedProduct;
       });
 
       if (mounted) {
@@ -97,41 +116,36 @@ class _AdminHomePageState extends State<AdminHomePage> {
     }
   }
 
-  void _handleDeleteProduct(Product product) {
-    showDialog(
+  void _handleDeleteProduct(Product product) async {
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Hapus Produk'),
         content: Text('Yakin ingin menghapus "${product.name}"?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                AdminData.deleteProduct(product.id);
-              });
-              Navigator.pop(context);
-              
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${product.name} berhasil dihapus'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Hapus', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
+
+    if (confirm == true) {
+      await FirebaseFirestore.instance.collection('products').doc(product.id).delete();
+      setState(() => products.removeWhere((p) => p.id == product.id));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${product.name} berhasil dihapus'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _navigateToViewAll(String section) {
@@ -154,8 +168,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
         child: AdminHeader(
           categories: categories,
           selectedCategory: selectedCategory,
-          onCategorySelected: (value) =>
-              setState(() => selectedCategory = value),
+          onCategorySelected: (value) => setState(() => selectedCategory = value),
           onSearchChanged: (value) => setState(() => searchQuery = value),
         ),
       ),
@@ -166,7 +179,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
           children: [
             const BannerWidget(),
             SizedBox(height: 24.h),
-
             const BrandSection(),
             SizedBox(height: 24.h),
 
@@ -175,7 +187,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 title: "Trending",
                 products: trendingProducts,
                 onEdit: (product) => _handleEditProduct(product, "Trending"),
-                onDelete: (product) => _handleDeleteProduct(product),
+                onDelete: _handleDeleteProduct,
                 onViewAll: () => _navigateToViewAll("Trending"),
               ),
               SizedBox(height: 24.h),
@@ -186,11 +198,12 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 title: "Terbaru",
                 products: newProducts,
                 onEdit: (product) => _handleEditProduct(product, "Terbaru"),
-                onDelete: (product) => _handleDeleteProduct(product),
+                onDelete: _handleDeleteProduct,
                 onViewAll: () => _navigateToViewAll("Terbaru"),
               ),
               SizedBox(height: 24.h),
             ],
+
             Text(
               searchQuery.isNotEmpty || selectedCategory.isNotEmpty
                   ? "Hasil Pencarian (${filteredProducts.length})"
@@ -246,7 +259,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                       );
                     },
                   ),
-            
+
             SizedBox(height: 80.h),
           ],
         ),

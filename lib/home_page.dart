@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/pages/user/widgets/logo_card.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
-import 'package:my_app/data/dummy_products.dart';
 import 'package:my_app/pages/user/widgets/product_card.dart';
 import 'package:my_app/pages/product/product_page.dart';
 import 'package:my_app/pages/community/community_page.dart';
@@ -25,18 +24,33 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late final List<Product> productObjects;
+  List<Product> productObjects = []; 
   String searchQuery = "";
   String selectedBrands = "";
   int selectedIndex = 0;
   String? userRole;
   bool isLoadingRole = true;
+  bool isLoadingProducts = true;
 
   @override
   void initState() {
     super.initState();
-    productObjects = AdminData.dummyProducts;
     _getUserRole();
+    _getProductsFromFirestore(); 
+  }
+
+  Future<void> _getProductsFromFirestore() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('products').get();
+      final products = snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+      setState(() {
+        productObjects = products;
+        isLoadingProducts = false;
+      });
+    } catch (e) {
+      print("Error ambil produk: $e");
+      setState(() => isLoadingProducts = false);
+    }
   }
 
   Future<void> _getUserRole() async {
@@ -67,17 +81,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   void onItemTapped(int index) {
-    setState(() {
-      selectedIndex = index;
-    });
+    setState(() => selectedIndex = index);
+
     switch (index) {
-      case 0:
-        break;
       case 1:
         if (userRole == 'admin') {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => AdminProductPage(initialProducts: productObjects)),
+            MaterialPageRoute(
+              builder: (_) => AdminProductPage(initialProducts: productObjects),
+            ),
           );
         } else {
           Navigator.push(
@@ -112,6 +125,12 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoadingRole || isLoadingProducts) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final filteredProducts = productObjects.where((product) {
       final name = product.name.toLowerCase();
       final matchesSearch = name.contains(searchQuery.toLowerCase());
@@ -119,10 +138,6 @@ class _HomePageState extends State<HomePage> {
           selectedBrands.isEmpty || name.contains(selectedBrands.toLowerCase());
       return matchesSearch && matchesBrands;
     }).toList();
-
-    if (isLoadingRole) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -175,15 +190,6 @@ class _HomePageState extends State<HomePage> {
                 searchQuery = value;
                 selectedBrands = "";
               });
-              final matches =
-                  productObjects.where((p) => p.name.toLowerCase() == value.toLowerCase()).toList();
-              if (matches.isNotEmpty) {
-                final match = matches.first;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ProductDetailPage(product: match)),
-                );
-              }
             },
             decoration: InputDecoration(
               hintText: "Cari sepatu...",
@@ -213,27 +219,13 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "Hasil pencarian (${filteredProducts.length})",
-              style: const TextStyle(
-                fontFamily: "Poppins",
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (selectedBrands.isNotEmpty)
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    selectedBrands = "";
-                  });
-                },
-                child: const Text("Reset", style: TextStyle(fontFamily: "Poppins")),
-              ),
-          ],
+        Text(
+          "Hasil pencarian (${filteredProducts.length})",
+          style: const TextStyle(
+            fontFamily: "Poppins",
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 12),
         SizedBox(

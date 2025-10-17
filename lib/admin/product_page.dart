@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/models/product_model.dart';
-import 'package:my_app/data/dummy_products.dart';
 import 'package:my_app/admin/product_detail_page.dart';
 
 class AdminProductPage extends StatefulWidget {
@@ -13,7 +12,7 @@ class AdminProductPage extends StatefulWidget {
 }
 
 class _AdminProductPageState extends State<AdminProductPage> {
-  late List<Product> products = List.from(AdminData.dummyProducts);
+  late List<Product> products;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
