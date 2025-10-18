@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:my_app/firebase_options.dart';
 import 'package:my_app/providers/favorite_provider.dart';
@@ -28,12 +30,14 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  await initializeDateFormatting('id_ID', null);
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
           create: (_) => FavoriteProvider(),
-          lazy: false, 
+          lazy: false,
         ),
       ],
       child: const PrimezSportsApp(),
@@ -55,6 +59,17 @@ class PrimezSportsApp extends StatelessWidget {
           navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
           title: 'Primez Sports',
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('id', 'ID'),
+            Locale('en', 'US'), 
+          ],
+          locale: const Locale('id', 'ID'),
+          
           theme: ThemeData(
             primaryColor: AppColors.primary,
             scaffoldBackgroundColor: Colors.white,
