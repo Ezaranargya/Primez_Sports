@@ -32,7 +32,8 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => FavoriteProvider()..loadFavorites(),
+          create: (_) => FavoriteProvider(),
+          lazy: false, 
         ),
       ],
       child: const PrimezSportsApp(),
@@ -69,7 +70,7 @@ class PrimezSportsApp extends StatelessWidget {
             '/register': (context) => const RegisterPage(),
             '/home': (context) => const HomePage(title: 'Primez Sports'),
             '/test': (context) => const TestLauncherPage(),
-            '/favorite': (context) => const UserFavoritePage(),
+            '/favorite': (context) => const UserFavoritesPage(),
           },
         );
       },
@@ -111,7 +112,8 @@ class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   Future<String?> _getUserRole(String uid) async {
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
     if (doc.exists) {
       return doc.data()?['role'] as String?;
     }
@@ -129,6 +131,10 @@ class AuthWrapper extends StatelessWidget {
 
         if (snapshot.hasData) {
           final user = snapshot.data!;
+          Future.microtask(() {
+            Provider.of<FavoriteProvider>(context, listen: false)
+                .loadFavorites();
+          });
 
           return FutureBuilder<String?>(
             future: _getUserRole(user.uid),

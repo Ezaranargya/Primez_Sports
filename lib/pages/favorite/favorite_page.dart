@@ -1,132 +1,215 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:my_app/models/product_model.dart';
-import 'package:my_app/pages/favorite/widgets/favorite_item_card.dart';
-import 'package:my_app/theme/app_colors.dart';
+import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/providers/favorite_provider.dart';
+import 'package:my_app/theme/app_colors.dart';
+import 'package:provider/provider.dart';
+import 'package:my_app/utils/formatter.dart';
 
-class UserFavoritePage extends StatefulWidget {
-  const UserFavoritePage({super.key});
+class UserFavoritesPage extends StatefulWidget {
+  const UserFavoritesPage({super.key});
 
   @override
-  State<UserFavoritePage> createState() => _UserFavoritePageState();
+  State<UserFavoritesPage> createState() => _UserFavoritesPageState();
 }
 
-class _UserFavoritePageState extends State<UserFavoritePage> {
+class _UserFavoritesPageState extends State<UserFavoritesPage> {
   @override
-  Widget build(BuildContext context) {
-    final double statusBarHeight = MediaQuery.of(context).padding.top;
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadFavorites();
+    });
+  }
 
+  Future<void> _loadFavorites() async {
+    final provider = context.read<FavoriteProvider>();
+    await provider.loadFavorites();
+  }
+
+   @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.secondary,
-      extendBodyBehindAppBar: true, 
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        title: Text(
+          'Favorites',
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              height: statusBarHeight + 35.h,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.25),
-                    offset: const Offset(0, 3),
-                    blurRadius: 1,
+        centerTitle: true,
+        backgroundColor: const Color(0xFFE53E3E),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadFavorites,
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+      body: Consumer<FavoriteProvider>(
+        builder: (context, provider, _) {
+          if (provider.isLoading) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(
+                    color: Color(0xFFE53E3E),
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'Memuat favorites...',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: Colors.grey.shade600,
+                      fontFamily: 'Poppins',
+                    ),
                   ),
                 ],
               ),
-              padding: EdgeInsets.only(top: statusBarHeight -25.h),
-              alignment: Alignment.center,
-              child: Text(
-                "Favorites",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16.sp,
-                  letterSpacing: 0.3,
-                  fontFamily: "Poppins",
-                ),
-              ),
-            ),
+            );
+          }
 
-            SizedBox(height: 12.h),
-            Expanded(
-              child: Consumer<FavoriteProvider>(
-                builder: (context, favoriteProvider, _) {
-                  final favorites = favoriteProvider.favorites;
-
-                  if (favorites.isEmpty) {
-                    return _buildEmptyState("Belum ada produk favorite");
-                  }
-
-                  return ListView.builder(
-                    key: const PageStorageKey('favoritesList'),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 12.h,
+          if (provider.favorites.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.favorite_border,
+                    size: 80,
+                    color: Colors.grey.shade400,
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'Belum ada produk favorite',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
                     ),
-                    itemCount: favorites.length,
-                    itemBuilder: (context, index) {
-                      final Product product = favorites[index];
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: 12.h),
-                        child: FavoriteItemCard(product: product),
-                      );
-                    },
-                  );
-                },
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    'Mulai tambahkan produk favorit Anda!',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+            );
+          }
 
-  Widget _buildEmptyState(String message) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.favorite_border_rounded,
-              size: 80.sp,
-              color: Colors.grey.shade400,
+          return RefreshIndicator(
+            onRefresh: _loadFavorites,
+            color: const Color(0xFFE53E3E),
+            child: ListView.separated(
+              padding: EdgeInsets.all(16.w),
+              itemCount: provider.favorites.length,
+              separatorBuilder: (_, __) => SizedBox(height: 12.h),
+              itemBuilder: (context, index) {
+                final product = provider.favorites[index];
+
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProductDetailPage(product: product),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: Colors.grey.shade200,
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8.r),
+                          child: Container(
+                            width: 80.w,
+                            height: 80.w,
+                            color: Colors.white,
+                            child: Image(
+                              image: product.imagePath.startsWith('http')
+                                  ? NetworkImage(product.imagePath)
+                                  : AssetImage(product.imagePath)
+                                      as ImageProvider,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(
+                                  Icons.broken_image,
+                                  size: 40,
+                                  color: Colors.grey.shade400,
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                product.name,
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black87,
+                                  height: 1.3,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 6.h),
+                              Text(
+                                Formatter.formatPrice(product.price),
+                                style: TextStyle(
+                                  fontSize: 15.sp,
+                                  color: const Color(0xFFE53E3E),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          color: Colors.grey.shade400,
+                          size: 24,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
-            SizedBox(height: 16.h),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontFamily: "Poppins",
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              "Mulai tambahkan produk favorit Anda!",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontFamily: "Poppins",
-                color: Colors.grey.shade500,
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

@@ -1,123 +1,85 @@
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:my_app/models/product_model.dart';
 
-class FavoriteProvider extends ChangeNotifier {
-  final List<Product> _favorites = [];
-  List<Product> get favorites => List.unmodifiable(_favorites);
-
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+class FavoriteProvider with ChangeNotifier {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<Product?> _getProductsFromFirestore(String productId) async {
-    try {
-      final doc = await _db.collection('products').doc(productId).get();
-      if (!doc.exists) return null;
-      return Product.fromFirestore(doc);
-    } catch (e) {
-      if (kDebugMode) print('❌ Error fetching product from Firestore: $e');
-    }
-  }
+  List<Product> _favorites = [];
+  bool _isLoading = false;
+  bool _isInitialized = false;
 
-  Future<void> loadFavorites() async {
+  List<Product> get favorites => _favorites;
+  bool get isLoading => _isLoading;
+  bool get isInitialized => _isInitialized;
+
+  FavoriteProvider() {
+    _initializeFavorites();
+  }
+  Future<void> _initializeFavorites() async {
+    if (_isInitialized) return;
+    
     final user = _auth.currentUser;
     if (user == null) {
-      if (kDebugMode) print('⚠️ User not logged in, skipping loadFavorites');
+      _isInitialized = true;
       return;
     }
 
+    await loadFavorites();
+    _isInitialized = true;
+  }
+  Future<void> loadFavorites() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      print('⚠️ User belum login, tidak bisa load favorites');
+      return;
+    }
+
+    _isLoading = true;
+    notifyListeners();
+
     try {
-      final snapshot = await _db
+      print('🔄 Loading favorites dari Firebase untuk user: ${user.uid}');
+
+      final snapshot = await _firestore
           .collection('users')
           .doc(user.uid)
           .collection('favorites')
-          .orderBy('addedAt', descending: true)
           .get();
 
       _favorites.clear();
 
-      if (kDebugMode) {
-        print('📦 Loading ${snapshot.docs.length} favorites from Firestore');
+      for (var doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          final product = Product.fromMap(doc.id, data);
+          _favorites.add(product);
+          print('✅ Loaded favorite: ${product.name}');
+        } catch (e) {
+          print('❌ Error parsing favorite product ${doc.id}: $e');
+        }
       }
 
-      for(var doc in snapshot.docs) {
-        final data = doc.data();
-        if (data.isEmpty) continue;
-
-          final productId = data['productId']?.toString() ?? doc.id;
-          final product = await _getProductsFromFirestore(productId);
-          
-          if (product != null) {
-            _favorites.add(product);
-            if (kDebugMode) print('✅ Loaded favorite: ${product.name}');
-          } else {
-            if (kDebugMode) print('⚠️ Product not found in Firestore: $productId');
-          }
-      }
-
-      if (kDebugMode) {
-        print('✅ Loaded ${_favorites.length} favorites successfully');
-      }
-
-      notifyListeners();
+      print('✅ Total favorites loaded: ${_favorites.length}');
     } catch (e) {
-      if (kDebugMode) print('❌ FavoriteProvider.loadFavorites error: $e');
+      print('❌ Error loading favorites: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
-
-  double _parsePrice(dynamic value) {
-    if (value == null) return 0.0;
-    if (value is num) return value.toDouble();
-    if (value is String) {
-      return double.tryParse(value.replaceAll(',', '.')) ?? 0.0;
-    }
-    return 0.0;
+  bool isFavorite(String productId) {
+    return _favorites.any((product) => product.id == productId);
   }
-
-  List<String> _safeStringList(dynamic value) {
-    if (value == null) return [];
-    if (value is List) {
-      return value.map((e) => e.toString()).toList();
-    }
-    return [];
-  }
-
-  List<PurchaseOption> _parsePurchaseOptions(dynamic value) {
-    if (value == null) return [];
-    if (value is! List) return [];
-
-    return value
-        .map((opt) {
-          if (opt is! Map) return null;
-          return PurchaseOption(
-            name: opt['name']?.toString() ?? '',
-            storeName: opt['storeName']?.toString() ?? '',
-            price: _parsePrice(opt['price']),
-            logoUrl: opt['logoUrl']?.toString() ?? '',
-            link: opt['link']?.toString() ?? '',
-          );
-        })
-        .whereType<PurchaseOption>()
-        .toList();
-  }
-
-  bool isFavorite(String id) => _favorites.any((p) => p.id == id);
-
   Future<void> toggleFavorite(Product product) async {
     final user = _auth.currentUser;
-    
     if (user == null) {
-      if (isFavorite(product.id)) {
-        _favorites.removeWhere((p) => p.id == product.id);
-      } else {
-        _favorites.add(product);
-      }
-      notifyListeners();
-      return;
+      throw Exception('User belum login');
     }
 
-    final favDocRef = _db
+    final docRef = _firestore
         .collection('users')
         .doc(user.uid)
         .collection('favorites')
@@ -125,82 +87,50 @@ class FavoriteProvider extends ChangeNotifier {
 
     try {
       if (isFavorite(product.id)) {
-        await favDocRef.delete();
+        await docRef.delete();
         _favorites.removeWhere((p) => p.id == product.id);
-        
-        if (kDebugMode) {
-          print('🗑️ Removed ${product.name} from favorites');
-        }
+        print('🗑️ Removed from favorites: ${product.name}');
       } else {
-        await favDocRef.set({
-          'productId': product.id,
-          'addedAt': FieldValue.serverTimestamp(),
-        });
+        await docRef.set(product.toMap());
         _favorites.add(product);
-        
-        if (kDebugMode) {
-          print('❤️ Added ${product.name} to favorites with ${product.purchaseOptions.length} purchase options');
-        }
+        print('❤️ Added to favorites: ${product.name}');
       }
+
       notifyListeners();
     } catch (e) {
-      if (kDebugMode) print('❌ FavoriteProvider.toggleFavorite error: $e');
+      print('❌ Error toggling favorite: $e');
       rethrow;
     }
   }
-
   Future<void> removeFavorite(String productId) async {
     final user = _auth.currentUser;
-
-    _favorites.removeWhere((p) => p.id == productId);
-    notifyListeners();
-
     if (user == null) return;
 
     try {
-      final favDocRef = _db
+      await _firestore
           .collection('users')
           .doc(user.uid)
           .collection('favorites')
-          .doc(productId);
+          .doc(productId)
+          .delete();
 
-      await favDocRef.delete();
-      
-      if (kDebugMode) {
-        print('🗑️ Removed product $productId from Firestore');
-      }
+      _favorites.removeWhere((p) => p.id == productId);
+      notifyListeners();
+
+      print('🗑️ Removed favorite: $productId');
     } catch (e) {
-      if (kDebugMode) print('❌ FavoriteProvider.removeFavorite error: $e');
+      print('❌ Error removing favorite: $e');
+      rethrow;
     }
   }
-
-  Future<void> clearAllFavorites() async {
-    final user = _auth.currentUser;
-
+  void clearFavorites() {
     _favorites.clear();
+    _isInitialized = false;
     notifyListeners();
+    print('🧹 Favorites cleared');
+  }
 
-    if (user == null) return;
-
-    try {
-      final batch = _db.batch();
-      final snapshot = await _db
-          .collection('users')
-          .doc(user.uid)
-          .collection('favorites')
-          .get();
-
-      for (var doc in snapshot.docs) {
-        batch.delete(doc.reference);
-      }
-
-      await batch.commit();
-      
-      if (kDebugMode) {
-        print('🗑️ Cleared all ${snapshot.docs.length} favorites');
-      }
-    } catch (e) {
-      if (kDebugMode) print('❌ FavoriteProvider.clearAllFavorites error: $e');
-    }
+  Future<void> refreshFavorites() async {
+    await loadFavorites();
   }
 }

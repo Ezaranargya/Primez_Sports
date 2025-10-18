@@ -30,7 +30,6 @@ class ProductInfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Gambar Produk
           Container(
             margin: EdgeInsets.all(12.w),
             padding: EdgeInsets.all(12.w),
@@ -81,8 +80,6 @@ class ProductInfoCard extends StatelessWidget {
                   : _buildImageErrorPlaceholder(),
             ),
           ),
-
-          // Deskripsi Produk
           if (product.description.isNotEmpty) ...[
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 12.w),
@@ -114,8 +111,6 @@ class ProductInfoCard extends StatelessWidget {
               ),
             ),
           ],
-
-          // Purchase Options
           if (product.purchaseOptions.isNotEmpty) ...[
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 12.w),
@@ -138,8 +133,6 @@ class ProductInfoCard extends StatelessWidget {
             PurchaseOptionsList(options: product.purchaseOptions),
             SizedBox(height: 12.h),
           ],
-
-          // Note untuk admin
           Container(
             margin: EdgeInsets.symmetric(horizontal: 12.w),
             padding: EdgeInsets.all(12.w),

@@ -37,7 +37,7 @@ class _UserHomePageState extends State<UserHomePage>
   List<Widget> get _pages {
     return [
       HomeContentPage(allProducts: allProducts),
-      const UserFavoritePage(),
+      const UserFavoritesPage(),
       const UserCommunityPage(),
       const UserNewsPage(),
       const UserProfilePage(),

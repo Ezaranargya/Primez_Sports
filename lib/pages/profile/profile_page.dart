@@ -33,15 +33,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context), // Tutup dialog tanpa logout
+          onPressed: () => Navigator.pop(context), 
           child: const Text("Batal", style: TextStyle(color: Colors.white70)),
         ),
         TextButton(
           onPressed: () async {
-            Navigator.pop(context); // Tutup dialog terlebih dahulu
-            await FirebaseAuth.instance.signOut(); // Logout dari Firebase
-            
-            // Arahkan user ke halaman login, hapus semua halaman sebelumnya
+            Navigator.pop(context); 
+            await FirebaseAuth.instance.signOut(); 
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => const LoginPage()),

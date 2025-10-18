@@ -18,7 +18,7 @@ class _BottomNavState extends State<BottomNav> {
 
     final List<Widget> _pages = [
         UserHomePage(),
-        UserFavoritePage(),
+        UserFavoritesPage(),
         UserProductPage(),
         UserCommunityPage(),
         UserNewsPage(),

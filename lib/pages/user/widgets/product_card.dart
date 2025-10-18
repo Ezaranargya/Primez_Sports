@@ -4,21 +4,48 @@ import 'package:my_app/models/product_model.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/utils/formatter.dart';
 import 'package:my_app/theme/app_colors.dart';
+import 'package:my_app/providers/widgets/favorite_button.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback? onTap;
   final bool isHorizontal;
+  final bool showFavoriteButton;
+  final bool isCompact; 
 
   const ProductCard({
     super.key,
     required this.product,
     this.isHorizontal = false,
     this.onTap,
+    this.showFavoriteButton = true,
+    this.isCompact = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (isCompact) {
+      return Card(
+        child: ListTile(
+          title: Text(product.name),
+          trailing: showFavoriteButton
+              ? FavoriteButton(
+                  product: product,
+                  size: 24,
+                  activeColor: Colors.red,
+                  inactiveColor: Colors.grey.shade400,
+                )
+              : null,
+          onTap: onTap ??
+              () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProductDetailPage(product: product),
+                    ),
+                  ),
+        ),
+      );
+    }
     return GestureDetector(
       onTap: onTap ??
           () => Navigator.push(
@@ -47,26 +74,57 @@ class ProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
-              child: Image(
-                image: product.imagePath.startsWith('http')
-                    ? NetworkImage(product.imagePath)
-                    : AssetImage(product.imagePath) as ImageProvider,
-                height: 120,
-                width: double.infinity,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  print('❌ Error load gambar: $error');
-                  return Container(
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
+                  child: Image(
+                    image: product.imagePath.startsWith('http')
+                        ? NetworkImage(product.imagePath)
+                        : AssetImage(product.imagePath) as ImageProvider,
                     height: 120,
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.broken_image, size: 80, color: Colors.grey),
-                  );
-                },
-              ),
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      print('❌ Error load gambar: $error');
+                      return Container(
+                        height: 120,
+                        color: Colors.grey.shade200,
+                        child: const Icon(
+                          Icons.broken_image,
+                          size: 80,
+                          color: Colors.grey,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                if (showFavoriteButton)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: FavoriteButton(
+                        product: product,
+                        size: 20,
+                        activeColor: AppColors.primary,
+                        inactiveColor: Colors.grey.shade400,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-
             Padding(
               padding: EdgeInsets.all(10.w),
               child: Column(
@@ -108,6 +166,7 @@ class ProductHorizontalList extends StatelessWidget {
   final List<Product> products;
   final VoidCallback? onSeeAll;
   final int maxItems;
+  final bool showFavoriteButton;
 
   const ProductHorizontalList({
     super.key,
@@ -115,6 +174,7 @@ class ProductHorizontalList extends StatelessWidget {
     required this.products,
     this.onSeeAll,
     this.maxItems = 2,
+    this.showFavoriteButton = true,
   });
 
   @override
@@ -174,7 +234,10 @@ class ProductHorizontalList extends StatelessWidget {
             itemCount: displayProducts.length,
             separatorBuilder: (_, __) => SizedBox(width: 12.w),
             itemBuilder: (context, index) {
-              return ProductCard(product: displayProducts[index]);
+              return ProductCard(
+                product: displayProducts[index],
+                showFavoriteButton: showFavoriteButton,
+              );
             },
           ),
         ),

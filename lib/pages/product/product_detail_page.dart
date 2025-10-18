@@ -12,15 +12,18 @@ import 'widgets/product_info.dart';
 import 'widgets/action_buttons.dart';
 import 'purchase_options_list.dart';
 import 'package:my_app/providers/favorite_provider.dart';
+import 'package:my_app/providers/widgets/favorite_button.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final Product product;
   final bool isAdmin;
+  final bool showFavoriteInAppBar;
 
   const ProductDetailPage({
     super.key,
     required this.product,
     this.isAdmin = false,
+    this.showFavoriteInAppBar = false,
   });
 
   @override
@@ -79,6 +82,37 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     );
   }
 
+  List<Widget> _buildAppBarActions() {
+    List<Widget> actions = [];
+
+    if (widget.isAdmin) {
+      actions.addAll([
+        IconButton(
+          icon: const Icon(Icons.edit),
+          tooltip: 'Edit Produk',
+          onPressed: () {},
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete),
+          tooltip: 'Hapus Produk',
+          onPressed: () {},
+        ),
+      ]);
+    } else if (widget.showFavoriteInAppBar) {
+      actions.addAll([
+        FavoriteButton(
+          product: widget.product,
+          size: 28,
+          activeColor: Colors.red,
+          inactiveColor: Colors.white,
+        ),
+        SizedBox(width: 8.w),
+      ]);
+    }
+
+    return actions.isNotEmpty ? actions : [];
+  }
+
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
@@ -99,20 +133,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         backgroundColor: const Color(0xFFE53E3E),
         foregroundColor: Colors.white,
         elevation: 0,
-        actions: widget.isAdmin
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  tooltip: 'Edit Produk',
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  tooltip: 'Hapus Produk',
-                  onPressed: () {},
-                ),
-              ]
-            : null,
+        actions: _buildAppBarActions(),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.w),
@@ -121,13 +142,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           children: [
             ProductImage(imageUrl: product.imagePath),
             SizedBox(height: 16.h),
-
             ProductInfo(
               product: product,
               showDescription: false,
             ),
             SizedBox(height: 24.h),
-
             if (product.description.isNotEmpty) ...[
               SizedBox(height: 12.h),
               
@@ -174,17 +193,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
               SizedBox(height: 24.h),
             ],
-            Consumer<FavoriteProvider>(
-              builder: (context, favoriteProvider, _) {
-                final isFavorite = favoriteProvider.isFavorite(product.id);
-                return ActionButtons(
-                  isFavorite: isFavorite,
-                  isLoadingFavorite: _isLoadingFavorite,
-                  onFavoriteTap: () => _toggleFavorite(context),
-                  onShareTap: _shareProduct,
-                );
-              },
-            ),
+            if (!widget.showFavoriteInAppBar)
+              Consumer<FavoriteProvider>(
+                builder: (context, favoriteProvider, _) {
+                  final isFavorite = favoriteProvider.isFavorite(product.id);
+                  return ActionButtons(
+                    isFavorite: isFavorite,
+                    isLoadingFavorite: _isLoadingFavorite,
+                    onFavoriteTap: () => _toggleFavorite(context),
+                    onShareTap: _shareProduct,
+                  );
+                },
+              ),
 
             SizedBox(height: 24.h),
           ],
