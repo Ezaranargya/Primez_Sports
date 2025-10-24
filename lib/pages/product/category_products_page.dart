@@ -95,7 +95,7 @@ class _CategoryProductCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ProductDetailPage(product: product),
+            builder: (context) => UserProductDetailPage(product: product),
           ),
         );
       },
@@ -118,39 +118,8 @@ class _CategoryProductCard extends StatelessWidget {
               borderRadius: BorderRadius.horizontal(
                 left: Radius.circular(12.r),
               ),
-              child: product.imagePath.isNotEmpty
-                  ? Image.asset(
-                      product.imagePath,
-                      width: 120.w,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 120.w,
-                          color: Colors.grey[200],
-                          child: Center(
-                            child: Icon(
-                              Icons.image_outlined,
-                              size: 40.sp,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        );
-                      },
-                    )
-                  : Container(
-                      width: 120.w,
-                      color: Colors.grey[200],
-                      child: Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          size: 40.sp,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
+              child: _buildProductImage(),
             ),
-
             Expanded(
               child: Padding(
                 padding: EdgeInsets.all(12.w),
@@ -185,6 +154,40 @@ class _CategoryProductCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductImage() {
+    if (product.imageUrl.isEmpty) return _placeholder();
+
+    return product.imageUrl.startsWith('http')
+        ? Image.network(
+            product.imageUrl,
+            width: 120.w,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _placeholder(),
+          )
+        : Image.asset(
+            product.imageUrl,
+            width: 120.w,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _placeholder(),
+          );
+  }
+
+  Widget _placeholder() {
+    return Container(
+      width: 120.w,
+      color: Colors.grey[200],
+      child: Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 40.sp,
+          color: Colors.grey,
         ),
       ),
     );

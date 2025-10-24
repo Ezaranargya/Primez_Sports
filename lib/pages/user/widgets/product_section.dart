@@ -146,7 +146,7 @@ class ProductSection extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ProductDetailPage(product: product),
+        builder: (_) => UserProductDetailPage(product: product),
       ),
     );
   }

@@ -8,17 +8,18 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-import 'package:my_app/firebase_options.dart';
+import 'firebase_options.dart';
 import 'package:my_app/providers/favorite_provider.dart';
 import 'package:my_app/screen/test_launcher_page.dart';
 import 'package:my_app/screens/register/register_page.dart';
 import 'package:my_app/screens/login/login_page.dart';
 import 'package:my_app/screens/splash/splash_screen.dart';
 import 'package:my_app/pages/user/user_home_page.dart';
+import 'package:my_app/pages/favorite/favorite_page.dart';
+import 'package:my_app/pages/notifications/notifications_page.dart';
+import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/pages/user/home_content_page.dart';
 import 'package:my_app/home_page.dart';
-import 'package:my_app/pages/favorite/favorite_page.dart';
-import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/admin/pages/admin_home_page.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -26,6 +27,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 🔥 Inisialisasi Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -66,10 +68,9 @@ class PrimezSportsApp extends StatelessWidget {
           ],
           supportedLocales: const [
             Locale('id', 'ID'),
-            Locale('en', 'US'), 
+            Locale('en', 'US'),
           ],
           locale: const Locale('id', 'ID'),
-          
           theme: ThemeData(
             primaryColor: AppColors.primary,
             scaffoldBackgroundColor: Colors.white,
@@ -78,6 +79,7 @@ class PrimezSportsApp extends StatelessWidget {
               fontSizeFactor: 1.sp,
             ),
           ),
+          // 👇 Halaman pertama saat aplikasi dibuka
           home: const SplashToAuthWrapper(),
           routes: {
             '/auth': (context) => const AuthWrapper(),
@@ -86,6 +88,7 @@ class PrimezSportsApp extends StatelessWidget {
             '/home': (context) => const HomePage(title: 'Primez Sports'),
             '/test': (context) => const TestLauncherPage(),
             '/favorite': (context) => const UserFavoritesPage(),
+            '/notifications': (context) => const NotificationsPage(),
           },
         );
       },
@@ -126,6 +129,7 @@ class _SplashToAuthWrapperState extends State<SplashToAuthWrapper> {
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
+  // Ambil role user dari Firestore (admin atau user)
   Future<String?> _getUserRole(String uid) async {
     final doc =
         await FirebaseFirestore.instance.collection('users').doc(uid).get();
@@ -144,6 +148,7 @@ class AuthWrapper extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
+        // Jika user sudah login
         if (snapshot.hasData) {
           final user = snapshot.data!;
           Future.microtask(() {
@@ -164,15 +169,17 @@ class AuthWrapper extends StatelessWidget {
 
               final role = roleSnapshot.data;
 
+              // 🔥 Arahkan berdasarkan role
               if (role == 'admin') {
-                return const AdminHomePage();
+                return const AdminHomePage(); // Halaman admin yang CRUD ke Firebase
               } else {
-                return const UserHomePage();
+                return const UserHomePage(); // Halaman user biasa
               }
             },
           );
         }
 
+        // Jika belum login → ke LoginPage
         return const LoginPage();
       },
     );

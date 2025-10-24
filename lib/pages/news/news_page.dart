@@ -25,68 +25,44 @@ class _UserNewsPageState extends State<UserNewsPage> {
   bool isLoading = true;
 
   Future<void> fetchNews() async {
-    try {
-      print('🔄 Fetching news from Firestore...');
-      
-      final usersSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .get();
-      
-      print('👥 Found ${usersSnapshot.docs.length} users');
-      
-      List<NewsModel> allNewsFromAllUsers = [];
-      
-      for (var userDoc in usersSnapshot.docs) {
-        print('📂 Checking news for user: ${userDoc.id}');
-        
-        final newsSnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userDoc.id)
-            .collection('news')
-            .get();
-        
-        print('   Found ${newsSnapshot.docs.length} news for this user');
-        
-        for (var newsDoc in newsSnapshot.docs) {
-          try {
-            final news = NewsModel.fromFirestore(newsDoc.data(), newsDoc.id);
-            allNewsFromAllUsers.add(news);
-          } catch (e) {
-            print('   ⚠️ Error parsing news ${newsDoc.id}: $e');
-          }
-        }
-      }
-      
-      final snapshot = allNewsFromAllUsers;
-      
-      print('📦 Total news documents found: ${snapshot.length}');
-      
-      print('📦 Total news documents found: ${snapshot.length}');
-      
-      if (snapshot.isEmpty) {
-        print('⚠️ No news found in any user collection!');
-      }
+  try {
+    print('🔄 Fetching news from Firestore (main collection)...');
 
-      snapshot.sort((a, b) => b.date.compareTo(a.date));
-      
-      print('✅ Successfully loaded ${snapshot.length} news');
-      
-      setState(() {
-        allNews = snapshot;
-        isLoading = false;
-      });
-    } catch (e, stackTrace) {
-      print('❌ Error loading news: $e');
-      print('Stack trace: $stackTrace');
-      setState(() => isLoading = false);
+    // Langsung ambil dari koleksi utama 'news'
+    final newsSnapshot =
+        await FirebaseFirestore.instance.collection('news').get();
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading news: $e')),
-        );
-      }
+    print('📦 Found ${newsSnapshot.docs.length} news documents');
+
+    if (newsSnapshot.docs.isEmpty) {
+      print('⚠️ No news found in main collection!');
+    }
+
+    final allNewsList = newsSnapshot.docs.map((doc) {
+      return NewsModel.fromFirestore(doc.data(), doc.id);
+    }).toList();
+
+    // Urutkan berdasarkan tanggal
+    allNewsList.sort((a, b) => b.date.compareTo(a.date));
+
+    print('✅ Successfully loaded ${allNewsList.length} news');
+
+    setState(() {
+      allNews = allNewsList;
+      isLoading = false;
+    });
+  } catch (e, stackTrace) {
+    print('❌ Error loading news: $e');
+    print('Stack trace: $stackTrace');
+    setState(() => isLoading = false);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading news: $e')),
+      );
     }
   }
+}
 
   @override
   void initState() {

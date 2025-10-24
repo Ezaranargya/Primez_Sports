@@ -81,7 +81,7 @@ class _NewProductCard extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ProductDetailPage(product: product),
+          builder: (_) => UserProductDetailPage(product: product),
         ),
       ),
       child: Container(
@@ -104,31 +104,32 @@ class _NewProductCard extends StatelessWidget {
   }
 
   Widget _buildImage() {
-    final bool isNetworkImage = product.imagePath.startsWith('http');
+  final bool isNetworkImage = product.imageUrl.startsWith('http');
 
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      child: product.imagePath.isNotEmpty
-          ? (isNetworkImage
-              ? Image.network(
-                  product.imagePath,
-                  height: 110,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      _placeholderImage(),
-                )
-              : Image.asset(
-                  product.imagePath,
-                  height: 110,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      _placeholderImage(),
-                ))
-          : _placeholderImage(),
-    );
-  }
+  return ClipRRect(
+    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+    child: product.imageUrl.isNotEmpty
+        ? (isNetworkImage
+            ? Image.network(
+                product.imageUrl,
+                height: 110,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    _placeholderImage(),
+              )
+            : Image.asset(
+                product.imageUrl,
+                height: 110,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    _placeholderImage(),
+              ))
+        : _placeholderImage(),
+  );
+}
+
 
   Widget _placeholderImage() {
     return Container(

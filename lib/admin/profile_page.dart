@@ -1,54 +1,120 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminProfilePage extends StatefulWidget {
   const AdminProfilePage({super.key});
 
   @override
-  State<AdminProfilePage> createState () => _AdminProfilePage();
+  State<AdminProfilePage> createState() => _AdminProfilePageState();
 }
 
-class _AdminProfilePage extends State<AdminProfilePage> {
+class _AdminProfilePageState extends State<AdminProfilePage> {
   String _name = "Admin";
   final TextEditingController _controller = TextEditingController();
 
-  void _editProfile () {
+  void _editProfile() {
     _controller.text = _name;
     showDialog(
-      context: context, 
+      context: context,
       builder: (context) => AlertDialog(
-        title:  const Text("Edit Profile"),
-        content: TextField(controller: _controller),
+        title: const Text("Edit Profile"),
+        content: TextField(
+          controller: _controller,
+          decoration: const InputDecoration(
+            hintText: "Masukkan nama baru",
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () {
-              if (_controller.text.isNotEmpty){
+              if (_controller.text.isNotEmpty) {
                 setState(() {
                   _name = _controller.text;
                 });
               }
               Navigator.pop(context);
-            }, 
-            child: const Text("Save"),
-            )
+            },
+            child: const Text("Simpan"),
+          ),
         ],
-      )
-      );
+      ),
+    );
+  }
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    // Navigasi ke halaman login (ganti route sesuai project kamu)
+    Navigator.pushReplacementNamed(context, '/login');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Admin Profile")),
-      body: Center(
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        backgroundColor: Colors.red,
+        centerTitle: true,
+        title: const Text(
+          "Profile",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        automaticallyImplyLeading: false,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("Nama: $_name", style:   const TextStyle(fontSize: 20)),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _editProfile, 
-              child: const Text("Edit Profile"),
-              )
+            // Card Profil
+            Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.grey,
+                  child: Icon(Icons.person, color: Colors.white, size: 28),
+                ),
+                title: Text(
+                  _name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                  ),
+                ),
+                trailing: TextButton(
+                  onPressed: _editProfile,
+                  child: const Text(
+                    "Edit",
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            // Tombol Logout
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _logout,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  elevation: 2,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  "Logout",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            )
           ],
         ),
       ),

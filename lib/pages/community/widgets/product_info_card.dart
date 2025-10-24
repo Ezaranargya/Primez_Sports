@@ -43,10 +43,10 @@ class ProductInfoCard extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8.r),
-              child: product.imagePath.isNotEmpty
-                  ? (product.imagePath.startsWith('assets/')
+              child: product.imageUrl.isNotEmpty
+                  ? (product.imageUrl.startsWith('assets/')
                       ? Image.asset(
-                          product.imagePath,
+                          product.imageUrl,
                           height: 180.h,
                           width: double.infinity,
                           fit: BoxFit.contain,
@@ -55,7 +55,7 @@ class ProductInfoCard extends StatelessWidget {
                           },
                         )
                       : Image.network(
-                          product.imagePath,
+                          product.imageUrl,
                           height: 180.h,
                           width: double.infinity,
                           fit: BoxFit.contain,
@@ -166,7 +166,6 @@ class ProductInfoCard extends StatelessWidget {
               ],
             ),
           ),
-
           SizedBox(height: 12.h),
         ],
       ),

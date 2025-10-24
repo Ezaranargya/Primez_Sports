@@ -80,7 +80,7 @@ class ProductCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ProductDetailPage(product: product)),
+        MaterialPageRoute(builder: (_) => UserProductDetailPage(product: product)),
       ),
       child: Container(
         width: 150,
@@ -124,31 +124,31 @@ class ProductCard extends StatelessWidget {
   }
 
   Widget _buildImageWithBadge() {
-    final bool isNetworkImage = product.imagePath.startsWith('http');
+    final bool isNetwork = product.imageUrl.startsWith('http');
 
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      child: product.imagePath.isNotEmpty
-          ? (isNetworkImage
-              ? Image.asset(
-                  product.imagePath,
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _placeholderImage();
-                  },
-                )
-              : Image.asset(
-                  product.imagePath,
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _placeholderImage();
-                  },
-                ))
-          : _placeholderImage(),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
+      child: product.imageUrl.isNotEmpty
+      ? (isNetwork
+      ? Image.network(
+        product.imageUrl,
+        height: 120.h,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _placeholderImage();
+        },
+      )
+      :Image.asset(
+        product.imageUrl,
+        height: 120.h,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _placeholderImage();
+        },
+      ))
+      :_placeholderImage(),
     );
   }
 

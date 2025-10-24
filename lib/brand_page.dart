@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
@@ -127,6 +128,99 @@ class _ProductCard extends StatelessWidget {
 
   const _ProductCard({required this.product});
 
+  Widget _buildImage() {
+    final url = product.imageUrl;
+    if (url.isEmpty) {
+      return Container(
+        color: Colors.grey[200],
+        child: Center(
+          child: Icon(
+            Icons.image_outlined,
+            size: 40.sp,
+            color: Colors.grey,
+          ),
+        ),
+      );
+    }
+
+    // jika url remote
+    if (url.startsWith('http')) {
+      return Image.network(
+        url,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[200],
+            child: Center(
+              child: Icon(
+                Icons.broken_image,
+                size: 40.sp,
+                color: Colors.grey,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    // jika local asset (path relatif di assets)
+    if (!url.startsWith('/')) {
+      return Image.asset(
+        url,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[200],
+            child: Center(
+              child: Icon(
+                Icons.image_outlined,
+                size: 40.sp,
+                color: Colors.grey,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    // kemungkinan path file device
+    try {
+      return Image.file(
+        File(url),
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[200],
+            child: Center(
+              child: Icon(
+                Icons.image_outlined,
+                size: 40.sp,
+                color: Colors.grey,
+              ),
+            ),
+          );
+        },
+      );
+    } catch (_) {
+      return Container(
+        color: Colors.grey[200],
+        child: Center(
+          child: Icon(
+            Icons.image_outlined,
+            size: 40.sp,
+            color: Colors.grey,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -134,7 +228,7 @@ class _ProductCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ProductDetailPage(product: product),
+            builder: (context) => UserProductDetailPage(product: product),
           ),
         );
       },
@@ -159,37 +253,9 @@ class _ProductCard extends StatelessWidget {
                 borderRadius: BorderRadius.vertical(
                   top: Radius.circular(12.r),
                 ),
-                child: product.imagePath.isNotEmpty
-                    ? Image.asset(
-                        product.imagePath,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[200],
-                            child: Center(
-                              child: Icon(
-                                Icons.image_outlined,
-                                size: 40.sp,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          );
-                        },
-                      )
-                    : Container(
-                        color: Colors.grey[200],
-                        child: Center(
-                          child: Icon(
-                            Icons.image_outlined,
-                            size: 40.sp,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
+                child: _buildImage(),
               ),
             ),
-
             Expanded(
               flex: 3,
               child: Padding(

@@ -51,7 +51,7 @@ class FavoriteItemCard extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ProductDetailPage(product: product!),
+                builder: (context) => UserProductDetailPage(product: product!),
               ),
             );
           },
@@ -74,9 +74,9 @@ class FavoriteItemCard extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8.r),
-                    child: (product!.imagePath.isNotEmpty)
-                        ? Image.asset(
-                            product!.imagePath,
+                    child: (product!.imageUrl.isNotEmpty)
+                        ? Image.network(
+                            product!.imageUrl,
                             width: 80.w,
                             height: 80.h,
                             fit: BoxFit.cover,

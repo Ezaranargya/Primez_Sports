@@ -88,7 +88,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => ProductDetailPage(product: banner['product']),
+                            builder: (_) => UserProductDetailPage(product: banner['product']),
                           ),
                         );
                       }
@@ -126,31 +126,13 @@ class _BannerCarouselState extends State<BannerCarousel> {
   }
 }
 
-Future<List<Product>> fetchProducts() async {
-  List<Product> products = [];
-  final userSnapshot = await FirebaseFirestore.instance.collection('users').get();
-
-  for (var userDoc in userSnapshot.docs) {
-    final productSnapshot = await userDoc.reference.collection('products').get();
-
-    for (var doc in productSnapshot.docs) {
-      try {
-        final rawData = doc.data();
-        final product = Product.fromFirestore(doc);
-        products.add(product);
-
-        if (product.brand.toLowerCase().contains('mizuno')) {
-          for (int i = 0; i < product.categories.length; i++) {
-          }
-        }
-      } catch (e, stackTrace) {
-      }
-    }
-  }
-
-  final mizunoCount =
-      products.where((p) => p.brand.toLowerCase().contains('mizuno')).length;
-  return products;
+// 🔹 Stream real-time ambil produk dari root collection `products`
+Stream<List<Product>> fetchProductsStream() {
+  return FirebaseFirestore.instance
+      .collection('products')
+      .snapshots()
+      .map((snapshot) =>
+          snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList());
 }
 
 class HomeContentPage extends StatefulWidget {
@@ -164,7 +146,6 @@ class HomeContentPage extends StatefulWidget {
 class _HomeContentPageState extends State<HomeContentPage> {
   String searchQuery = "";
   String selectedCategory = "";
-  List<Product> loadedProducts = [];
 
   final List<Map<String, String>> categories = [
     {"display": "Basketball shoes", "filter": "basketball"},
@@ -172,71 +153,8 @@ class _HomeContentPageState extends State<HomeContentPage> {
     {"display": "Volleyball shoes", "filter": "volleyball"},
   ];
 
-  List<Product> get currentProducts =>
-      loadedProducts.isNotEmpty ? loadedProducts : widget.allProducts;
-
-  List<Product> get trendingProducts {
-    final trending = currentProducts.where((p) {
-      final hasTrending = p.categories.any((c) {
-        final category = c.toLowerCase().trim();
-        return category.contains("trending") ||
-            category.contains("populer") ||
-            category.contains("popular");
-      });
-      if (hasTrending);
-      return hasTrending;
-    }).toList();
-    print('   Total: ${trending.length}');
-    return trending;
-  }
-
-  List<Product> get newProducts {
-    final newProds = currentProducts.where((p) {
-      final isNew = p.categories.any((c) {
-        final category = c.toLowerCase().trim();
-        return category.contains("terbaru") ||
-            category.contains("new") ||
-            category.contains("baru");
-      });
-      if (isNew);
-      return isNew;
-    }).toList();
-    print('   Total: ${newProds.length}');
-    return newProds;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProducts();
-  }
-
-  Future<void> _loadProducts() async {
-    try {
-      final products = await fetchProducts();
-      setState(() => loadedProducts = products);
-    } catch (e, stackTrace) {
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    
-    final List<Map<String, dynamic>> bannerData = [
-      {
-        'image': 'assets/Nike_Giannis_Immortality_4_1.png',
-        'product': currentProducts.length > 2 ? currentProducts[5] : null
-      },
-      {
-        'image': 'assets/Sepak_Bola_PUMA_x_NEYMAR_JR_FUTURE_7_ULTIMATE_FGAG_1.png',
-        'product': currentProducts.length > 3 ? currentProducts[2] : null
-      },
-      {
-        'image': 'assets/Mizuno_Wave_Momentum_3_1.png',
-        'product': currentProducts.length > 1 ? currentProducts[4] : null
-      },
-    ];
-
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: PreferredSize(
@@ -248,50 +166,82 @@ class _HomeContentPageState extends State<HomeContentPage> {
           categories: categories,
           onSearchChanged: (value) => setState(() => searchQuery = value),
           onCategorySelected: (category) {
-            final filteredProducts = currentProducts
-                .where((p) => p.categories
-                    .any((c) => c.toLowerCase().contains(category.toLowerCase())))
-                .toList();
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => CategoryProductsPage(
-                  category: category,
-                  products: filteredProducts,
-                ),
-              ),
-            );
+            // Navigasi ke halaman produk berdasarkan kategori
           },
         ),
       ),
-      body: loadedProducts.isEmpty
-          ? const Center(child: Text('Tidak ada produk'))
-          : Padding(
-              padding: const EdgeInsets.all(16),
-              child: ListView(
-                children: [
-                  BannerCarousel(banners: bannerData),
-                  const SizedBox(height: 20),
-                  if (trendingProducts.isNotEmpty)
-                    TrendingSection(title: "Trending", products: trendingProducts)
-                  else
-                    const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text('⚠️ No trending products found'),
-                    ),
-                  const SizedBox(height: 20),
-                  if (newProducts.isNotEmpty)
-                    NewSection(title: "Terbaru", products: newProducts)
-                  else
-                    const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text('⚠️ No new products found'),
-                    ),
-                  BrandSection(products: currentProducts),
-                  const SizedBox(height: 80),
-                ],
-              ),
+      body: StreamBuilder<List<Product>>(
+        stream: fetchProductsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return const Center(child: Text('Terjadi kesalahan saat memuat produk'));
+          }
+
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('Tidak ada produk'));
+          }
+
+          final products = snapshot.data!;
+          final trendingProducts = products.where((p) {
+            return p.categories.any((c) =>
+                c.toLowerCase().contains("trending") ||
+                c.toLowerCase().contains("popular") ||
+                c.toLowerCase().contains("populer"));
+          }).toList();
+
+          final newProducts = products.where((p) {
+            return p.categories.any((c) =>
+                c.toLowerCase().contains("new") ||
+                c.toLowerCase().contains("baru") ||
+                c.toLowerCase().contains("terbaru"));
+          }).toList();
+
+          final bannerData = [
+            {
+              'image': 'assets/Nike_Giannis_Immortality_4_1.png',
+              'product': products.length > 2 ? products[2] : null,
+            },
+            {
+              'image': 'assets/Sepak_Bola_PUMA_x_NEYMAR_JR_FUTURE_7_ULTIMATE_FGAG_1.png',
+              'product': products.length > 1 ? products[1] : null,
+            },
+            {
+              'image': 'assets/Mizuno_Wave_Momentum_3_1.png',
+              'product': products.isNotEmpty ? products[0] : null,
+            },
+          ];
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: ListView(
+              children: [
+                BannerCarousel(banners: bannerData),
+                const SizedBox(height: 20),
+                if (trendingProducts.isNotEmpty)
+                  TrendingSection(title: "Trending", products: trendingProducts)
+                else
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('⚠️ No trending products found'),
+                  ),
+                const SizedBox(height: 20),
+                if (newProducts.isNotEmpty)
+                  NewSection(title: "Terbaru", products: newProducts)
+                else
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                  ),
+                BrandSection(products: products),
+                const SizedBox(height: 80),
+              ],
             ),
+          );
+        },
+      ),
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
@@ -9,17 +11,17 @@ import 'package:my_app/providers/widgets/favorite_button.dart';
 class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback? onTap;
-  final bool isHorizontal;
+  final bool isCompact;
   final bool showFavoriteButton;
-  final bool isCompact; 
+  final bool isHorizontal;
 
   const ProductCard({
     super.key,
     required this.product,
-    this.isHorizontal = false,
     this.onTap,
-    this.showFavoriteButton = true,
     this.isCompact = false,
+    this.showFavoriteButton = true,
+    this.isHorizontal = false,
   });
 
   @override
@@ -36,24 +38,13 @@ class ProductCard extends StatelessWidget {
                   inactiveColor: Colors.grey.shade400,
                 )
               : null,
-          onTap: onTap ??
-              () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProductDetailPage(product: product),
-                    ),
-                  ),
+          onTap: onTap ?? () => _navigateToDetail(context),
         ),
       );
     }
+
     return GestureDetector(
-      onTap: onTap ??
-          () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProductDetailPage(product: product),
-                ),
-              ),
+      onTap: onTap ?? () => _navigateToDetail(context),
       child: Container(
         width: 160.w,
         decoration: BoxDecoration(
@@ -78,26 +69,7 @@ class ProductCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
-                  child: Image(
-                    image: product.imagePath.startsWith('http')
-                        ? NetworkImage(product.imagePath)
-                        : AssetImage(product.imagePath) as ImageProvider,
-                    height: 120,
-                    width: double.infinity,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      print('❌ Error load gambar: $error');
-                      return Container(
-                        height: 120,
-                        color: Colors.grey.shade200,
-                        child: const Icon(
-                          Icons.broken_image,
-                          size: 80,
-                          color: Colors.grey,
-                        ),
-                      );
-                    },
-                  ),
+                  child: _buildProductImage(product),
                 ),
                 if (showFavoriteButton)
                   Positioned(
@@ -159,89 +131,98 @@ class ProductCard extends StatelessWidget {
       ),
     );
   }
-}
 
-class ProductHorizontalList extends StatelessWidget {
-  final String title;
-  final List<Product> products;
-  final VoidCallback? onSeeAll;
-  final int maxItems;
-  final bool showFavoriteButton;
+  void _navigateToDetail(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UserProductDetailPage(product: product),
+      ),
+    );
+  }
 
-  const ProductHorizontalList({
-    super.key,
-    required this.title,
-    required this.products,
-    this.onSeeAll,
-    this.maxItems = 2,
-    this.showFavoriteButton = true,
-  });
+  /// 🔹 GABUNG buildProductImage di sini
+  Widget _buildProductImage(Product product, {double? width, double? height}) {
+    final double imageHeight = height ?? 120;
 
-  @override
-  Widget build(BuildContext context) {
-    final displayProducts = products.length > maxItems
-        ? products.sublist(0, maxItems)
-        : products;
+    // Base64 image
+    if (product.imageBase64 != null && product.imageBase64!.isNotEmpty) {
+      try {
+        return Image.memory(
+          base64Decode(product.imageBase64!),
+          width: width ?? double.infinity,
+          height: imageHeight,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildPlaceholder(imageHeight),
+        );
+      } catch (e) {
+        print('❌ Error decoding base64: $e');
+      }
+    }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+    // File local
+    if (product.imageUrl.isNotEmpty) {
+      if (product.imageUrl.startsWith('/data')) {
+        return Image.file(
+          File(product.imageUrl),
+          width: width ?? double.infinity,
+          height: imageHeight,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildPlaceholder(imageHeight),
+        );
+      } else if (product.imageUrl.startsWith('assets/')) {
+        return Image.asset(
+          product.imageUrl,
+          width: width ?? double.infinity,
+          height: imageHeight,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildPlaceholder(imageHeight),
+        );
+      } else {
+        // Network image
+        return Image.network(
+          product.imageUrl,
+          width: width ?? double.infinity,
+          height: imageHeight,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return Container(
+              width: width ?? double.infinity,
+              height: imageHeight,
+              color: Colors.grey[200],
+              child: Center(
+                child: CircularProgressIndicator(
+                  value: progress.expectedTotalBytes != null
+                      ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                      : null,
+                  strokeWidth: 2,
                 ),
               ),
-              if (products.length > maxItems || onSeeAll != null)
-                GestureDetector(
-                  onTap: onSeeAll,
-                  child: Text(
-                    "Lihat Semua",
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
+            );
+          },
+          errorBuilder: (_, __, ___) => _buildPlaceholder(imageHeight),
+        );
+      }
+    }
 
-        Padding(
-          padding: EdgeInsets.only(left: 16.w, top: 4.h),
-          child: Container(
-            height: 2.h,
-            width: 60.w,
-            color: AppColors.primary,
-          ),
-        ),
+    // Placeholder
+    return _buildPlaceholder(imageHeight);
+  }
 
-        SizedBox(height: 12.h),
-
-        SizedBox(
-          height: 240.h,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            itemCount: displayProducts.length,
-            separatorBuilder: (_, __) => SizedBox(width: 12.w),
-            itemBuilder: (context, index) {
-              return ProductCard(
-                product: displayProducts[index],
-                showFavoriteButton: showFavoriteButton,
-              );
-            },
-          ),
-        ),
-      ],
+  Widget _buildPlaceholder(double height) {
+    return Container(
+      width: double.infinity,
+      height: height,
+      color: Colors.grey[200],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.image_not_supported, size: 40.sp, color: Colors.grey[400]),
+          SizedBox(height: 4.h),
+          Text('No Image', style: TextStyle(fontSize: 10.sp, color: Colors.grey[500])),
+        ],
+      ),
     );
   }
 }

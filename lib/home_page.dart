@@ -89,7 +89,7 @@ class _HomePageState extends State<HomePage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => AdminProductPage(initialProducts: productObjects),
+              builder: (_) => AdminProductPage(),
             ),
           );
         } else {
@@ -237,7 +237,7 @@ class _HomePageState extends State<HomePage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => ProductDetailPage(product: product)),
+                    MaterialPageRoute(builder: (_) => UserProductDetailPage(product: product)),
                   );
                 },
                 child: SizedBox(
@@ -270,7 +270,7 @@ class _HomePageState extends State<HomePage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => ProductDetailPage(product: product)),
+                    MaterialPageRoute(builder: (_) => UserProductDetailPage(product: product)),
                   );
                 },
                 child: ProductCard(product: product, isHorizontal: true),
@@ -293,7 +293,7 @@ class _HomePageState extends State<HomePage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => ProductDetailPage(product: product)),
+                    MaterialPageRoute(builder: (_) => UserProductDetailPage(product: product)),
                   );
                 },
                 child: ProductCard(product: product, isHorizontal: true),

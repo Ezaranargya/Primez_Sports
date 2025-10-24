@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:my_app/pages/user/home_content_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeHeader extends StatelessWidget {
   final String userName;
@@ -61,18 +61,50 @@ class HomeHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.notifications_none),
-                    color: Colors.black87,
-                    iconSize: 22,
-                    onPressed: () {},
-                  ),
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('notifications')
+                      .where('isRead', isEqualTo: false)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    bool hasUnread = false;
+                    if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                      hasUnread = true;
+                    }
+
+                    return Stack(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.notifications_none),
+                            color: Colors.black87,
+                            iconSize: 22,
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/notifications');
+                            },
+                          ),
+                        ),
+                        if (hasUnread)
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: Container(
+                              width: 10.w,
+                              height: 10.w,
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -81,7 +113,7 @@ class HomeHeader extends StatelessWidget {
           const SizedBox(height: 8),
           Container(
             decoration: const BoxDecoration(color: Color(0xFFE53E3E)),
-            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 2), 
+            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 2),
             child: Row(
               children: List.generate(categories.length, (index) {
                 final category = categories[index];
@@ -91,7 +123,10 @@ class HomeHeader extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () => onCategorySelected(category["filter"]!),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
                       child: Text(
                         category["display"]!,
                         textAlign: TextAlign.center,

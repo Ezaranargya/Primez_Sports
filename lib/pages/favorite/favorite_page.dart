@@ -123,7 +123,7 @@ class _UserFavoritesPageState extends State<UserFavoritesPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ProductDetailPage(product: product),
+                        builder: (_) => UserProductDetailPage(product: product),
                       ),
                     );
                   },
@@ -153,10 +153,9 @@ class _UserFavoritesPageState extends State<UserFavoritesPage> {
                             height: 80.w,
                             color: Colors.white,
                             child: Image(
-                              image: product.imagePath.startsWith('http')
-                                  ? NetworkImage(product.imagePath)
-                                  : AssetImage(product.imagePath)
-                                      as ImageProvider,
+                              image: (product.imageUrl.isNotEmpty && product.imageUrl.startsWith('http'))
+                                  ? NetworkImage(product.imageUrl)
+                                  : (product.imageUrl.isNotEmpty ? AssetImage(product.imageUrl) : const AssetImage('assets/images/placeholder.png')) as ImageProvider,
                               fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) {
                                 return Icon(

@@ -15,7 +15,7 @@ class NewsProductCard extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ProductDetailPage(product: product),
+          builder: (_) => UserProductDetailPage(product: product),
         ),
       ),
       child: Container(
@@ -35,12 +35,7 @@ class NewsProductCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
-              child: Image.asset(
-                product.imagePath, 
-                height: 100.h,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
+              child: _buildProductImage(),
             ),
             Padding(
               padding: EdgeInsets.all(8.w),
@@ -69,6 +64,42 @@ class NewsProductCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductImage() {
+    if (product.imageUrl.isEmpty) return _placeholder();
+
+    final isNetwork = product.imageUrl.startsWith('http');
+
+    return isNetwork
+        ? Image.network(
+            product.imageUrl,
+            height: 100.h,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _placeholder(),
+          )
+        : Image.asset(
+            product.imageUrl,
+            height: 100.h,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _placeholder(),
+          );
+  }
+
+  Widget _placeholder() {
+    return Container(
+      height: 100.h,
+      color: Colors.grey[200],
+      child: Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 40.sp,
+          color: Colors.grey,
         ),
       ),
     );

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
-import 'package:my_app/utils/formatter.dart';
 
 class NewsBannerCard extends StatelessWidget {
   final Product product;
@@ -15,7 +14,7 @@ class NewsBannerCard extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ProductDetailPage(product: product),
+          builder: (_) => UserProductDetailPage(product: product),
         ),
       ),
       child: Container(
@@ -34,12 +33,7 @@ class NewsBannerCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16.r),
           child: Stack(
             children: [
-              Image.network(
-                product.imagePath,
-                height: 180.h,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
+              _buildProductImage(),
               Positioned(
                 bottom: 12.h,
                 left: 12.w,
@@ -67,6 +61,42 @@ class NewsBannerCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductImage() {
+    if (product.imageUrl.isEmpty) return _placeholder();
+
+    final isNetwork = product.imageUrl.startsWith('http');
+
+    return isNetwork
+        ? Image.network(
+            product.imageUrl,
+            height: 180.h,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _placeholder(),
+          )
+        : Image.asset(
+            product.imageUrl,
+            height: 180.h,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _placeholder(),
+          );
+  }
+
+  Widget _placeholder() {
+    return Container(
+      height: 180.h,
+      color: Colors.grey[200],
+      child: Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 50.sp,
+          color: Colors.grey,
         ),
       ),
     );
