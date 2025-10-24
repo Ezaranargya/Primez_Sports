@@ -16,7 +16,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        isCoreLibraryDesugaringEnabled = true   
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -33,7 +33,15 @@ android {
 
     buildTypes {
         release {
+            // Saat ini tidak perlu rilis, jadi matikan minify
+            isMinifyEnabled = false
+            isShrinkResources = false
             signingConfig = signingConfigs.getByName("debug")
+        }
+        debug {
+            isDebuggable = true
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
