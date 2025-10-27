@@ -9,8 +9,8 @@ import 'package:my_app/pages/community/community_page.dart';
 import 'package:my_app/pages/news/news_page.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
 import 'package:my_app/pages/product/widgets/product_image.dart'; // ✅ Import ProductImage
-import 'admin/product_page.dart';
-import 'admin/community_page.dart';
+import 'admin/product/product_page.dart';
+import 'admin/community/community_page.dart';
 import 'admin/news_page.dart';
 import 'admin/profile_page.dart';
 import 'models/product_model.dart';

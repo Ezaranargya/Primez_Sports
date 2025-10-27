@@ -5,7 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/services/product_service.dart';
 import 'package:my_app/theme/app_colors.dart';
-import 'package:my_app/admin/admin_product_add_page.dart';
+import 'package:my_app/admin/product/admin_product_add_page.dart';
 
 class AdminProductPage extends StatefulWidget {
   const AdminProductPage({super.key});

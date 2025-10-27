@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/admin/pages/admin_home_page.dart';
-import 'product_page.dart';
-import 'community_page.dart';
+import 'package:my_app/admin/product/product_page.dart';
+import 'package:my_app/admin/community/community_page.dart';
 import 'news_page.dart';
 import 'profile_page.dart';
 import '../models/product_model.dart'; 
