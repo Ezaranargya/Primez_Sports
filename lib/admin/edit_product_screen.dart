@@ -6,7 +6,6 @@ import 'package:my_app/pages/product/widgets/product_image.dart';
 
 class EditProductScreen extends StatefulWidget {
   final String? productId;
-
   const EditProductScreen({Key? key, this.productId}) : super(key: key);
 
   @override
@@ -14,24 +13,38 @@ class EditProductScreen extends StatefulWidget {
 }
 
 class _EditProductScreenState extends State<EditProductScreen> {
-  String? _imageBase64;
-  bool _imageChanged = false;
+  // =============== STATE & CONTROLLER ===============
   bool _isLoading = false;
   bool _dataReady = false;
+  bool _imageChanged = false;
+
+  String? _imageBase64;
+  String? _selectedKategori;
+  String? _selectedSubKategori;
 
   final _namaController = TextEditingController();
   final _brandController = TextEditingController();
   final _deskripsiController = TextEditingController();
   final _hargaController = TextEditingController();
 
-  String? _selectedCategori;
-  String? _selectedSubCategori;
-
   List<Map<String, dynamic>> _opsiPembelian = [];
 
-  static const _kategoriList = ['Soccer', 'Basketball', 'Running', 'Tennis', 'Other'];
-  static const _subKategoriList = ['Trending', 'New Arrival', 'Sale', 'Featured'];
+  static const _kategoriList = [
+    'Soccer',
+    'Basketball',
+    'Running',
+    'Tennis',
+    'Other'
+  ];
 
+  static const _subKategoriList = [
+    'Trending',
+    'New Arrival',
+    'Sale',
+    'Featured'
+  ];
+
+  // =============== INIT ===============
   @override
   void initState() {
     super.initState();
@@ -55,6 +68,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
+  // =============== LOAD DATA DARI FIRESTORE ===============
   Future<void> _loadProduct() async {
     setState(() => _isLoading = true);
 
@@ -65,51 +79,54 @@ class _EditProductScreenState extends State<EditProductScreen> {
           .get();
 
       if (!doc.exists) throw Exception('Produk tidak ditemukan');
-
       final data = doc.data() as Map<String, dynamic>;
 
-      String? rawKategori = data['kategori']?.toString() ?? data['category']?.toString();
-      String? rawSubKategori = data['subKategori']?.toString() ?? data['subCategory']?.toString();
-
-      if (rawKategori == null && data['categories'] is List) {
-        final categories = data['categories'] as List;
-        if (categories.isNotEmpty) {
-          rawKategori = categories[0]?.toString();
-          if (categories.length > 1) rawSubKategori = categories[1]?.toString();
-        }
-      }
-
-      print('rawKategori: $rawKategori');
-      print('rawSubKategori: $rawSubKategori');
-      print('kategoriList: $_kategoriList');
-      print('subKategoriList: $_subKategoriList');
-
       final hargaValue = data['harga'] ?? data['price'] ?? 0;
-      final hargaText = hargaValue is num ? hargaValue.toInt().toString() : hargaValue.toString();
+      final hargaText = (hargaValue is num)
+          ? hargaValue.toInt().toString()
+          : hargaValue.toString();
 
-      final opsiData = data['opsiPembelian'] ?? data['purchaseOptions'] ?? [];
-      final opsi = opsiData is List ? List<Map<String, dynamic>>.from(opsiData) : <Map<String, dynamic>>[];
+      final kategori = data['kategori'] ??
+          data['category'] ??
+          (data['categories'] is List && data['categories'].isNotEmpty
+              ? data['categories'][0]
+              : null);
+
+      final subKategori = data['subKategori'] ??
+          data['subCategory'] ??
+          (data['categories'] is List && data['categories'].length > 1
+              ? data['categories'][1]
+              : null);
+
+      final opsi = (data['opsiPembelian'] ??
+              data['purchaseOptions'] ??
+              []) as List<dynamic>;
 
       if (!mounted) return;
 
       setState(() {
-        _namaController.text = data['nama']?.toString() ?? data['name']?.toString() ?? '';
+        _namaController.text =
+            data['nama']?.toString() ?? data['name']?.toString() ?? '';
         _brandController.text = data['brand']?.toString() ?? '';
-        _deskripsiController.text = data['deskripsi']?.toString() ?? data['description']?.toString() ?? '';
+        _deskripsiController.text =
+            data['deskripsi']?.toString() ?? data['description']?.toString() ?? '';
         _hargaController.text = hargaText;
 
-        // ✅ Cocokkan kategori/sub kategori dengan list (case insensitive)
-        _selectedCategori = _kategoriList.firstWhere(
-          (cat) => cat.toLowerCase() == (rawKategori ?? '').toLowerCase(),
+        _selectedKategori = _kategoriList.firstWhere(
+          (c) => c.toLowerCase() == (kategori ?? '').toLowerCase(),
           orElse: () => _kategoriList.first,
         );
 
-        _selectedSubCategori = _subKategoriList.firstWhere(
-          (sub) => sub.toLowerCase() == (rawSubKategori ?? '').toLowerCase(),
+        _selectedSubKategori = _subKategoriList.firstWhere(
+          (c) => c.toLowerCase() == (subKategori ?? '').toLowerCase(),
           orElse: () => _subKategoriList.first,
         );
 
-        _opsiPembelian = opsi;
+        _opsiPembelian = opsi.map((e) {
+          if (e is Map<String, dynamic>) return e;
+          return <String, dynamic>{};
+        }).toList();
+
         _imageBase64 = data['imageBase64']?.toString();
         _isLoading = false;
         _dataReady = true;
@@ -121,12 +138,13 @@ class _EditProductScreenState extends State<EditProductScreen> {
           _dataReady = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memuat produk: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Gagal memuat produk: $e')),
         );
       }
     }
   }
 
+  // =============== PICK GAMBAR ===============
   Future<void> _pickImage() async {
     try {
       final base64 = await ImageHelper.pickImageAsBase64();
@@ -134,7 +152,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
       if (base64.length > 900000) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gambar terlalu besar! Maksimal ~900KB')),
+          const SnackBar(content: Text('Gambar terlalu besar! Maksimal 900KB')),
         );
         return;
       }
@@ -150,17 +168,11 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
+  // =============== SIMPAN PRODUK ===============
   Future<void> _saveProduct() async {
     if (_namaController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nama produk harus diisi!')),
-      );
-      return;
-    }
-
-    if (_hargaController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Harga produk harus diisi!')),
+        const SnackBar(content: Text('Nama produk wajib diisi!')),
       );
       return;
     }
@@ -176,34 +188,36 @@ class _EditProductScreenState extends State<EditProductScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final success = await ProductService().saveProduct(
+      final success = await ProductService().saveOrUpdateProduct(
         productId: widget.productId,
-        nama: _namaController.text.trim(),
+        name: _namaController.text.trim(),
         brand: _brandController.text.trim(),
-        deskripsi: _deskripsiController.text.trim(),
-        harga: harga,
-        kategori: _selectedCategori ?? _kategoriList.first,
-        subKategori: _selectedSubCategori ?? _subKategoriList.first,
-        opsiPembelian: _opsiPembelian,
-        imageBase64: _imageChanged ? (_imageBase64?? '') : '',
+        description: _deskripsiController.text.trim(),
+        price: harga,
+        categories: [
+          _selectedKategori ?? _kategoriList.first,
+          _selectedSubKategori ?? _subKategoriList.first
+        ],
+        purchaseOptions: _opsiPembelian,
+        imageBase64: _imageBase64 ?? '',
       );
 
-      if (mounted) {
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✅ Produk berhasil disimpan!'), backgroundColor: Colors.green),
-          );
-          Navigator.pop(context, true);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('❌ Gagal menyimpan produk'), backgroundColor: Colors.red),
-          );
-        }
-      }
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success
+              ? '✅ Produk berhasil disimpan!'
+              : '❌ Gagal menyimpan produk'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+
+      if (success) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error saat menyimpan: $e')),
         );
       }
     } finally {
@@ -211,12 +225,12 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
+  // =============== UI ===============
   @override
   Widget build(BuildContext context) {
     if (!_dataReady) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Loading...')),
-        body: const Center(child: CircularProgressIndicator()),
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -238,19 +252,20 @@ class _EditProductScreenState extends State<EditProductScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // ======== GAMBAR ========
                   GestureDetector(
                     onTap: _pickImage,
                     child: Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
+                        border: Border.all(color: Colors.grey.shade400),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: ProductImage(
                           imageBase64: _imageBase64,
-                          width: double.infinity,
                           height: 200,
+                          width: double.infinity,
                         ),
                       ),
                     ),
@@ -262,78 +277,51 @@ class _EditProductScreenState extends State<EditProductScreen> {
                     label: const Text('Pilih Gambar'),
                   ),
                   const SizedBox(height: 24),
-                  TextField(
-                    controller: _namaController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nama Produk *',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.shopping_bag),
-                    ),
-                  ),
+
+                  // ======== INPUT ========
+                  _buildTextField(
+                      _namaController, 'Nama Produk *', Icons.shopping_bag),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _brandController,
-                    decoration: const InputDecoration(
-                      labelText: 'Brand',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.branding_watermark),
-                    ),
-                  ),
+                  _buildTextField(
+                      _brandController, 'Brand', Icons.branding_watermark),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _deskripsiController,
-                    decoration: const InputDecoration(
-                      labelText: 'Deskripsi Produk',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.description),
-                      alignLabelWithHint: true,
-                    ),
-                    maxLines: 4,
-                  ),
+                  _buildTextField(_deskripsiController, 'Deskripsi Produk',
+                      Icons.description,
+                      ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _hargaController,
-                    decoration: const InputDecoration(
-                      labelText: 'Harga *',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.attach_money),
-                      prefixText: 'Rp ',
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
+                  _buildTextField(_hargaController, 'Harga *',
+                      Icons.attach_money, TextInputType.number),
                   const SizedBox(height: 16),
 
-                  // ✅ Dropdown kategori
+                  // ======== DROPDOWN ========
                   _buildDropdownField(
                     label: 'Kategori',
-                    selectedValue: _selectedCategori,
+                    selectedValue: _selectedKategori,
                     items: _kategoriList,
                     icon: Icons.category,
-                    onChanged: (value) => setState(() => _selectedCategori = value),
+                    onChanged: (v) => setState(() => _selectedKategori = v),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildDropdownField(
+                    label: 'Sub Kategori',
+                    selectedValue: _selectedSubKategori,
+                    items: _subKategoriList,
+                    icon: Icons.layers,
+                    onChanged: (v) => setState(() => _selectedSubKategori = v),
                   ),
                   const SizedBox(height: 16),
 
-                  // ✅ Dropdown sub kategori
-                  _buildDropdownField(
-                    label: 'Sub Kategori',
-                    selectedValue: _selectedSubCategori,
-                    items: _subKategoriList,
-                    icon: Icons.layers,
-                    onChanged: (value) => setState(() => _selectedSubCategori = value),
-                  ),
-
-                  const SizedBox(height: 24),
-                  const Text('* Wajib diisi', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  const Text('* Wajib diisi',
+                      style: TextStyle(color: Colors.grey)),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _saveProduct,
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.all(16),
-                      backgroundColor: Colors.blue,
-                    ),
+                        backgroundColor: Colors.blue, padding: const EdgeInsets.all(16)),
                     child: const Text(
                       'SIMPAN PRODUK',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),
                 ],
@@ -342,7 +330,21 @@ class _EditProductScreenState extends State<EditProductScreen> {
     );
   }
 
-  // ✅ versi aman dari DropdownButton
+  // ======== REUSABLE WIDGET ========
+  Widget _buildTextField(TextEditingController controller, String label,
+      IconData icon, [TextInputType? type, int maxLines = 1]) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: const OutlineInputBorder(),
+      ),
+      maxLines: maxLines,
+      keyboardType: type,
+    );
+  }
+
   Widget _buildDropdownField({
     required String label,
     required String? selectedValue,
@@ -357,22 +359,17 @@ class _EditProductScreenState extends State<EditProductScreen> {
         labelText: label,
         border: const OutlineInputBorder(),
         prefixIcon: Icon(icon),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: validValue,
-          isDense: true,
           isExpanded: true,
           hint: Text('Pilih $label'),
-          items: items.map((item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) onChanged(value);
+          items: items
+              .map((item) => DropdownMenuItem(value: item, child: Text(item, maxLines: 2)))
+              .toList(),
+          onChanged: (v) {
+            if (v != null) onChanged(v);
           },
         ),
       ),

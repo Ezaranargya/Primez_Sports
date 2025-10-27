@@ -4,6 +4,7 @@ import 'package:my_app/models/product_model.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/utils/formatter.dart';
+import 'package:my_app/pages/product/widgets/product_image.dart';
 
 class TrendingSection extends StatelessWidget {
   final String title;
@@ -22,20 +23,25 @@ class TrendingSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // 🔹 Section Title
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
           child: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 20,
+              fontSize: 20.sp,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12.h),
+
+        // 🔹 Product List Container
         Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(12.w),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12.r),
@@ -47,21 +53,25 @@ class TrendingSection extends StatelessWidget {
               ),
             ],
           ),
-          padding: const EdgeInsets.all(12),
-          child: SizedBox(
-            height: 220,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: products.length,
-              separatorBuilder: (context, index) => Container(
-                margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 20.h),
-                width: 1.5,
-                color: Colors.grey.shade400,
-              ),
-              itemBuilder: (context, index) {
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(products.length, (index) {
                 final product = products[index];
-                return ProductCard(product: product);
-              },
+                return Row(
+                  children: [
+                    _TrendingProductCard(product: product),
+
+                    if (index != products.length - 1)
+                      Container(
+                        height: 120.h,
+                        width: 1.2.w,
+                        margin: EdgeInsets.symmetric(horizontal: 10.w),
+                        color: Colors.grey.shade300,
+                      ),
+                  ],
+                );
+              }),
             ),
           ),
         ),
@@ -70,97 +80,65 @@ class TrendingSection extends StatelessWidget {
   }
 }
 
-class ProductCard extends StatelessWidget {
+class _TrendingProductCard extends StatelessWidget {
   final Product product;
 
-  const ProductCard({super.key, required this.product});
+  const _TrendingProductCard({required this.product});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => UserProductDetailPage(product: product)),
+        MaterialPageRoute(
+          builder: (_) => UserProductDetailPage(product: product),
+        ),
       ),
       child: Container(
-        width: 150,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        width: 130.w, // 🔹 Lebar kartu lebih ramping
+        color: Colors.white,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildImageWithBadge(),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                Formatter.formatPrice(product.price),
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            // 🔹 Product Image (diperkecil)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8.r),
+              child: ProductImage(
+                imageBase64: product.imageBase64,
+                imageUrl: product.imageUrl,
+                width: 130.w,
+                height: 80.h, // 🔹 DULUNYA 100.h → Sekarang lebih kecil
+                fit: BoxFit.cover,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 8.0),
-              child: Text(
-                product.name,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+            SizedBox(height: 6.h),
+
+            // 🔹 Price
+            Text(
+              Formatter.formatPrice(product.price),
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
               ),
+            ),
+            SizedBox(height: 3.h),
+
+            // 🔹 Product Name
+            Text(
+              product.name,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+                fontFamily: 'Poppins',
+                height: 1.2,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImageWithBadge() {
-    final bool isNetwork = product.imageUrl.startsWith('http');
-
-    return ClipRRect(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
-      child: product.imageUrl.isNotEmpty
-      ? (isNetwork
-      ? Image.network(
-        product.imageUrl,
-        height: 120.h,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return _placeholderImage();
-        },
-      )
-      :Image.asset(
-        product.imageUrl,
-        height: 120.h,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return _placeholderImage();
-        },
-      ))
-      :_placeholderImage(),
-    );
-  }
-
-  Widget _placeholderImage() {
-    return Container(
-      height: 120,
-      color: Colors.grey[200],
-      child: const Center(
-        child: Icon(
-          Icons.image,
-          size: 60,
-          color: Colors.grey,
         ),
       ),
     );

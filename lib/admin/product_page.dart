@@ -135,6 +135,7 @@ class _AdminProductPageState extends State<AdminProductPage> {
                   itemBuilder: (context, index) {
                     final p = products[index];
                     return Card(
+                      color: AppColors.backgroundColor,
                       elevation: 3,
                       margin: EdgeInsets.symmetric(vertical: 6.h),
                       shape: RoundedRectangleBorder(

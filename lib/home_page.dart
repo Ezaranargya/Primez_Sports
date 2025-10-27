@@ -8,6 +8,7 @@ import 'package:my_app/pages/product/product_page.dart';
 import 'package:my_app/pages/community/community_page.dart';
 import 'package:my_app/pages/news/news_page.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
+import 'package:my_app/pages/product/widgets/product_image.dart'; // ✅ Import ProductImage
 import 'admin/product_page.dart';
 import 'admin/community_page.dart';
 import 'admin/news_page.dart';
@@ -24,7 +25,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<Product> productObjects = []; 
+  List<Product> productObjects = [];
   String searchQuery = "";
   String selectedBrands = "";
   int selectedIndex = 0;
@@ -36,19 +37,40 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _getUserRole();
-    _getProductsFromFirestore(); 
+    _getProductsFromFirestore();
   }
 
+  /// ============================================================
+  /// 🔹 GET PRODUCTS FROM FIRESTORE
+  /// ============================================================
   Future<void> _getProductsFromFirestore() async {
     try {
+      print('📦 Fetching products from Firestore...');
       final snapshot = await FirebaseFirestore.instance.collection('products').get();
-      final products = snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+      
+      final products = snapshot.docs.map((doc) {
+        final product = Product.fromFirestore(doc);
+        
+        // Debug logging
+        if (product.imageBase64 != null && product.imageBase64!.isNotEmpty) {
+          print('✅ Product ${product.id} has imageBase64 (${product.imageBase64!.length} chars)');
+        } else if (product.imageUrl.isNotEmpty) {
+          print('ℹ️ Product ${product.id} has imageUrl: ${product.imageUrl}');
+        } else {
+          print('⚠️ Product ${product.id} has no image');
+        }
+        
+        return product;
+      }).toList();
+
       setState(() {
         productObjects = products;
         isLoadingProducts = false;
       });
+      
+      print('✅ Loaded ${products.length} products');
     } catch (e) {
-      print("Error ambil produk: $e");
+      print("❌ Error fetching products: $e");
       setState(() => isLoadingProducts = false);
     }
   }
@@ -86,17 +108,9 @@ class _HomePageState extends State<HomePage> {
     switch (index) {
       case 1:
         if (userRole == 'admin') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AdminProductPage(),
-            ),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (_) => AdminProductPage()));
         } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const UserProductPage()),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const UserProductPage()));
         }
         break;
       case 2:

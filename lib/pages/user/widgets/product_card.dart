@@ -1,124 +1,97 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
-import 'package:my_app/utils/formatter.dart';
 import 'package:my_app/theme/app_colors.dart';
-import 'package:my_app/providers/widgets/favorite_button.dart';
+import 'package:my_app/utils/formatter.dart';
+import 'package:my_app/pages/product/widgets/product_image.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
-  final VoidCallback? onTap;
-  final bool isCompact;
-  final bool showFavoriteButton;
   final bool isHorizontal;
+  final double? width;
+  final double? imageHeight;
 
   const ProductCard({
     super.key,
     required this.product,
-    this.onTap,
-    this.isCompact = false,
-    this.showFavoriteButton = true,
     this.isHorizontal = false,
+    this.width,
+    this.imageHeight,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (isCompact) {
-      return Card(
-        child: ListTile(
-          title: Text(product.name),
-          trailing: showFavoriteButton
-              ? FavoriteButton(
-                  product: product,
-                  size: 24,
-                  activeColor: Colors.red,
-                  inactiveColor: Colors.grey.shade400,
-                )
-              : null,
-          onTap: onTap ?? () => _navigateToDetail(context),
-        ),
-      );
-    }
+    // Determine dimensions based on layout type
+    final cardWidth = width ?? (isHorizontal ? 180.w : 150.w);
+    final imgHeight = imageHeight ?? (isHorizontal ? 140.h : 120.h);
 
     return GestureDetector(
-      onTap: onTap ?? () => _navigateToDetail(context),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => UserProductDetailPage(product: product),
+        ),
+      ),
       child: Container(
-        width: 160.w,
+        width: cardWidth,
+        margin: isHorizontal 
+            ? EdgeInsets.only(right: 12.w) 
+            : EdgeInsets.zero,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
-          border: Border.all(
-            color: Colors.grey.shade200,
-            width: 1,
-          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
-                  child: _buildProductImage(product),
-                ),
-                if (showFavoriteButton)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: FavoriteButton(
-                        product: product,
-                        size: 20,
-                        activeColor: AppColors.primary,
-                        inactiveColor: Colors.grey.shade400,
-                      ),
-                    ),
-                  ),
-              ],
+            // ✅ Product Image (Base64 / URL)
+            ProductImage(
+              imageBase64: product.imageBase64,
+              imageUrl: product.imageUrl,
+              width: double.infinity,
+              height: imgHeight,
+              fit: BoxFit.cover,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(12.r),
+              ),
             ),
+
+            // Product Info
             Padding(
-              padding: EdgeInsets.all(10.w),
+              padding: EdgeInsets.all(isHorizontal ? 12.w : 8.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Price
                   Text(
                     Formatter.formatPrice(product.price),
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: isHorizontal ? 16.sp : 14.sp,
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: 4.h),
+
+                  // Name
                   Text(
                     product.name,
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: isHorizontal ? 14.sp : 13.sp,
                       color: Colors.black87,
-                      height: 1.3,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Poppins',
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -131,97 +104,192 @@ class ProductCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  void _navigateToDetail(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => UserProductDetailPage(product: product),
+/// ============================================================
+/// 🔹 COMPACT PRODUCT CARD (untuk grid view)
+/// ============================================================
+class CompactProductCard extends StatelessWidget {
+  final Product product;
+
+  const CompactProductCard({
+    super.key,
+    required this.product,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => UserProductDetailPage(product: product),
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ✅ Product Image
+            Expanded(
+              flex: 6,
+              child: ProductImage(
+                imageBase64: product.imageBase64,
+                imageUrl: product.imageUrl,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(12.r),
+                ),
+              ),
+            ),
+
+            // Product Info
+            Expanded(
+              flex: 4,
+              child: Padding(
+                padding: EdgeInsets.all(8.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      Formatter.formatPrice(product.price),
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Poppins',
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
 
-  /// 🔹 GABUNG buildProductImage di sini
-  Widget _buildProductImage(Product product, {double? width, double? height}) {
-    final double imageHeight = height ?? 120;
+/// ============================================================
+/// 🔹 LARGE PRODUCT CARD (untuk featured products)
+/// ============================================================
+class LargeProductCard extends StatelessWidget {
+  final Product product;
 
-    // Base64 image
-    if (product.imageBase64 != null && product.imageBase64!.isNotEmpty) {
-      try {
-        return Image.memory(
-          base64Decode(product.imageBase64!),
-          width: width ?? double.infinity,
-          height: imageHeight,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildPlaceholder(imageHeight),
-        );
-      } catch (e) {
-        print('❌ Error decoding base64: $e');
-      }
-    }
+  const LargeProductCard({
+    super.key,
+    required this.product,
+  });
 
-    // File local
-    if (product.imageUrl.isNotEmpty) {
-      if (product.imageUrl.startsWith('/data')) {
-        return Image.file(
-          File(product.imageUrl),
-          width: width ?? double.infinity,
-          height: imageHeight,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildPlaceholder(imageHeight),
-        );
-      } else if (product.imageUrl.startsWith('assets/')) {
-        return Image.asset(
-          product.imageUrl,
-          width: width ?? double.infinity,
-          height: imageHeight,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildPlaceholder(imageHeight),
-        );
-      } else {
-        // Network image
-        return Image.network(
-          product.imageUrl,
-          width: width ?? double.infinity,
-          height: imageHeight,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return Container(
-              width: width ?? double.infinity,
-              height: imageHeight,
-              color: Colors.grey[200],
-              child: Center(
-                child: CircularProgressIndicator(
-                  value: progress.expectedTotalBytes != null
-                      ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
-                      : null,
-                  strokeWidth: 2,
-                ),
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => UserProductDetailPage(product: product),
+        ),
+      ),
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ✅ Product Image
+            ProductImage(
+              imageBase64: product.imageBase64,
+              imageUrl: product.imageUrl,
+              width: double.infinity,
+              height: 200.h,
+              fit: BoxFit.cover,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(16.r),
               ),
-            );
-          },
-          errorBuilder: (_, __, ___) => _buildPlaceholder(imageHeight),
-        );
-      }
-    }
+            ),
 
-    // Placeholder
-    return _buildPlaceholder(imageHeight);
-  }
-
-  Widget _buildPlaceholder(double height) {
-    return Container(
-      width: double.infinity,
-      height: height,
-      color: Colors.grey[200],
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.image_not_supported, size: 40.sp, color: Colors.grey[400]),
-          SizedBox(height: 4.h),
-          Text('No Image', style: TextStyle(fontSize: 10.sp, color: Colors.grey[500])),
-        ],
+            // Product Info
+            Padding(
+              padding: EdgeInsets.all(16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (product.brand.isNotEmpty) ...[
+                    Text(
+                      product.brand,
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                  ],
+                  Text(
+                    product.name,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    Formatter.formatPrice(product.price),
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

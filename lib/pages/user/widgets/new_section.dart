@@ -4,6 +4,7 @@ import 'package:my_app/models/product_model.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/utils/formatter.dart';
+import 'package:my_app/pages/product/widgets/product_image.dart';
 
 class NewSection extends StatelessWidget {
   final String title;
@@ -49,15 +50,11 @@ class NewSection extends StatelessWidget {
           ),
           padding: const EdgeInsets.all(12),
           child: SizedBox(
-            height: 210,
+            height: 230.h, // ✅ Increased height
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: products.length,
-              separatorBuilder: (context, index) => Container(
-                margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 20.h),
-                width: 1.2,
-                color: Colors.grey.shade300,
-              ),
+              separatorBuilder: (context, index) => SizedBox(width: 12.w),
               itemBuilder: (context, index) {
                 final product = products[index];
                 return _NewProductCard(product: product);
@@ -70,6 +67,9 @@ class NewSection extends StatelessWidget {
   }
 }
 
+/// ============================================================
+/// 🔹 NEW PRODUCT CARD (Fixed overflow)
+/// ============================================================
 class _NewProductCard extends StatelessWidget {
   final Product product;
 
@@ -85,94 +85,71 @@ class _NewProductCard extends StatelessWidget {
         ),
       ),
       child: Container(
-        width: 140,
+        width: 150.w, // ✅ Increased width
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color: Colors.grey.shade200,
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // ✅ Prevent overflow
           children: [
-            _buildImage(),
-            const SizedBox(height: 6),
-            _buildPrice(),
-            const SizedBox(height: 2),
-            _buildName(),
+            // ✅ Product Image
+            ProductImage(
+              imageBase64: product.imageBase64,
+              imageUrl: product.imageUrl,
+              width: double.infinity,
+              height: 130.h, // ✅ Fixed height
+              fit: BoxFit.cover,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(12.r),
+              ),
+            ),
+
+            // ✅ Product Info
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(10.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Product Name
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Poppins',
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+
+                    // Price
+                    Text(
+                      Formatter.formatPrice(product.price),
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildImage() {
-  final bool isNetworkImage = product.imageUrl.startsWith('http');
-
-  return ClipRRect(
-    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-    child: product.imageUrl.isNotEmpty
-        ? (isNetworkImage
-            ? Image.network(
-                product.imageUrl,
-                height: 110,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    _placeholderImage(),
-              )
-            : Image.asset(
-                product.imageUrl,
-                height: 110,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    _placeholderImage(),
-              ))
-        : _placeholderImage(),
-  );
-}
-
-
-  Widget _placeholderImage() {
-    return Container(
-      height: 110,
-      color: Colors.grey[200],
-      child: const Center(
-        child: Icon(
-          Icons.image,
-          size: 50,
-          color: Colors.grey,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPrice() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: Text(
-        Formatter.formatPrice(product.price),
-        style: const TextStyle(
-          fontSize: 13,
-          color: AppColors.primary,
-          fontWeight: FontWeight.bold,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-
-  Widget _buildName() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 4.0),
-      child: Text(
-        product.name,
-        style: const TextStyle(
-          fontSize: 13,
-          color: Colors.black87,
-          fontWeight: FontWeight.w600,
-        ),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }

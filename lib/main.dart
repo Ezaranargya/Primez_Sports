@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:google_fonts/google_fonts.dart'; // ✅ Tambahkan untuk Inter font
 
 import 'firebase_options.dart';
 import 'package:my_app/providers/favorite_provider.dart';
@@ -21,6 +22,7 @@ import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/pages/user/home_content_page.dart';
 import 'package:my_app/home_page.dart';
 import 'package:my_app/admin/pages/admin_home_page.dart';
+import 'package:my_app/pages/encode.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -71,16 +73,45 @@ class PrimezSportsApp extends StatelessWidget {
             Locale('en', 'US'),
           ],
           locale: const Locale('id', 'ID'),
+
+          // ✅ Theme yang sudah digabung: Inter untuk deskripsi, Poppins untuk judul
           theme: ThemeData(
             primaryColor: AppColors.primary,
             scaffoldBackgroundColor: Colors.white,
-            fontFamily: 'Poppins',
-            textTheme: Typography.englishLike2018.apply(
-              fontSizeFactor: 1.sp,
+
+            // Gunakan kombinasi Inter + Poppins
+            textTheme: GoogleFonts.interTextTheme(
+              Theme.of(context).textTheme,
+            ).copyWith(
+              // Deskripsi / isi teks → Inter
+              bodyMedium: GoogleFonts.inter(
+                fontSize: 14,
+                height: 1.4,
+                letterSpacing: 0,
+                color: Colors.black87,
+              ),
+
+              // Judul besar → Poppins (lokal font)
+              titleLarge: const TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                color: Colors.black,
+              ),
+
+              // Subjudul / Header kecil → Poppins (SemiBold)
+              headlineSmall: const TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: Colors.black,
+              ),
             ),
           ),
+
           // 👇 Halaman pertama saat aplikasi dibuka
           home: const SplashToAuthWrapper(),
+
           routes: {
             '/auth': (context) => const AuthWrapper(),
             '/login': (context) => const LoginPage(),
@@ -89,6 +120,7 @@ class PrimezSportsApp extends StatelessWidget {
             '/test': (context) => const TestLauncherPage(),
             '/favorite': (context) => const UserFavoritesPage(),
             '/notifications': (context) => const NotificationsPage(),
+            '/encode': (context) => const EncodecodeExample(),
           },
         );
       },
@@ -148,7 +180,6 @@ class AuthWrapper extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        // Jika user sudah login
         if (snapshot.hasData) {
           final user = snapshot.data!;
           Future.microtask(() {
@@ -171,7 +202,7 @@ class AuthWrapper extends StatelessWidget {
 
               // 🔥 Arahkan berdasarkan role
               if (role == 'admin') {
-                return const AdminHomePage(); // Halaman admin yang CRUD ke Firebase
+                return const AdminHomePage(); // Halaman admin
               } else {
                 return const UserHomePage(); // Halaman user biasa
               }

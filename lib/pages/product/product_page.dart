@@ -4,7 +4,7 @@ import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/services/product_service.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
-import 'package:my_app/pages/user/widgets/product_card.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class UserProductPage extends StatelessWidget {
   const UserProductPage({super.key});
@@ -19,10 +19,10 @@ class UserProductPage extends StatelessWidget {
           appBar: AppBar(
             title: Text(
               "Produk",
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 18.sp,
-                fontFamily: "Poppins",
                 fontWeight: FontWeight.w500,
+                color: Colors.white,
               ),
             ),
             backgroundColor: AppColors.primary,
@@ -31,88 +31,16 @@ class UserProductPage extends StatelessWidget {
             centerTitle: true,
           ),
           body: StreamBuilder<List<Product>>(
-            // ✅ FIXED: Gunakan ProductService untuk consistency
             stream: ProductService().getAllProducts(),
             builder: (context, snapshot) {
-              print('📊 UserProductPage - State: ${snapshot.connectionState}');
-              print('📊 Has Data: ${snapshot.hasData}, Length: ${snapshot.data?.length ?? 0}');
+              if (snapshot.hasError) return _buildErrorState(snapshot.error.toString());
+              if (snapshot.connectionState == ConnectionState.waiting) return _buildLoadingState();
+              if (!snapshot.hasData || snapshot.data!.isEmpty) return _buildEmptyState();
 
-              // Error handling
-              if (snapshot.hasError) {
-                print('❌ Error: ${snapshot.error}');
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline, size: 64.sp, color: Colors.red),
-                      SizedBox(height: 16.h),
-                      Text(
-                        "Terjadi kesalahan",
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontFamily: "Poppins",
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        "${snapshot.error}",
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: Colors.grey,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              // Loading state
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              // Empty state
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.shopping_bag_outlined,
-                          size: 80.sp, color: Colors.grey.shade400),
-                      SizedBox(height: 16.h),
-                      Text(
-                        "Belum ada produk",
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontFamily: "Poppins",
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        "Produk akan muncul di sini",
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontFamily: "Poppins",
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              // ✅ Data berhasil dimuat
               final products = snapshot.data!;
-              print('✅ Displaying ${products.length} products');
 
-              // Display products in grid
               return RefreshIndicator(
                 onRefresh: () async {
-                  // Trigger rebuild
                   await Future.delayed(const Duration(milliseconds: 500));
                 },
                 child: GridView.builder(
@@ -121,22 +49,12 @@ class UserProductPage extends StatelessWidget {
                     crossAxisCount: 2,
                     crossAxisSpacing: 12.w,
                     mainAxisSpacing: 12.h,
-                    childAspectRatio: 0.65,
+                    childAspectRatio: 0.7,
                   ),
                   itemCount: products.length,
                   itemBuilder: (context, index) {
-                    final p = products[index];
-                    return ProductCard(
-                      product: p,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => UserProductDetailPage(product: p),
-                          ),
-                        );
-                      },
-                    );
+                    final product = products[index];
+                    return _buildProductCard(product);
                   },
                 ),
               );
@@ -144,6 +62,148 @@ class UserProductPage extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  /// ============================================================
+  /// 🔹 PRODUCT CARD
+  /// ============================================================
+  Widget _buildProductCard(Product product) {
+    return GestureDetector(
+      onTap: () {
+        // Bisa langsung navigasi ke detail
+      },
+      child: Card(
+        child: Padding(
+          padding: EdgeInsets.all(12.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Judul produk → Poppins
+              Text(
+                product.name,
+                style: GoogleFonts.poppins(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 4.h),
+              // Deskripsi produk → Inter
+              Text(
+                product.description,
+                style: GoogleFonts.inter(
+                  fontSize: 14.sp,
+                  height: 1.3,
+                  letterSpacing: 0,
+                  color: Colors.black87,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(color: AppColors.primary),
+          SizedBox(height: 16.h),
+          Text(
+            "Memuat produk...",
+            style: GoogleFonts.poppins(
+              fontSize: 14.sp,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String message) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(32.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 80.sp, color: Colors.red.shade400),
+            SizedBox(height: 24.h),
+            Text(
+              "Terjadi Kesalahan",
+              style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              message,
+              style: GoogleFonts.poppins(
+                fontSize: 14.sp,
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 24.h),
+            ElevatedButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.refresh),
+              label: const Text('Coba Lagi'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(32.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.shopping_bag_outlined, size: 100.sp, color: Colors.grey.shade300),
+            SizedBox(height: 24.h),
+            Text(
+              "Belum Ada Produk",
+              style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              "Produk akan muncul di sini\nsetelah ditambahkan oleh admin",
+              style: GoogleFonts.inter(
+                fontSize: 14.sp,
+                height: 1.5,
+                letterSpacing: 0,
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
