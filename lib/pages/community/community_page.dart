@@ -14,23 +14,61 @@ class UserCommunityPage extends StatefulWidget {
 }
 
 class _UserCommunityPageState extends State<UserCommunityPage> {
-  final List<Map<String, String>> communities = [
-    {"name": "Kumpulan Sepatu Brand Nike Official", "brand": "Nike"},
-    {"name": "Kumpulan Sepatu Brand Jordan Official", "brand": "Jordan"},
-    {"name": "Kumpulan Sepatu Brand Adidas Official", "brand": "Adidas"},
-    {"name": "Kumpulan Sepatu Brand Under Armour Official", "brand": "Under Armour"},
-    {"name": "Kumpulan Sepatu Brand Puma Official", "brand": "Puma"},
-    {"name": "Kumpulan Sepatu Brand Mizuno Official", "brand": "Mizuno"},
+  final List<Map<String, dynamic>> communities = [
+    {
+      "name": "Kumpulan Sepatu Brand Nike Official",
+      "brand": "Nike",
+      "logo": "assets/logo_nike.png"
+    },
+    {
+      "name": "Kumpulan Sepatu Brand Jordan Official",
+      "brand": "Jordan",
+      "logo": "assets/logo_jordan.png"
+    },
+    {
+      "name": "Kumpulan Sepatu Brand Adidas Official",
+      "brand": "Adidas",
+      "logo": "assets/logo_adidas.png"
+    },
+    {
+      "name": "Kumpulan Sepatu Brand Under Armour Official",
+      "brand": "Under Armour",
+      "logo": "assets/logo_under_armour.png"
+    },
+    {
+      "name": "Kumpulan Sepatu Brand Puma Official",
+      "brand": "Puma",
+      "logo": "assets/logo_puma.png"
+    },
+    {
+      "name": "Kumpulan Sepatu Brand Mizuno Official",
+      "brand": "Mizuno",
+      "logo": "assets/logo_mizuno.png"
+    },
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(50.h),
-        child: const CommunityHeader(title: "Komunitas"),
+
+      /// 🔴 Header Merah (judul Komunitas)
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        title: Text(
+          "Komunitas",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 3,
+        shadowColor: Colors.black.withOpacity(0.25),
       ),
+
+      /// 🔘 Body List Komunitas
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         child: ListView(
@@ -43,8 +81,10 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          CommunityChatPage(brand: community["brand"]!),
+                      builder: (_) => CommunityChatPage(
+                        brand: community["brand"]!,
+                        logoPath: community["logo"]!,
+                      ),
                     ),
                   );
                 },

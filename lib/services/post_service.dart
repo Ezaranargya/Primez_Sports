@@ -1,7 +1,7 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 /// Model for Community Post
 class CommunityPost {
@@ -10,7 +10,7 @@ class CommunityPost {
   final String title;
   final String content;
   final String description;
-  final String imageUrl;
+  final String imageBase64; // Changed from imageUrl to imageBase64
   final List<PurchaseLink> links;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -21,7 +21,7 @@ class CommunityPost {
     required this.title,
     this.content = '',
     this.description = '',
-    this.imageUrl = '',
+    this.imageBase64 = '', // Changed from imageUrl
     this.links = const [],
     this.createdAt,
     this.updatedAt,
@@ -39,7 +39,7 @@ class CommunityPost {
       title: data['title']?.toString() ?? '',
       content: data['content']?.toString() ?? '',
       description: data['description']?.toString() ?? '',
-      imageUrl: data['imageUrl']?.toString() ?? '',
+      imageBase64: data['imageBase64']?.toString() ?? '', // Changed from imageUrl
       links: links,
       createdAt: _parseTimestamp(data['createdAt']),
       updatedAt: _parseTimestamp(data['updatedAt']),
@@ -52,7 +52,7 @@ class CommunityPost {
       'title': title,
       'content': content,
       'description': description,
-      'imageUrl': imageUrl,
+      'imageBase64': imageBase64, // Changed from imageUrl
       'links': links.map((e) => e.toMap()).toList(),
     };
   }
@@ -101,16 +101,13 @@ class PurchaseLink {
 /// Service for managing community posts
 class PostService {
   final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
   final FirebaseAuth _auth;
   final String _collection = 'posts';
 
   PostService({
     FirebaseFirestore? firestore,
-    FirebaseStorage? storage,
     FirebaseAuth? auth,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storage = storage ?? FirebaseStorage.instance,
         _auth = auth ?? FirebaseAuth.instance;
 
   CollectionReference<Map<String, dynamic>> get _postRef =>
@@ -132,6 +129,40 @@ class PostService {
   }
 
   // ============================================================
+  // 🔹 CONVERT IMAGE FILE TO BASE64
+  // ============================================================
+  Future<String> imageFileToBase64(File imageFile) async {
+    try {
+      print('🔄 Converting image to base64...');
+      final bytes = await imageFile.readAsBytes();
+      final base64String = base64Encode(bytes);
+      print('✅ Image converted to base64 (${base64String.length} chars)');
+      return base64String;
+    } catch (e) {
+      print('❌ Error converting image to base64: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================================
+  // 🔹 CONVERT BASE64 TO IMAGE FILE
+  // ============================================================
+  Future<File> base64ToImageFile(String base64String, String fileName) async {
+    try {
+      print('🔄 Converting base64 to image file...');
+      final bytes = base64Decode(base64String);
+      final tempDir = Directory.systemTemp;
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      print('✅ Base64 converted to file: ${file.path}');
+      return file;
+    } catch (e) {
+      print('❌ Error converting base64 to file: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================================
   // 🔹 CREATE POST
   // ============================================================
   Future<String> createPost({
@@ -139,7 +170,7 @@ class PostService {
     required String title,
     String? content,
     String? description,
-    String? imageUrl,
+    String? imageBase64, // Changed from imageUrl
     List<Map<String, dynamic>>? links,
   }) async {
     try {
@@ -158,7 +189,7 @@ class PostService {
         'title': title.trim(),
         'content': content?.trim() ?? '',
         'description': description?.trim() ?? '',
-        'imageUrl': imageUrl ?? '',
+        'imageBase64': imageBase64 ?? '', // Changed from imageUrl
         'links': links ?? [],
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -175,6 +206,32 @@ class PostService {
   }
 
   // ============================================================
+  // 🔹 CREATE POST WITH IMAGE FILE
+  // ============================================================
+  Future<String> createPostWithImageFile({
+    required String brand,
+    required String title,
+    String? content,
+    String? description,
+    File? imageFile, // Accept File directly
+    List<Map<String, dynamic>>? links,
+  }) async {
+    String? imageBase64;
+    if (imageFile != null) {
+      imageBase64 = await imageFileToBase64(imageFile);
+    }
+
+    return createPost(
+      brand: brand,
+      title: title,
+      content: content,
+      description: description,
+      imageBase64: imageBase64,
+      links: links,
+    );
+  }
+
+  // ============================================================
   // 🔹 UPDATE POST
   // ============================================================
   Future<void> updatePost({
@@ -183,7 +240,7 @@ class PostService {
     String? title,
     String? content,
     String? description,
-    String? imageUrl,
+    String? imageBase64, // Changed from imageUrl
     List<Map<String, dynamic>>? links,
   }) async {
     try {
@@ -201,7 +258,7 @@ class PostService {
       if (title != null) updateData['title'] = title.trim();
       if (content != null) updateData['content'] = content.trim();
       if (description != null) updateData['description'] = description.trim();
-      if (imageUrl != null) updateData['imageUrl'] = imageUrl;
+      if (imageBase64 != null) updateData['imageBase64'] = imageBase64; // Changed from imageUrl
       if (links != null) updateData['links'] = links;
 
       await _postRef.doc(postId).update(updateData);
@@ -210,6 +267,34 @@ class PostService {
       print('❌ Error updating post: $e');
       rethrow;
     }
+  }
+
+  // ============================================================
+  // 🔹 UPDATE POST WITH IMAGE FILE
+  // ============================================================
+  Future<void> updatePostWithImageFile({
+    required String postId,
+    String? brand,
+    String? title,
+    String? content,
+    String? description,
+    File? imageFile, // Accept File directly
+    List<Map<String, dynamic>>? links,
+  }) async {
+    String? imageBase64;
+    if (imageFile != null) {
+      imageBase64 = await imageFileToBase64(imageFile);
+    }
+
+    return updatePost(
+      postId: postId,
+      brand: brand,
+      title: title,
+      content: content,
+      description: description,
+      imageBase64: imageBase64,
+      links: links,
+    );
   }
 
   // ============================================================
@@ -271,23 +356,6 @@ class PostService {
     } catch (e) {
       print('❌ Error fetching post: $e');
       return null;
-    }
-  }
-
-  // ============================================================
-  // 🔹 UPLOAD IMAGE TO FIREBASE STORAGE
-  // ============================================================
-  Future<String> uploadImage(File imageFile, String fileName) async {
-    try {
-      print('📤 Uploading image: $fileName');
-      final ref = _storage.ref().child('posts/$fileName');
-      final uploadTask = await ref.putFile(imageFile);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
-      print('✅ Image uploaded successfully');
-      return downloadUrl;
-    } catch (e) {
-      print('❌ Error uploading image: $e');
-      rethrow;
     }
   }
 

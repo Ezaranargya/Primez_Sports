@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -28,11 +29,58 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final _descriptionController = TextEditingController();
 
   String? _imagePath;
+  String? _imageBase64;
   File? _imageFile;
   bool _isLoading = false;
 
   // Purchase options list
   final List<Map<String, dynamic>> _purchaseOptions = [];
+
+  // Category values
+  String? _mainCategory;
+  String? _subCategory;
+
+  // ============================================================
+  // 🔹 STORE LOGO MAPPING
+  // ============================================================
+  final Map<String, Map<String, String>> _storeLogos = {
+    'tokopedia': {
+      'name': 'Tokopedia',
+      'logo': 'assets/logo_tokopedia.png',
+    },
+    'shopee': {
+      'name': 'Shopee',
+      'logo': 'assets/logo_shopee.png',
+    },
+    'blibli': {
+      'name': 'Blibli',
+      'logo': 'assets/logo_blibli.jpg',
+    },
+    'under armour': {
+      'name': 'Under armour',
+      'logo': 'assets/logo_under_armour.png',
+    },
+    'jordan': {
+      'name': 'Jordan',
+      'logo': 'assets/logo_jordan.png',
+    },
+    'puma': {
+      'name': 'Puma',
+      'logo': 'assets/logo_puma.png',
+    },
+    'mizuno': {
+      'name': 'Mizuno',
+      'logo': 'assets/logo_mizuno.png',
+    },
+    'nike': {
+      'name': 'Nike Official',
+      'logo': 'assets/logo_nike.png',
+    },
+    'adidas': {
+      'name': 'Adidas Official',
+      'logo': 'assets/logo_adidas.png',
+    },
+  };
 
   @override
   void initState() {
@@ -47,7 +95,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _titleController.text = data['title']?.toString() ?? '';
     _contentController.text = data['content']?.toString() ?? '';
     _descriptionController.text = data['description']?.toString() ?? '';
-    _imagePath = data['imageUrl']?.toString();
+    _imageBase64 = data['imageUrl']?.toString();
+    _mainCategory = data['mainCategory']?.toString();
+    _subCategory = data['subCategory']?.toString();
 
     final links = data['links'] as List<dynamic>? ?? [];
     _purchaseOptions.addAll(
@@ -63,102 +113,70 @@ class _CreatePostPageState extends State<CreatePostPage> {
     super.dispose();
   }
 
+  // ============================================================
+  // 🔹 DETECT STORE FROM URL
+  // ============================================================
+  Map<String, String> _detectStoreFromUrl(String url) {
+    final lowerUrl = url.toLowerCase();
+    
+    for (var entry in _storeLogos.entries) {
+      if (lowerUrl.contains(entry.key)) {
+        return {
+          'store': entry.value['name']!,
+          'logoUrl': entry.value['logo']!,
+        };
+      }
+    }
+    
+    return {
+      'store': 'Other',
+      'logoUrl': 'assets/logos/default.png',
+    };
+  }
+
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
+      final bytes = await File(pickedFile.path).readAsBytes();
+      final base64String = base64Encode(bytes);
+      
       setState(() {
         _imageFile = File(pickedFile.path);
         _imagePath = pickedFile.path;
+        _imageBase64 = base64String;
       });
     }
   }
 
   void _addPurchaseOption() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final linkController = TextEditingController();
-        final priceController = TextEditingController();
-        final storeController = TextEditingController();
-        final logoController = TextEditingController();
-
-        return AlertDialog(
-          title: const Text('Tambah Opsi Pembelian'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: linkController,
-                  decoration: const InputDecoration(
-                    labelText: 'Link/URL',
-                    hintText: 'https://...',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                SizedBox(height: 12.h),
-                TextField(
-                  controller: priceController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Harga',
-                    hintText: '1500000',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                SizedBox(height: 12.h),
-                TextField(
-                  controller: storeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Toko (opsional)',
-                    hintText: 'Tokopedia',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                SizedBox(height: 12.h),
-                TextField(
-                  controller: logoController,
-                  decoration: const InputDecoration(
-                    labelText: 'Logo URL (opsional)',
-                    hintText: 'assets/...',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (linkController.text.isNotEmpty) {
-                  setState(() {
-                    _purchaseOptions.add({
-                      'url': linkController.text,
-                      'price': int.tryParse(priceController.text) ?? 0,
-                      'store': storeController.text,
-                      'logoUrl': logoController.text,
-                    });
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('Tambah'),
-            ),
-          ],
-        );
-      },
-    );
+    setState(() {
+      _purchaseOptions.add({
+        'url': '',
+        'price': 0,
+        'store': '',
+        'logoUrl': '',
+      });
+    });
   }
 
   void _removePurchaseOption(int index) {
     setState(() {
       _purchaseOptions.removeAt(index);
+    });
+  }
+
+  void _updatePurchaseOption(int index, String field, dynamic value) {
+    setState(() {
+      _purchaseOptions[index][field] = value;
+      
+      // Auto-detect store and logo when URL changes
+      if (field == 'url' && value.toString().isNotEmpty) {
+        final storeInfo = _detectStoreFromUrl(value.toString());
+        _purchaseOptions[index]['store'] = storeInfo['store']!;
+        _purchaseOptions[index]['logoUrl'] = storeInfo['logoUrl']!;
+      }
     });
   }
 
@@ -170,26 +188,70 @@ class _CreatePostPageState extends State<CreatePostPage> {
     setState(() => _isLoading = true);
 
     try {
+      // Step 1: Cari communityId berdasarkan brand
+      final communityQuery = await FirebaseFirestore.instance
+          .collection('communities')
+          .where('brand', isEqualTo: widget.brand)
+          .limit(1)
+          .get();
+
+      String? communityId;
+      if (communityQuery.docs.isNotEmpty) {
+        communityId = communityQuery.docs.first.id;
+      }
+
+      // Prepare post data
       final postData = {
         'brand': widget.brand,
         'title': _titleController.text.trim(),
         'content': _contentController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'imageUrl': _imagePath ?? '',
+        'imageUrl': _imageBase64 ?? '',
         'links': _purchaseOptions,
+        'mainCategory': _mainCategory,
+        'subCategory': _subCategory,
         'updatedAt': FieldValue.serverTimestamp(),
       };
+
+      // Tambahkan communityId jika ditemukan
+      if (communityId != null) {
+        postData['communityId'] = communityId;
+      }
 
       if (widget.postId == null) {
         // Create new post
         postData['createdAt'] = FieldValue.serverTimestamp();
-        await FirebaseFirestore.instance.collection('posts').add(postData);
+        
+        // Step 2a: Simpan ke collection 'posts' utama
+        final postRef = await FirebaseFirestore.instance
+            .collection('posts')
+            .add(postData);
+
+        // Step 2b: Jika ada communityId, simpan juga ke subcollection komunitas
+        if (communityId != null) {
+          await FirebaseFirestore.instance
+              .collection('communities')
+              .doc(communityId)
+              .collection('posts')
+              .doc(postRef.id)
+              .set(postData);
+        }
       } else {
         // Update existing post
         await FirebaseFirestore.instance
             .collection('posts')
             .doc(widget.postId)
             .update(postData);
+
+        // Update juga di subcollection komunitas jika ada
+        if (communityId != null) {
+          await FirebaseFirestore.instance
+              .collection('communities')
+              .doc(communityId)
+              .collection('posts')
+              .doc(widget.postId)
+              .update(postData);
+        }
       }
 
       if (mounted) {
@@ -197,8 +259,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
           SnackBar(
             content: Text(
               widget.postId == null
-                  ? 'Posting berhasil dibuat'
-                  : 'Posting berhasil diupdate',
+                  ? 'Produk berhasil ditambahkan ke komunitas ${widget.brand}'
+                  : 'Produk berhasil diupdate',
             ),
             backgroundColor: Colors.green,
           ),
@@ -260,11 +322,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                   fit: BoxFit.cover,
                                 ),
                               )
-                            : _imagePath != null && _imagePath!.isNotEmpty
+                            : _imageBase64 != null && _imageBase64!.isNotEmpty
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(12.r),
-                                    child: Image.asset(
-                                      _imagePath!,
+                                    child: Image.memory(
+                                      base64Decode(_imageBase64!),
                                       fit: BoxFit.cover,
                                       errorBuilder:
                                           (context, error, stackTrace) {
@@ -295,21 +357,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         }
                         return null;
                       },
-                    ),
-                    SizedBox(height: 16.h),
-
-                    // Brand Display (read-only)
-                    TextFormField(
-                      initialValue: widget.brand,
-                      decoration: InputDecoration(
-                        labelText: 'Brand',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                      ),
-                      enabled: false,
                     ),
                     SizedBox(height: 16.h),
 
@@ -348,6 +395,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
                     // Main Category Dropdown
                     DropdownButtonFormField<String>(
+                      value: _mainCategory,
                       decoration: InputDecoration(
                         labelText: 'Kategori Utama',
                         border: OutlineInputBorder(
@@ -357,18 +405,21 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         fillColor: Colors.white,
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'Running', child: Text('Running')),
                         DropdownMenuItem(value: 'Basketball', child: Text('Basketball')),
-                        DropdownMenuItem(value: 'Football', child: Text('Football')),
-                        DropdownMenuItem(value: 'Training', child: Text('Training')),
-                        DropdownMenuItem(value: 'Casual', child: Text('Casual')),
+                        DropdownMenuItem(value: 'Soccer', child: Text('Soccer')),
+                        DropdownMenuItem(value: 'Volleyball', child: Text('Volleyball')),
                       ],
-                      onChanged: (value) {},
+                      onChanged: (value) {
+                        setState(() {
+                          _mainCategory = value;
+                        });
+                      },
                     ),
                     SizedBox(height: 16.h),
 
                     // Sub Category Dropdown
                     DropdownButtonFormField<String>(
+                      value: _subCategory,
                       decoration: InputDecoration(
                         labelText: 'Sub Kategori',
                         border: OutlineInputBorder(
@@ -378,12 +429,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         fillColor: Colors.white,
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'Men', child: Text('Men')),
-                        DropdownMenuItem(value: 'Women', child: Text('Women')),
-                        DropdownMenuItem(value: 'Unisex', child: Text('Unisex')),
-                        DropdownMenuItem(value: 'Kids', child: Text('Kids')),
+                        DropdownMenuItem(value: 'Trending', child: Text('Trending')),
+                        DropdownMenuItem(value: 'Terbaru', child: Text('Terbaru')),
                       ],
-                      onChanged: (value) {},
+                      onChanged: (value) {
+                        setState(() {
+                          _subCategory = value;
+                        });
+                      },
                     ),
                     SizedBox(height: 20.h),
 
@@ -433,58 +486,168 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     else
                       ...List.generate(_purchaseOptions.length, (index) {
                         final option = _purchaseOptions[index];
+                        final hasLogo = option['logoUrl']?.toString().isNotEmpty ?? false;
+                        
                         return Container(
-                          margin: EdgeInsets.only(bottom: 8.h),
+                          margin: EdgeInsets.only(bottom: 12.h),
                           padding: EdgeInsets.all(12.w),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(8.r),
                             border: Border.all(color: Colors.grey[300]!),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (option['store'] != null &&
-                                        option['store'].toString().isNotEmpty)
-                                      Text(
-                                        option['store'],
-                                        style: TextStyle(
-                                          fontSize: 14.sp,
-                                          fontWeight: FontWeight.w600,
+                              // Store Logo Preview
+                              if (hasLogo)
+                                Container(
+                                  margin: EdgeInsets.only(bottom: 8.h),
+                                  padding: EdgeInsets.all(8.w),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(8.r),
+                                    border: Border.all(color: Colors.grey[200]!),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 40.w,
+                                        height: 40.w,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(6.r),
+                                          border: Border.all(color: Colors.grey[300]!),
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(6.r),
+                                          child: Image.asset(
+                                            option['logoUrl']!,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return Icon(
+                                                Icons.store,
+                                                size: 24.sp,
+                                                color: Colors.grey[400],
+                                              );
+                                            },
+                                          ),
                                         ),
                                       ),
-                                    if (option['price'] != null &&
-                                        option['price'] > 0)
-                                      Text(
-                                        'Rp ${_formatPrice(option['price'])}',
-                                        style: TextStyle(
-                                          fontSize: 13.sp,
-                                          color: AppColors.primary,
-                                          fontWeight: FontWeight.bold,
+                                      SizedBox(width: 12.w),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              option['store'] ?? 'Unknown Store',
+                                              style: TextStyle(
+                                                fontSize: 14.sp,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Terdeteksi otomatis',
+                                              style: TextStyle(
+                                                fontSize: 11.sp,
+                                                color: Colors.green[600],
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    Text(
-                                      option['url'] ?? '',
-                                      style: TextStyle(
-                                        fontSize: 11.sp,
-                                        color: Colors.blue,
+                                      Icon(
+                                        Icons.check_circle,
+                                        color: Colors.green,
+                                        size: 20.sp,
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                    ],
+                                  ),
+                                ),
+                              
+                              Row(
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: TextField(
+                                      decoration: InputDecoration(
+                                        labelText: 'Link ${index + 1}',
+                                        hintText: 'https://...',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8.r),
+                                        ),
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 12.w,
+                                          vertical: 10.h,
+                                        ),
+                                        prefixIcon: Icon(
+                                          Icons.link,
+                                          size: 20.sp,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      onChanged: (value) {
+                                        _updatePurchaseOption(index, 'url', value);
+                                      },
+                                      controller: TextEditingController(
+                                        text: option['url']?.toString() ?? '',
+                                      )..selection = TextSelection.collapsed(
+                                          offset: option['url']?.toString().length ?? 0,
+                                        ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                  size: 20.sp,
-                                ),
-                                onPressed: () => _removePurchaseOption(index),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Expanded(
+                                    child: TextField(
+                                      decoration: InputDecoration(
+                                        labelText: 'Harga',
+                                        hintText: '1500000',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8.r),
+                                        ),
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 12.w,
+                                          vertical: 10.h,
+                                        ),
+                                        prefixText: 'Rp ',
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                      onChanged: (value) {
+                                        _updatePurchaseOption(
+                                          index,
+                                          'price',
+                                          int.tryParse(value) ?? 0,
+                                        );
+                                      },
+                                      controller: TextEditingController(
+                                        text: option['price']?.toString() ?? '',
+                                      )..selection = TextSelection.collapsed(
+                                          offset: option['price']?.toString().length ?? 0,
+                                        ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.white,
+                                        size: 20.sp,
+                                      ),
+                                      onPressed: () => _removePurchaseOption(index),
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(
+                                        minWidth: 36.w,
+                                        minHeight: 36.h,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

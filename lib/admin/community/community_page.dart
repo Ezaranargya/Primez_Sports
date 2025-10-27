@@ -55,29 +55,9 @@ class _AdminCommunityPageState extends State<AdminCommunityPage> {
               margin: EdgeInsets.all(12.w),
               padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: AppColors.backgroundColor,
                 borderRadius: BorderRadius.circular(10.r),
-                border: Border.all(color: Colors.blue.shade200, width: 1.5),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.admin_panel_settings,
-                    size: 20,
-                    color: Colors.blue.shade700,
-                  ),
-                  SizedBox(width: 10.w),
-                  Expanded(
-                    child: Text(
-                      'Mode Admin: Anda dapat membuat dan mengelola posting untuk setiap brand',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        color: Colors.blue.shade700,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
+                border: Border.all(color: AppColors.backgroundColor, width: 1.5),
               ),
             ),
             SizedBox(height: 8.h),
