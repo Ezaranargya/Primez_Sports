@@ -266,7 +266,6 @@ class Product {
     }
   }
 
-  /// ✅ CLEAN VERSION (no duplicate fields)
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
       'name': name,

@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:my_app/models/news_model.dart';
 import 'package:my_app/theme/app_colors.dart';
+import 'package:my_app/pages/product/widgets/product_image.dart';
 
 class NewsDetailPage extends StatelessWidget {
   final NewsModel news;
@@ -35,7 +37,13 @@ class NewsDetailPage extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  _buildImage(news.imageUrl1),
+                  ProductImage(
+                    image: news.imageUrl1,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    borderRadius: BorderRadius.zero,
+                  ),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -185,19 +193,6 @@ class NewsDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildImage(String imagePath) {
-    return Image.asset(
-      imagePath,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Container(
-        color: Colors.grey[300],
-        child: const Center(
-          child: Icon(Icons.broken_image, size: 50),
-        ),
-      ),
-    );
-  }
-
   Widget _buildContentItem(ContentItem item) {
     return Padding(
       padding: EdgeInsets.only(bottom: 20.h),
@@ -218,9 +213,12 @@ class NewsDetailPage extends StatelessWidget {
 
           if (item.imageUrl != null && item.imageUrl!.isNotEmpty) ...[
             SizedBox(height: 12.h),
-            ClipRRect(
+            ProductImage(
+              image: item.imageUrl!,
+              width: double.infinity,
+              height: 200.h,
+              fit: BoxFit.cover,
               borderRadius: BorderRadius.circular(12.r),
-              child: _buildImage(item.imageUrl!),
             ),
             if (item.caption != null && item.caption!.isNotEmpty) ...[
               SizedBox(height: 8.h),
@@ -229,7 +227,7 @@ class NewsDetailPage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13.sp,
                   fontStyle: FontStyle.italic,
-                  color: Colors.grey[600],
+                  color: const Color.fromARGB(255, 112, 92, 92),
                   fontFamily: 'Poppins',
                 ),
               ),

@@ -263,7 +263,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: ProductImage(
-                          imageBase64: _imageBase64,
+                          image: _imageBase64 ?? '', // ✅ Ganti dari imageBase64 ke image
                           height: 200,
                           width: double.infinity,
                         ),

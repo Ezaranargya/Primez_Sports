@@ -1,9 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
-import 'package:my_app/utils/formatter.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
+import 'package:my_app/utils/formatter.dart';
+import 'package:my_app/pages/product/widgets/product_image.dart'; // pastikan path sesuai
 
+/// ============================================================
+/// 🛍️ WIDGET: NewsProductCard
+/// Card produk dengan gambar (Base64/URL/assets), nama, harga, dan brand.
+/// ============================================================
 class NewsProductCard extends StatelessWidget {
   final Product product;
 
@@ -11,6 +17,9 @@ class NewsProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String brand =
+        product.brand.isNotEmpty ? product.brand : 'Unknown Brand';
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -18,88 +27,88 @@ class NewsProductCard extends StatelessWidget {
           builder: (_) => UserProductDetailPage(product: product),
         ),
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
+      child: Card(
+        margin: EdgeInsets.symmetric(vertical: 8.h, horizontal: 12.w),
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
-              child: _buildProductImage(),
-            ),
-            Padding(
-              padding: EdgeInsets.all(8.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    Formatter.formatPrice(product.price),
-                    style: TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+        elevation: 2,
+        child: Padding(
+          padding: EdgeInsets.all(12.w),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              /// ============================================================
+              /// 🖼️ Gambar Produk (otomatis deteksi Base64 / URL / Asset)
+              /// ============================================================
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8.r),
+                child: ProductImage(
+                  image: product.imageUrl,
+                  width: 100.w,
+                  height: 100.h,
+                  fit: BoxFit.cover,
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+              SizedBox(width: 12.w),
 
-  Widget _buildProductImage() {
-    if (product.imageUrl.isEmpty) return _placeholder();
+              /// ============================================================
+              /// 📋 Detail Produk
+              /// ============================================================
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// 🔹 Nama produk
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                        color: Colors.black87,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 6.h),
 
-    final isNetwork = product.imageUrl.startsWith('http');
+                    /// 🔹 Harga
+                    Text(
+                      Formatter.formatPrice(product.price),
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    SizedBox(height: 6.h),
 
-    return isNetwork
-        ? Image.network(
-            product.imageUrl,
-            height: 100.h,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _placeholder(),
-          )
-        : Image.asset(
-            product.imageUrl,
-            height: 100.h,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _placeholder(),
-          );
-  }
-
-  Widget _placeholder() {
-    return Container(
-      height: 100.h,
-      color: Colors.grey[200],
-      child: Center(
-        child: Icon(
-          Icons.image_outlined,
-          size: 40.sp,
-          color: Colors.grey,
+                    /// 🔹 Brand
+                    Row(
+                      children: [
+                        Icon(Icons.storefront,
+                            size: 14.sp, color: Colors.grey[600]),
+                        SizedBox(width: 4.w),
+                        Expanded(
+                          child: Text(
+                            brand,
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: Colors.grey[600],
+                              fontFamily: 'Poppins',
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

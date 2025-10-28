@@ -2,178 +2,187 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 /// ============================================================
-/// 🔹 REUSABLE PRODUCT IMAGE WIDGET
-/// ============================================================
-/// Widget ini bisa dipakai di:
-/// - Product Card (Homepage)
-/// - Product Detail Page
-/// - Favorite List
-/// - Search Results
+/// 🖼️ UNIVERSAL IMAGE WIDGET (ENHANCED VERSION)
 /// ============================================================
 class ProductImage extends StatelessWidget {
-  final String? imageBase64;
   final String? imageUrl;
+  final String? image;
   final double? width;
   final double? height;
   final BoxFit fit;
   final BorderRadius? borderRadius;
+  final Widget? placeholder; // ✅ Custom placeholder
+  final bool showDebugInfo; // ✅ Debug mode
 
   const ProductImage({
-    Key? key,
-    this.imageBase64,
+    super.key,
     this.imageUrl,
+    this.image,
     this.width,
     this.height,
     this.fit = BoxFit.cover,
     this.borderRadius,
-  }) : super(key: key);
+    this.placeholder,
+    this.showDebugInfo = false,
+  });
+
+  bool _isBase64(String str) {
+    if (str.isEmpty) return false;
+
+    if (str.startsWith('data:image/')) {
+      debugPrint('🟢 Detected as BASE64 (has data:image prefix)');
+      return true;
+    }
+
+    try {
+      if (str.length < 100) return false;
+      base64Decode(str.contains(',') ? str.split(',')[1] : str);
+      debugPrint('🟢 Detected as BASE64 (decoded successfully)');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // ✅ DEBUG: Print what we receive
-    if (imageBase64 != null && imageBase64!.isNotEmpty) {
-      print('🖼️ ProductImage: Has imageBase64 (${imageBase64!.length} chars)');
-    } else if (imageUrl != null && imageUrl!.isNotEmpty) {
-      print('🖼️ ProductImage: Has imageUrl: $imageUrl');
-    } else {
-      print('⚠️ ProductImage: No image available');
+    final String? imgSource = imageUrl ?? image;
+    
+    if (imgSource == null || imgSource.isEmpty) {
+      debugPrint('⚠️ ProductImage: No image source provided');
+      return _buildPlaceholder('No Image');
     }
+
+    final img = imgSource.trim();
+    debugPrint('🖼️ ProductImage input: ${img.substring(0, img.length > 50 ? 50 : img.length)}...');
 
     Widget imageWidget;
 
-    // ✅ PRIORITY 1: Base64 image (dari admin upload)
-    if (imageBase64 != null && imageBase64!.isNotEmpty) {
-      imageWidget = _buildBase64Image();
-    }
-    // ✅ PRIORITY 2: Network image URL
-    else if (imageUrl != null && imageUrl!.isNotEmpty) {
-      imageWidget = _buildNetworkImage();
-    }
-    // ✅ PRIORITY 3: Placeholder
-    else {
-      imageWidget = _buildPlaceholder();
+    if (_isBase64(img)) {
+      imageWidget = _buildBase64Image(img);
+    } else if (img.startsWith('http')) {
+      imageWidget = _buildNetworkImage(img);
+    } else if (img.startsWith('assets/')) {
+      imageWidget = _buildAssetImage(img);
+    } else {
+      debugPrint('⚪ Unknown image type: $img');
+      return _buildPlaceholder('Invalid Format');
     }
 
-    // Wrap with ClipRRect if borderRadius provided
-    if (borderRadius != null) {
-      return ClipRRect(
-        borderRadius: borderRadius!,
-        child: imageWidget,
-      );
-    }
-
-    return imageWidget;
+    return ClipRRect(
+      borderRadius: borderRadius ?? BorderRadius.circular(8),
+      child: imageWidget,
+    );
   }
 
-  /// ============================================================
-  /// 🔹 Build Base64 Image
-  /// ============================================================
-  Widget _buildBase64Image() {
+  Widget _buildBase64Image(String img) {
     try {
-      // Remove data:image prefix if exists
-      String base64String = imageBase64!;
-
-      // Handle different base64 formats
-      if (base64String.contains('base64,')) {
-        base64String = base64String.split('base64,').last;
-      } else if (base64String.contains(',')) {
-        base64String = base64String.split(',').last;
-      }
-
-      // Remove whitespace
-      base64String = base64String.replaceAll(RegExp(r'\s+'), '');
-
-      // Decode base64
-      final bytes = base64Decode(base64String);
-
-      print('✅ Successfully decoded base64 image (${bytes.length} bytes)');
-
+      final base64Data = img.split(',').last;
+      final bytes = base64Decode(base64Data);
+      debugPrint('✅ Rendering BASE64 image (${bytes.length} bytes)');
+      
       return Image.memory(
         bytes,
         width: width,
         height: height,
         fit: fit,
-        gaplessPlayback: true,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded) return child;
+          return AnimatedOpacity(
+            opacity: frame == null ? 0 : 1,
+            duration: const Duration(milliseconds: 300),
+            child: child,
+          );
+        },
         errorBuilder: (context, error, stackTrace) {
-          print('❌ Error rendering base64 image: $error');
-          return _buildPlaceholder(error: 'Error rendering image');
+          debugPrint('❌ Error rendering base64: $error');
+          return _buildPlaceholder('Load Error');
         },
       );
-    } catch (e, stackTrace) {
-      print('❌ Error decoding base64: $e');
-      print('📋 Stack trace: $stackTrace');
-      return _buildPlaceholder(error: 'Invalid image format');
+    } catch (e) {
+      debugPrint('❌ Base64 decode failed: $e');
+      return _buildPlaceholder('Decode Error');
     }
   }
 
-  /// ============================================================
-  /// 🔹 Build Network Image
-  /// ============================================================
-  Widget _buildNetworkImage() {
+  Widget _buildNetworkImage(String url) {
+    debugPrint('🌐 Rendering network image: $url');
+    
     return Image.network(
-      imageUrl!,
+      url,
       width: width,
       height: height,
       fit: fit,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
-        return _buildLoadingPlaceholder(loadingProgress);
+        
+        return Container(
+          width: width,
+          height: height,
+          color: Colors.grey[200],
+          child: Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+              strokeWidth: 2,
+              color: Colors.grey[400],
+            ),
+          ),
+        );
       },
       errorBuilder: (context, error, stackTrace) {
-        print('❌ Error loading network image: $error');
-        return _buildPlaceholder(error: 'Failed to load image');
+        debugPrint('❌ Network image error: $error');
+        return _buildPlaceholder('Network Error');
       },
     );
   }
 
-  /// ============================================================
-  /// 🔹 Build Placeholder
-  /// ============================================================
-  Widget _buildPlaceholder({String? error}) {
+  Widget _buildAssetImage(String path) {
+    debugPrint('📦 Rendering asset image: $path');
+    
+    return Image.asset(
+      path,
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('❌ Asset not found: $path');
+        return _buildPlaceholder('Asset Not Found');
+      },
+    );
+  }
+
+  Widget _buildPlaceholder(String? message) {
+    if (placeholder != null) return placeholder!;
+    
     return Container(
       width: width,
       height: height,
-      color: Colors.grey[200],
+      decoration: BoxDecoration(
+        color: Colors.grey[300],
+        borderRadius: borderRadius ?? BorderRadius.circular(8),
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            error != null ? Icons.broken_image : Icons.image_outlined,
-            size: width != null && width! < 100 ? 24 : 48,
-            color: Colors.grey[400],
+            Icons.broken_image_outlined,
+            color: Colors.grey[600],
+            size: 40,
           ),
-          if (width == null || width! > 100) ...[
+          if (showDebugInfo && message != null) ...[
             const SizedBox(height: 8),
             Text(
-              error ?? 'No Image',
+              message,
               style: TextStyle(
                 color: Colors.grey[600],
-                fontSize: 12,
+                fontSize: 10,
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  /// ============================================================
-  /// 🔹 Build Loading Placeholder
-  /// ============================================================
-  Widget _buildLoadingPlaceholder(ImageChunkEvent loadingProgress) {
-    return Container(
-      width: width,
-      height: height,
-      color: Colors.grey[200],
-      child: Center(
-        child: CircularProgressIndicator(
-          value: loadingProgress.expectedTotalBytes != null
-              ? loadingProgress.cumulativeBytesLoaded /
-                  loadingProgress.expectedTotalBytes!
-              : null,
-          strokeWidth: 2,
-        ),
       ),
     );
   }

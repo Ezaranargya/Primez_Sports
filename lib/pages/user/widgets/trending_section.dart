@@ -104,12 +104,17 @@ class _TrendingProductCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8.r),
               child: ProductImage(
-                imageBase64: product.imageBase64,
-                imageUrl: product.imageUrl,
-                width: 130.w,
-                height: 80.h, // 🔹 DULUNYA 100.h → Sekarang lebih kecil
+                image: product.imageBase64?.isNotEmpty == true
+                    ? product.imageBase64
+                    : product.imageUrl ?? '',
+                width: double.infinity,
+                height: 130.h, // ✅ Fixed height
                 fit: BoxFit.cover,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
               ),
+
             ),
             SizedBox(height: 6.h),
 

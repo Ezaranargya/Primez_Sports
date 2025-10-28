@@ -1,12 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:my_app/models/product_model.dart';
-import 'package:my_app/pages/product/product_detail_page.dart';
+import 'package:my_app/models/news_model.dart';
+import 'package:my_app/pages/news/news_detail_page.dart';
 
 class NewsBannerCard extends StatelessWidget {
-  final Product product;
+  final NewsModel news;
 
-  const NewsBannerCard({super.key, required this.product});
+  const NewsBannerCard({super.key, required this.news});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +15,7 @@ class NewsBannerCard extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => UserProductDetailPage(product: product),
+          builder: (_) => NewsDetailPage(news: news),
         ),
       ),
       child: Container(
@@ -33,29 +34,44 @@ class NewsBannerCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16.r),
           child: Stack(
             children: [
-              _buildProductImage(),
+              _buildNewsImage(),
               Positioned(
                 bottom: 12.h,
                 left: 12.w,
+                right: 12.w,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      product.brand,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
+                    if (news.brand.isNotEmpty)
+                      Text(
+                        news.brand,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
                     Text(
-                      product.name,
+                      news.title.isNotEmpty ? news.title : "Untitled",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
+                        height: 1.2,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    if (news.subtitle.isNotEmpty)
+                      Text(
+                        news.subtitle,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 11.sp,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                   ],
                 ),
               ),
@@ -66,37 +82,73 @@ class NewsBannerCard extends StatelessWidget {
     );
   }
 
-  Widget _buildProductImage() {
-    if (product.imageUrl.isEmpty) return _placeholder();
+  /// 🔹 Widget penampil gambar (mendukung base64, URL, dan asset)
+  Widget _buildNewsImage() {
+    final image = news.imageUrl;
 
-    final isNetwork = product.imageUrl.startsWith('http');
+    if (image.isEmpty) return _placeholder();
 
-    return isNetwork
-        ? Image.network(
-            product.imageUrl,
-            height: 180.h,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _placeholder(),
-          )
-        : Image.asset(
-            product.imageUrl,
-            height: 180.h,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _placeholder(),
-          );
+    // Base64 image
+    if (image.startsWith('data:image')) {
+      try {
+        final base64Data = image.split(',').last;
+        final bytes = base64Decode(base64Data);
+        return Image.memory(
+          bytes,
+          height: 180.h,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _placeholder(),
+        );
+      } catch (e) {
+        return _placeholder();
+      }
+    }
+
+    // Network image
+    if (image.startsWith('http')) {
+      return Image.network(
+        image,
+        height: 180.h,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _placeholder(),
+      );
+    }
+
+    // Local asset image
+    return Image.asset(
+      news.safeImageAsset,
+      height: 180.h,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => _placeholder(),
+    );
   }
 
+  /// 🔹 Placeholder ketika gambar tidak ada
   Widget _placeholder() {
     return Container(
       height: 180.h,
       color: Colors.grey[200],
       child: Center(
-        child: Icon(
-          Icons.image_outlined,
-          size: 50.sp,
-          color: Colors.grey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.image_outlined,
+              size: 40.sp,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              "Gambar tidak tersedia",
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 11.sp,
+              ),
+            ),
+          ],
         ),
       ),
     );

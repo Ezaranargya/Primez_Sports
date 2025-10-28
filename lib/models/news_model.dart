@@ -28,39 +28,45 @@ class NewsModel {
   });
 
   factory NewsModel.fromFirestore(Map<String, dynamic> data, String id) {
-  final rawImage = data['imageUrl1'] ?? data['imageUrl'] ?? '';
+    final rawImage = data['imageUrl1'] ?? data['imageUrl'] ?? '';
 
-  String assetPath = '';
-  if (rawImage is String && rawImage.startsWith('assets/')) {
-    assetPath = rawImage;
-  }
-  print("🔥 Firestore content field for $id: ${data['content']}");
+    String assetPath = '';
+    if (rawImage is String && rawImage.startsWith('assets/')) {
+      assetPath = rawImage;
+    }
+    print("🔥 Firestore content field for $id: ${data['content']}");
 
-  return NewsModel(
-    id: id,
-    title: data['title'] ?? '',
-    author: data['author'] ?? '',
-    brand: data['brand'] ?? '',
-    categories: List<String>.from(data['categories'] ?? []),
-    content: (data['content'] != null && data['content'] is List)
+    return NewsModel(
+      id: id,
+      title: data['title'] ?? '',
+      author: data['author'] ?? '',
+      brand: data['brand'] ?? '',
+      categories: List<String>.from(data['categories'] ?? []),
+      content: (data['content'] != null)
+    ? (data['content'] is List)
         ? (data['content'] as List)
             .whereType<Map>()
             .map((item) =>
                 ContentItem.fromMap(Map<String, dynamic>.from(item)))
             .toList()
-        : [],
-
-    createdAt: (data['createdAt'] is Timestamp)
-        ? (data['createdAt'] as Timestamp).toDate()
-        : DateTime.now(),
-    date: (data['date'] is Timestamp)
-        ? (data['date'] as Timestamp).toDate()
-        : DateTime.now(),
-    imageUrl1: rawImage,
-    subtitle: data['subtitle'] ?? '',
-    imageAsset: assetPath,
-  );
-}
+        : [
+            ContentItem(
+              type: 'text',
+              text: data['content'].toString(),
+            )
+          ]
+    : [],
+      createdAt: (data['createdAt'] is Timestamp)
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+      date: (data['date'] is Timestamp)
+          ? (data['date'] as Timestamp).toDate()
+          : DateTime.now(),
+      imageUrl1: rawImage,
+      subtitle: data['subtitle'] ?? '',
+      imageAsset: assetPath,
+    );
+  }
 
   String get imageUrl => imageUrl1;
   String get safeImageAsset =>
@@ -68,7 +74,7 @@ class NewsModel {
 
   String get contentAsText {
     return content
-        .where((item) => item.text != null)
+        .where((item) => item.text != null && item.text!.isNotEmpty)
         .map((item) => item.text!)
         .join('\n\n');
   }
@@ -90,32 +96,33 @@ class NewsModel {
 }
 
 class ContentItem {
+  final String type;
+  final String? text;
   final String? imageUrl;
   final String? caption;
-  final String? text;
-  final String type;
 
   ContentItem({
+    required this.type,
+    this.text,
     this.imageUrl,
     this.caption,
-    this.text,
-    required this.type,
   });
 
   factory ContentItem.fromMap(Map<String, dynamic> map) {
     return ContentItem(
-      imageUrl: map['imageUrl'],
-      caption: map['caption'],
-      text: map['text'],
-      type: map['type'] ?? 'text',
+      type: map['type'] as String? ?? 'text',
+      text: map['text'] as String?,
+      imageUrl: map['imageUrl'] as String?,
+      caption: map['caption'] as String?,
     );
   }
 
   Map<String, dynamic> toMap() {
-    final Map<String, dynamic> data = {'type': type};
-    if (imageUrl != null) data['imageUrl'] = imageUrl;
-    if (caption != null) data['caption'] = caption;
-    if (text != null) data['text'] = text;
-    return data;
+    return {
+      'type': type,
+      'text': text ?? '',
+      'imageUrl': imageUrl ?? '',
+      'caption': caption ?? '',
+    };
   }
 }

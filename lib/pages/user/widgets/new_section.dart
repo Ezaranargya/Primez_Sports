@@ -100,15 +100,16 @@ class _NewProductCard extends StatelessWidget {
           children: [
             // ✅ Product Image
             ProductImage(
-              imageBase64: product.imageBase64,
-              imageUrl: product.imageUrl,
-              width: double.infinity,
-              height: 130.h, // ✅ Fixed height
-              fit: BoxFit.cover,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(12.r),
+                image: product.imageBase64?.isNotEmpty == true
+                    ? product.imageBase64
+                    : product.imageUrl ?? '',
+                width: double.infinity,
+                height: 130.h, // ✅ Fixed height
+                fit: BoxFit.cover,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
               ),
-            ),
 
             // ✅ Product Info
             Expanded(

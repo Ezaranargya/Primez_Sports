@@ -54,13 +54,14 @@ class ProductCard extends StatelessWidget {
           children: [
             // ✅ Product Image (Base64 / URL)
             ProductImage(
-              imageBase64: product.imageBase64,
-              imageUrl: product.imageUrl,
+              image: product.imageBase64?.isNotEmpty == true
+                  ? product.imageBase64
+                  : product.imageUrl ?? '',
               width: double.infinity,
-              height: imgHeight,
+              height: 130.h, // ✅ Fixed height
               fit: BoxFit.cover,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(12.r),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
               ),
             ),
 
@@ -145,12 +146,14 @@ class CompactProductCard extends StatelessWidget {
             Expanded(
               flex: 6,
               child: ProductImage(
-                imageBase64: product.imageBase64,
-                imageUrl: product.imageUrl,
+                image: product.imageBase64?.isNotEmpty == true
+                    ? product.imageBase64
+                    : product.imageUrl ?? '',
                 width: double.infinity,
+                height: 130.h, // ✅ Fixed height
                 fit: BoxFit.cover,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(12.r),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
                 ),
               ),
             ),
@@ -236,13 +239,14 @@ class LargeProductCard extends StatelessWidget {
           children: [
             // ✅ Product Image
             ProductImage(
-              imageBase64: product.imageBase64,
-              imageUrl: product.imageUrl,
+              image: product.imageBase64?.isNotEmpty == true
+                  ? product.imageBase64
+                  : product.imageUrl ?? '',
               width: double.infinity,
-              height: 200.h,
+              height: 200.h, // ✅ Fixed height
               fit: BoxFit.cover,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(16.r),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
               ),
             ),
 

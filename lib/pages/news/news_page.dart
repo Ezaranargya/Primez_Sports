@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +9,8 @@ import 'package:my_app/pages/news/widgets/news_card.dart';
 import 'package:my_app/pages/news/news_detail_page.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:intl/intl.dart';
+import 'package:my_app/pages/product/widgets/product_image.dart';
+
 
 class UserNewsPage extends StatefulWidget {
   const UserNewsPage({super.key});
@@ -25,44 +28,42 @@ class _UserNewsPageState extends State<UserNewsPage> {
   bool isLoading = true;
 
   Future<void> fetchNews() async {
-  try {
-    print('🔄 Fetching news from Firestore (main collection)...');
+    try {
+      print('🔄 Fetching news from Firestore...');
 
-    // Langsung ambil dari koleksi utama 'news'
-    final newsSnapshot =
-        await FirebaseFirestore.instance.collection('news').get();
+      final newsSnapshot = await FirebaseFirestore.instance
+          .collection('news')
+          .orderBy('date', descending: true)
+          .get();
 
-    print('📦 Found ${newsSnapshot.docs.length} news documents');
+      print('📦 Found ${newsSnapshot.docs.length} news documents');
 
-    if (newsSnapshot.docs.isEmpty) {
-      print('⚠️ No news found in main collection!');
-    }
+      if (newsSnapshot.docs.isEmpty) {
+        print('⚠️ No news found in collection!');
+      }
 
-    final allNewsList = newsSnapshot.docs.map((doc) {
-      return NewsModel.fromFirestore(doc.data(), doc.id);
-    }).toList();
+      final allNewsList = newsSnapshot.docs.map((doc) {
+        return NewsModel.fromFirestore(doc.data(), doc.id);
+      }).toList();
 
-    // Urutkan berdasarkan tanggal
-    allNewsList.sort((a, b) => b.date.compareTo(a.date));
+      print('✅ Successfully loaded ${allNewsList.length} news');
 
-    print('✅ Successfully loaded ${allNewsList.length} news');
+      setState(() {
+        allNews = allNewsList;
+        isLoading = false;
+      });
+    } catch (e, stackTrace) {
+      print('❌ Error loading news: $e');
+      print('Stack trace: $stackTrace');
+      setState(() => isLoading = false);
 
-    setState(() {
-      allNews = allNewsList;
-      isLoading = false;
-    });
-  } catch (e, stackTrace) {
-    print('❌ Error loading news: $e');
-    print('Stack trace: $stackTrace');
-    setState(() => isLoading = false);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading news: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading news: $e')),
+        );
+      }
     }
   }
-}
 
   @override
   void initState() {
@@ -70,6 +71,7 @@ class _UserNewsPageState extends State<UserNewsPage> {
     fetchNews();
     _startAutoPlay();
   }
+
   List<NewsModel> get trendingNews => allNews
       .where((n) => n.categories.any((c) => c.toLowerCase().contains('trending')))
       .toList();
@@ -157,8 +159,6 @@ class _UserNewsPageState extends State<UserNewsPage> {
                             _buildSection('Trending', trendingNews, isHorizontal: true),
                           if (latestNews.isNotEmpty)
                             _buildSection('Terbaru', latestNews, useCarousel: true),
-                          if (soccerNews.isNotEmpty)
-                            _buildSection('Soccer', soccerNews),
                           SizedBox(height: 80.h),
                         ],
                       ),
@@ -219,12 +219,23 @@ class _UserNewsPageState extends State<UserNewsPage> {
                       itemCount: newsList.length,
                       itemBuilder: (context, index) {
                         final news = newsList[index];
+                        
+                        // ✅ DEBUG: Print image URL
+                        print('📰 Terbaru #$index - Image URL: ${news.imageUrl1}');
+                        
                         return GestureDetector(
                           onTap: () => _navigateToDetail(news),
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              _buildCarouselImage(news.imageUrl1),
+                              ProductImage(
+                                imageUrl: news.imageUrl1,
+                                width: double.infinity,
+                                height: 200.h,
+                                fit: BoxFit.cover,
+                                borderRadius: BorderRadius.circular(12.r),
+                                showDebugInfo: true, // ✅ Tampilkan debug info
+                              ),
                               Container(
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
@@ -358,6 +369,10 @@ class _UserNewsPageState extends State<UserNewsPage> {
         ),
         itemBuilder: (context, index) {
           final news = newsList[index];
+          
+          // ✅ DEBUG: Print image URL untuk Trending
+          print('📰 Trending #$index - Image URL: ${news.imageUrl1}');
+          
           return GestureDetector(
             onTap: () => _navigateToDetail(news),
             child: SizedBox(
@@ -365,19 +380,13 @@ class _UserNewsPageState extends State<UserNewsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
+                  ProductImage(
+                    imageUrl: news.imageUrl1,
+                    width: 160.w,
+                    height: 110.h,
+                    fit: BoxFit.cover,
                     borderRadius: BorderRadius.circular(12.r),
-                    child: Image.asset(
-                      news.imageUrl1,
-                      fit: BoxFit.cover,
-                      height: 110.h,
-                      width: double.infinity,
-                      errorBuilder: (_, __, ___) => Container(
-                        height: 110.h,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.broken_image),
-                      ),
-                    ),
+                    showDebugInfo: true, // ✅ Tampilkan debug info
                   ),
                   SizedBox(height: 8.h),
                   if (news.categories.isNotEmpty)
@@ -439,35 +448,6 @@ class _UserNewsPageState extends State<UserNewsPage> {
             child: NewsCard(news: news),
           );
         }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildCarouselImage(String imagePath) {
-    return Image.asset(
-      imagePath,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Container(
-        color: Colors.grey[300],
-        child: const Center(
-          child: Icon(Icons.broken_image, size: 50),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImage(String imagePath) {
-    return Image.asset(
-      imagePath,
-      fit: BoxFit.cover,
-      height: 110.h,
-      width: double.infinity,
-      errorBuilder: (_, __, ___) => Container(
-        height: 110.h,
-        color: Colors.grey[300],
-        child: const Center(
-          child: Icon(Icons.broken_image),
-        ),
       ),
     );
   }

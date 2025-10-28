@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/admin/product/product_page.dart';
 import 'package:my_app/admin/community/community_page.dart';
-import 'package:my_app/admin/news_page.dart';
+import 'package:my_app/admin/news/news_page.dart';
 import 'package:my_app/admin/profile_page.dart'; // ✅ tambahkan halaman profil
 import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/admin/product/admin_product_add_page.dart';
