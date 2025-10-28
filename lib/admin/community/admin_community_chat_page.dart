@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -62,22 +63,9 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  /// 🔹 Header merah + card putih (sesuai Figma)
-  Widget _buildHeader(String brand, String logoPath, BuildContext context) {
-    return CommunityHeader(
-      brandName: brand,
-      logoPath: logoPath,
-      onBack: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AdminCommunityPage()),
-        );
-      },
-    );
-  }
-
   /// 🔹 StreamBuilder untuk menampilkan daftar posting
   Widget _buildPostList(BuildContext context, String brand) {
+    // Query langsung dari posts collection dengan filter brand
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('posts')
@@ -88,17 +76,41 @@ class AdminCommunityChatPage extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
+        
         if (snapshot.hasError) {
           return Center(
-            child: Text(
-              '❌ Terjadi kesalahan: ${snapshot.error}',
-              style: TextStyle(color: Colors.red, fontSize: 14.sp),
-              textAlign: TextAlign.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 60.sp, color: Colors.red),
+                SizedBox(height: 16.h),
+                Text(
+                  '❌ Terjadi kesalahan',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 32.w),
+                  child: Text(
+                    '${snapshot.error}',
+                    style: TextStyle(color: Colors.red, fontSize: 13.sp),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
             ),
           );
         }
 
         final docs = snapshot.data?.docs ?? [];
+        
+        // Debug: Print jumlah dokumen yang ditemukan
+        print('📊 Found ${docs.length} posts for brand: $brand');
+        
         if (docs.isEmpty) return _buildEmptyState(brand);
 
         return ListView.separated(
@@ -109,6 +121,10 @@ class AdminCommunityChatPage extends StatelessWidget {
             final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>? ?? {};
             final postId = doc.id;
+            
+            // Debug: Print data setiap post
+            print('📄 Post $index: ${data['title']}');
+            
             return _buildPostCard(context, brand, postId, data);
           },
         );
@@ -144,14 +160,109 @@ class AdminCommunityChatPage extends StatelessWidget {
         ),
       );
 
+  /// 🔹 Cek apakah string adalah base64
+  bool _isBase64(String str) {
+    if (str.isEmpty) return false;
+    
+    try {
+      if (str.startsWith('http') || 
+          str.startsWith('https') || 
+          str.startsWith('assets/') ||
+          str.contains('.png') || 
+          str.contains('.jpg') || 
+          str.contains('.jpeg') ||
+          str.contains('.webp') ||
+          str.contains('/') && str.length < 100) {
+        return false;
+      }
+      
+      if (str.length < 100) {
+        return false;
+      }
+      
+      base64Decode(str);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 🔹 Build image widget dengan support base64, network, dan asset
+  Widget _buildPostImage(String imagePath) {
+    if (imagePath.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: EdgeInsets.only(top: 10.h),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10.r),
+        child: _isBase64(imagePath)
+            ? Image.memory(
+                base64Decode(imagePath),
+                fit: BoxFit.cover,
+                height: 180.h,
+                width: double.infinity,
+                errorBuilder: (context, error, stackTrace) {
+                  return _buildImageError();
+                },
+              )
+            : imagePath.startsWith('http')
+                ? Image.network(
+                    imagePath,
+                    fit: BoxFit.cover,
+                    height: 180.h,
+                    width: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return _buildImageError();
+                    },
+                  )
+                : Image.asset(
+                    imagePath,
+                    fit: BoxFit.cover,
+                    height: 180.h,
+                    width: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return _buildImageError();
+                    },
+                  ),
+      ),
+    );
+  }
+
+  /// 🔹 Placeholder jika gambar error
+  Widget _buildImageError() {
+    return Container(
+      height: 180.h,
+      width: double.infinity,
+      color: Colors.grey[200],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.broken_image, size: 48.sp, color: Colors.grey[400]),
+          SizedBox(height: 8.h),
+          Text(
+            'Gambar tidak dapat dimuat',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 🔹 Card posting
   Widget _buildPostCard(
-      BuildContext context, String brand, String postId, Map<String, dynamic> data) {
+    BuildContext context,
+    String brand,
+    String postId,
+    Map<String, dynamic> data,
+  ) {
     final title = data['title']?.toString() ?? '';
     final content = data['content']?.toString() ?? '';
     final description = data['description']?.toString() ?? '';
     final imagePath = data['imageUrl']?.toString() ?? '';
     final linksList = data['links'] as List<dynamic>? ?? [];
+    final mainCategory = data['mainCategory']?.toString() ?? '';
+    final subCategory = data['subCategory']?.toString() ?? '';
+    final communityId = data['communityId']?.toString();
 
     final createdAt = data['createdAt'] is Timestamp
         ? (data['createdAt'] as Timestamp).toDate()
@@ -173,6 +284,7 @@ class AdminCommunityChatPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header dengan badge admin dan action buttons
           Row(
             children: [
               Container(
@@ -208,10 +320,12 @@ class AdminCommunityChatPage extends StatelessWidget {
               ),
               IconButton(
                 icon: Icon(Icons.delete, size: 20.sp, color: Colors.red),
-                onPressed: () => _showDeleteDialog(context, postId),
+                onPressed: () => _showDeleteDialog(context, postId, communityId),
               ),
             ],
           ),
+
+          // Title
           if (title.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 8.h),
@@ -224,40 +338,95 @@ class AdminCommunityChatPage extends StatelessWidget {
                 ),
               ),
             ),
-          if (imagePath.isNotEmpty)
+
+          // Categories badges
+          if (mainCategory.isNotEmpty || subCategory.isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 10.h),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10.r),
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  height: 180.h,
-                  width: double.infinity,
-                ),
+              padding: EdgeInsets.only(top: 6.h),
+              child: Wrap(
+                spacing: 6.w,
+                children: [
+                  if (mainCategory.isNotEmpty)
+                    Chip(
+                      label: Text(mainCategory),
+                      backgroundColor: Colors.blue[50],
+                      labelStyle: TextStyle(
+                        fontSize: 11.sp,
+                        color: Colors.blue[700],
+                      ),
+                      padding: EdgeInsets.zero,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  if (subCategory.isNotEmpty)
+                    Chip(
+                      label: Text(subCategory),
+                      backgroundColor: Colors.green[50],
+                      labelStyle: TextStyle(
+                        fontSize: 11.sp,
+                        color: Colors.green[700],
+                      ),
+                      padding: EdgeInsets.zero,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                ],
               ),
             ),
+
+          // Image with base64 support
+          _buildPostImage(imagePath),
+
+          // Main Price (content field)
           if (content.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 8.h),
-              child: Text(
-                content,
-                textAlign: TextAlign.justify,
-                style:
-                    TextStyle(fontSize: 14.sp, color: Colors.black87, height: 1.6),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6.r),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Harga Utama: ',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      'Rp ${_formatPrice(content)}',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
+
+          // Description
           if (description.isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 6.h),
+              padding: EdgeInsets.only(top: 8.h),
               child: Text(
                 description,
                 textAlign: TextAlign.justify,
-                style:
-                    TextStyle(fontSize: 13.sp, color: Colors.black54, height: 1.6),
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: Colors.black87,
+                  height: 1.6,
+                ),
               ),
             ),
+
+          // Purchase options
           if (linksList.isNotEmpty) _buildLinks(context, linksList),
+
+          // Timestamp
           if (createdAt != null)
             Padding(
               padding: EdgeInsets.only(top: 8.h),
@@ -303,12 +472,14 @@ class AdminCommunityChatPage extends StatelessWidget {
                 if (uri != null && await canLaunchUrl(uri)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Gagal membuka tautan'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Gagal membuka tautan'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               },
               child: Container(
@@ -332,30 +503,55 @@ class AdminCommunityChatPage extends StatelessWidget {
                         width: 40.w,
                         height: 40.w,
                         margin: EdgeInsets.only(right: 10.w),
-                        child: Image.asset(logoUrl, fit: BoxFit.contain),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6.r),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6.r),
+                          child: Image.asset(
+                            logoUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                Icons.store,
+                                size: 24.sp,
+                                color: Colors.grey[400],
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (store.isNotEmpty)
-                            Text(store,
-                                style: TextStyle(
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.w600)),
-                          if (price != null)
+                          if (store.isNotEmpty && store != 'Other')
+                            Text(
+                              store,
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          if (price != null && price > 0)
                             Text(
                               "Rp ${_formatPrice(price)}",
                               style: TextStyle(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary),
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
                             ),
                         ],
                       ),
                     ),
-                    Icon(Icons.arrow_forward_ios,
-                        size: 16.sp, color: Colors.grey),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16.sp,
+                      color: Colors.grey,
+                    ),
                   ],
                 ),
               ),
@@ -366,7 +562,7 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  void _showDeleteDialog(BuildContext context, String postId) {
+  void _showDeleteDialog(BuildContext context, String postId, String? communityId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -379,11 +575,43 @@ class AdminCommunityChatPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () async {
-              await FirebaseFirestore.instance
-                  .collection('posts')
-                  .doc(postId)
-                  .delete();
-              if (context.mounted) Navigator.pop(context);
+              try {
+                // Hapus dari collection posts utama
+                await FirebaseFirestore.instance
+                    .collection('posts')
+                    .doc(postId)
+                    .delete();
+
+                // Hapus juga dari subcollection communities jika ada
+                if (communityId != null && communityId.isNotEmpty) {
+                  await FirebaseFirestore.instance
+                      .collection('communities')
+                      .doc(communityId)
+                      .collection('posts')
+                      .doc(postId)
+                      .delete();
+                }
+
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Posting berhasil dihapus'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Gagal menghapus: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),

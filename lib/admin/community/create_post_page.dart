@@ -57,19 +57,19 @@ class _CreatePostPageState extends State<CreatePostPage> {
       'logo': 'assets/logo_blibli.jpg',
     },
     'under armour': {
-      'name': 'Under armour',
+      'name': 'Under armour Official',
       'logo': 'assets/logo_under_armour.png',
     },
     'jordan': {
-      'name': 'Jordan',
+      'name': 'Jordan Official',
       'logo': 'assets/logo_jordan.png',
     },
     'puma': {
-      'name': 'Puma',
+      'name': 'Puma Official',
       'logo': 'assets/logo_puma.png',
     },
     'mizuno': {
-      'name': 'Mizuno',
+      'name': 'Mizuno Official',
       'logo': 'assets/logo_mizuno.png',
     },
     'nike': {
@@ -95,7 +95,18 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _titleController.text = data['title']?.toString() ?? '';
     _contentController.text = data['content']?.toString() ?? '';
     _descriptionController.text = data['description']?.toString() ?? '';
-    _imageBase64 = data['imageUrl']?.toString();
+    
+    // Handle image - bisa base64 atau URL/path biasa
+    final imageUrl = data['imageUrl']?.toString() ?? '';
+    if (imageUrl.isNotEmpty) {
+      // Cek apakah base64 atau bukan
+      if (_isBase64(imageUrl)) {
+        _imageBase64 = imageUrl;
+      } else {
+        _imagePath = imageUrl;
+      }
+    }
+    
     _mainCategory = data['mainCategory']?.toString();
     _subCategory = data['subCategory']?.toString();
 
@@ -103,6 +114,35 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _purchaseOptions.addAll(
       links.map((e) => Map<String, dynamic>.from(e as Map)),
     );
+  }
+  
+  bool _isBase64(String str) {
+    if (str.isEmpty) return false;
+    
+    try {
+      // Jika ada http, https, assets/, atau extension file -> bukan base64
+      if (str.startsWith('http') || 
+          str.startsWith('https') || 
+          str.startsWith('assets/') ||
+          str.contains('.png') || 
+          str.contains('.jpg') || 
+          str.contains('.jpeg') ||
+          str.contains('.webp') ||
+          str.contains('/') && str.length < 100) {
+        return false;
+      }
+      
+      // Base64 biasanya panjang (minimal ratusan karakter untuk image)
+      if (str.length < 100) {
+        return false;
+      }
+      
+      // Coba decode, kalau berhasil berarti base64
+      base64Decode(str);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   @override
@@ -113,9 +153,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     super.dispose();
   }
 
-  // ============================================================
-  // 🔹 DETECT STORE FROM URL
-  // ============================================================
   Map<String, String> _detectStoreFromUrl(String url) {
     final lowerUrl = url.toLowerCase();
     
@@ -334,7 +371,19 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                       },
                                     ),
                                   )
-                                : _buildImagePlaceholder(),
+                                : _imagePath != null && _imagePath!.isNotEmpty
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(12.r),
+                                        child: Image.network(
+                                          _imagePath!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            return _buildImagePlaceholder();
+                                          },
+                                        ),
+                                      )
+                                    : _buildImagePlaceholder(),
                       ),
                     ),
                     SizedBox(height: 16.h),
@@ -500,7 +549,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Store Logo Preview
-                              if (hasLogo)
+                              if (hasLogo && option['store'] != 'Other')
                                 Container(
                                   margin: EdgeInsets.only(bottom: 8.h),
                                   padding: EdgeInsets.all(8.w),
