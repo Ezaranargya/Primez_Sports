@@ -31,13 +31,13 @@ class BrandHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // 🔹 Tombol back
+          
           IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, size: 20),
             onPressed: onBack,
           ),
 
-          // 🔹 Logo brand
+          
           Image.asset(
             logoPath,
             width: 26.w,
@@ -46,7 +46,7 @@ class BrandHeader extends StatelessWidget {
           ),
           SizedBox(width: 10.w),
 
-          // 🔹 Teks nama brand
+          
           Expanded(
             child: Text(
               "Kumpulan Brand $brandName Official",

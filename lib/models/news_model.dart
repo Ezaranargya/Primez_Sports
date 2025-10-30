@@ -1,71 +1,91 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class NewsModel {
+class News {
   final String id;
   final String title;
+  final String subtitle;
   final String author;
   final String brand;
-  final List<String> categories;
-  final List<ContentItem> content;
-  final DateTime createdAt;
   final DateTime date;
+  final DateTime createdAt;
+  final List<String> categories;
   final String imageUrl1;
-  final String subtitle;
   final String imageAsset;
+  final List<ContentBlock> content;
 
-  NewsModel({
+  News({
     required this.id,
     required this.title,
+    required this.subtitle,
     required this.author,
     required this.brand,
-    required this.categories,
-    required this.content,
-    required this.createdAt,
     required this.date,
+    required this.createdAt,
+    required this.categories,
     required this.imageUrl1,
-    required this.subtitle,
+    required this.content,
     this.imageAsset = '',
   });
 
-  factory NewsModel.fromFirestore(Map<String, dynamic> data, String id) {
-    final rawImage = data['imageUrl1'] ?? data['imageUrl'] ?? '';
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'subtitle': subtitle,
+      'author': author,
+      'brand': brand,
+      'date': Timestamp.fromDate(date),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'categories': categories,
+      'imageUrl1': imageUrl1,
+      'imageAsset': imageAsset,
+      'content': content.map((block) => block.toMap()).toList(),
+    };
+  }
+
+  factory News.fromMap(Map<String, dynamic> map, String id) {
+    final rawImage = map['imageUrl1'] ?? map['imageUrl'] ?? '';
 
     String assetPath = '';
     if (rawImage is String && rawImage.startsWith('assets/')) {
       assetPath = rawImage;
     }
-    print("🔥 Firestore content field for $id: ${data['content']}");
+    print("🔥 Firestore content field for $id: ${map['content']}");
 
-    return NewsModel(
+    return News(
       id: id,
-      title: data['title'] ?? '',
-      author: data['author'] ?? '',
-      brand: data['brand'] ?? '',
-      categories: List<String>.from(data['categories'] ?? []),
-      content: (data['content'] != null)
-    ? (data['content'] is List)
-        ? (data['content'] as List)
-            .whereType<Map>()
-            .map((item) =>
-                ContentItem.fromMap(Map<String, dynamic>.from(item)))
-            .toList()
-        : [
-            ContentItem(
-              type: 'text',
-              text: data['content'].toString(),
-            )
-          ]
-    : [],
-      createdAt: (data['createdAt'] is Timestamp)
-          ? (data['createdAt'] as Timestamp).toDate()
+      title: map['title'] ?? '',
+      subtitle: map['subtitle'] ?? '',
+      author: map['author'] ?? '',
+      brand: map['brand'] ?? '',
+      date: (map['date'] is Timestamp)
+          ? (map['date'] as Timestamp).toDate()
           : DateTime.now(),
-      date: (data['date'] is Timestamp)
-          ? (data['date'] as Timestamp).toDate()
+      createdAt: (map['createdAt'] is Timestamp)
+          ? (map['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
+      categories: List<String>.from(map['categories'] ?? []),
       imageUrl1: rawImage,
-      subtitle: data['subtitle'] ?? '',
       imageAsset: assetPath,
+      content: (map['content'] != null)
+          ? (map['content'] is List)
+              ? (map['content'] as List)
+                  .whereType<Map>()
+                  .map((item) =>
+                      ContentBlock.fromMap(Map<String, dynamic>.from(item)))
+                  .toList()
+              : [
+                  ContentBlock(
+                    type: 'text',
+                    value: map['content'].toString(),
+                  )
+                ]
+          : [],
     );
+  }
+
+  // Alias untuk kompatibilitas
+  factory News.fromFirestore(Map<String, dynamic> data, String id) {
+    return News.fromMap(data, id);
   }
 
   String get imageUrl => imageUrl1;
@@ -74,55 +94,57 @@ class NewsModel {
 
   String get contentAsText {
     return content
-        .where((item) => item.text != null && item.text!.isNotEmpty)
-        .map((item) => item.text!)
+        .where((item) => item.value.isNotEmpty && item.type == 'text')
+        .map((item) => item.value)
         .join('\n\n');
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'title': title,
-      'author': author,
-      'brand': brand,
-      'categories': categories,
-      'content': content.map((item) => item.toMap()).toList(),
-      'createdAt': Timestamp.fromDate(createdAt),
-      'date': Timestamp.fromDate(date),
-      'imageUrl1': imageUrl1,
-      'subtitle': subtitle,
-      'imageAsset': imageAsset,
-    };
   }
 }
 
-class ContentItem {
-  final String type;
-  final String? text;
-  final String? imageUrl;
+class ContentBlock {
+  final String type; // "image" atau "text"
+  final String value;
   final String? caption;
 
-  ContentItem({
+  ContentBlock({
     required this.type,
-    this.text,
-    this.imageUrl,
+    required this.value,
     this.caption,
   });
-
-  factory ContentItem.fromMap(Map<String, dynamic> map) {
-    return ContentItem(
-      type: map['type'] as String? ?? 'text',
-      text: map['text'] as String?,
-      imageUrl: map['imageUrl'] as String?,
-      caption: map['caption'] as String?,
-    );
-  }
 
   Map<String, dynamic> toMap() {
     return {
       'type': type,
-      'text': text ?? '',
-      'imageUrl': imageUrl ?? '',
+      'value': value,
       'caption': caption ?? '',
+      // Untuk kompatibilitas dengan ContentItem
+      if (type == 'text') 'text': value,
+      if (type == 'image') 'imageUrl': value,
     };
   }
+
+  factory ContentBlock.fromMap(Map<String, dynamic> map) {
+    final type = map['type'] ?? 'text';
+    String value = '';
+
+    // Support both old and new format
+    if (type == 'text') {
+      value = map['value'] ?? map['text'] ?? '';
+    } else if (type == 'image') {
+      value = map['value'] ?? map['imageUrl'] ?? '';
+    }
+
+    return ContentBlock(
+      type: type,
+      value: value,
+      caption: map['caption'] as String?,
+    );
+  }
+
+  // Getter untuk kompatibilitas dengan ContentItem
+  String? get text => type == 'text' ? value : null;
+  String? get imageUrl => type == 'image' ? value : null;
 }
+
+// Alias untuk kompatibilitas
+typedef NewsModel = News;
+typedef ContentItem = ContentBlock;

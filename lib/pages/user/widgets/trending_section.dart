@@ -23,7 +23,7 @@ class TrendingSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 🔹 Section Title
+        
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.w),
           child: Text(
@@ -38,7 +38,7 @@ class TrendingSection extends StatelessWidget {
         ),
         SizedBox(height: 12.h),
 
-        // 🔹 Product List Container
+        
         Container(
           width: double.infinity,
           padding: EdgeInsets.all(12.w),
@@ -95,12 +95,12 @@ class _TrendingProductCard extends StatelessWidget {
         ),
       ),
       child: Container(
-        width: 130.w, // 🔹 Lebar kartu lebih ramping
+        width: 130.w, 
         color: Colors.white,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 Product Image (diperkecil)
+            
             ClipRRect(
               borderRadius: BorderRadius.circular(8.r),
               child: ProductImage(
@@ -108,7 +108,7 @@ class _TrendingProductCard extends StatelessWidget {
                     ? product.imageBase64
                     : product.imageUrl ?? '',
                 width: double.infinity,
-                height: 130.h, // ✅ Fixed height
+                height: 130.h, 
                 fit: BoxFit.cover,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(12),
@@ -118,7 +118,7 @@ class _TrendingProductCard extends StatelessWidget {
             ),
             SizedBox(height: 6.h),
 
-            // 🔹 Price
+            
             Text(
               Formatter.formatPrice(product.price),
               style: TextStyle(
@@ -127,10 +127,11 @@ class _TrendingProductCard extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Poppins',
               ),
+              textAlign: TextAlign.center,
             ),
             SizedBox(height: 3.h),
 
-            // 🔹 Product Name
+            
             Text(
               product.name,
               style: TextStyle(
@@ -142,6 +143,7 @@ class _TrendingProductCard extends StatelessWidget {
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ],
         ),

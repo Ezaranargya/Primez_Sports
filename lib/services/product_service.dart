@@ -14,9 +14,6 @@ class ProductService {
   CollectionReference<Map<String, dynamic>> get _productRef =>
       _firestore.collection(_collection);
 
-  // ============================================================
-  // 🔹 SAVE OR UPDATE PRODUCT (FINAL STABLE VERSION)
-  // ============================================================
   Future<bool> saveOrUpdateProduct({
     String? productId,
     String? name,
@@ -31,7 +28,7 @@ class ProductService {
     try {
       print('💾 ===== SAVE OR UPDATE PRODUCT =====');
 
-      // 🔧 Bentuk data dari model atau parameter
+      
       final data = product != null
           ? product.toMap()
           : {
@@ -47,7 +44,7 @@ class ProductService {
 
       print('🧩 Data sebelum validasi: $data');
 
-      // ✅ Bentuk ulang dengan tipe aman
+      
       final productData = {
         'name': data['name'] ?? '',
         'brand': data['brand'] ?? '',
@@ -62,7 +59,7 @@ class ProductService {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      // ✅ Validasi data
+      
       final nameValid = (productData['name'] as String).isNotEmpty;
       final hargaValid = (productData['price'] as num) > 0;
       final categoriesValid = productData['categories'] is List &&
@@ -75,10 +72,10 @@ class ProductService {
         return false;
       }
 
-      // Hapus ID internal
+      
       productData.remove('id');
 
-      // ✅ Tambah atau update produk
+      
       if (productId == null || productId.isEmpty) {
         print('➕ Menambahkan produk baru...');
         productData['createdAt'] = FieldValue.serverTimestamp();
@@ -103,9 +100,9 @@ class ProductService {
     }
   }
 
-  // ============================================================
-  // 🔹 DELETE PRODUCT
-  // ============================================================
+  
+  
+  
   Future<bool> deleteProduct(String id) async {
     if (!_isAdmin) {
       print('❌ User tidak memiliki akses admin');
@@ -122,9 +119,9 @@ class ProductService {
     }
   }
 
-  // ============================================================
-  // 🔹 GET ALL PRODUCTS
-  // ============================================================
+  
+  
+  
   Stream<List<Product>> getAllProducts() {
     return _productRef.snapshots().map((snapshot) {
       final products = snapshot.docs
@@ -144,9 +141,9 @@ class ProductService {
     });
   }
 
-  // ============================================================
-  // 🔹 FETCH PRODUCT BY ID
-  // ============================================================
+  
+  
+  
   Future<Product?> fetchProductById(String id) async {
     try {
       final doc = await _productRef.doc(id).get();
@@ -158,9 +155,9 @@ class ProductService {
     }
   }
 
-  // ============================================================
-  // 🔹 REALTIME PRODUCT BY ID
-  // ============================================================
+  
+  
+  
   Stream<Product?> getProductById(String id) {
     return _productRef.doc(id).snapshots().map((doc) {
       if (!doc.exists || doc.data() == null) return null;
@@ -168,9 +165,9 @@ class ProductService {
     });
   }
 
-  // ============================================================
-  // 🔹 GET PRODUCTS BY CATEGORY
-  // ============================================================
+  
+  
+  
   Stream<List<Product>> getProductsByCategory(String category) {
     return _productRef
         .where('categories', arrayContains: category)
@@ -180,9 +177,9 @@ class ProductService {
             .toList());
   }
 
-  // ============================================================
-  // 🔹 SEARCH PRODUCTS
-  // ============================================================
+  
+  
+  
   Stream<List<Product>> searchProducts(String query) {
     final lowerQuery = query.toLowerCase();
     return _productRef.snapshots().map((snapshot) {
@@ -193,9 +190,9 @@ class ProductService {
     });
   }
 
-  // ============================================================
-  // 🔹 TRENDING PRODUCTS
-  // ============================================================
+  
+  
+  
   Stream<List<Product>> getTrendingProducts() {
     return _productRef
         .where('categories', arrayContains: 'Trending')
@@ -205,9 +202,9 @@ class ProductService {
             .toList());
   }
 
-  // ============================================================
-  // 🔹 UPLOAD IMAGE
-  // ============================================================
+  
+  
+  
   Future<String> uploadImage(File imageFile, String fileName) async {
     try {
       final ref = _storage.ref().child('products/$fileName');
@@ -221,9 +218,9 @@ class ProductService {
     }
   }
 
-  // ============================================================
-  // 🔹 GET PRODUCT COUNT
-  // ============================================================
+  
+  
+  
   Future<int> getProductsCount() async {
     try {
       final snapshot = await _productRef.get();
@@ -234,9 +231,9 @@ class ProductService {
     }
   }
 
-  // ============================================================
-  // 🔹 CHECK PRODUCT EXISTENCE
-  // ============================================================
+  
+  
+  
   Future<bool> productExists(String id) async {
     try {
       final doc = await _productRef.doc(id).get();

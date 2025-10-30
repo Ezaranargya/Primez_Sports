@@ -30,7 +30,7 @@ class AdminCommunityChatPage extends StatelessWidget {
       backgroundColor: AppColors.backgroundColor,
       body: Column(
         children: [
-          // 🔹 Header custom seperti di Figma
+          
           CommunityHeader(
             brandName: brand,
             logoPath: logoPath,
@@ -42,12 +42,12 @@ class AdminCommunityChatPage extends StatelessWidget {
             },
           ),
 
-          // 🔹 Isi postingan
+          
           Expanded(child: _buildPostList(context, brand)),
         ],
       ),
 
-      // 🔹 Tombol tambah posting
+      
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
@@ -63,15 +63,16 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  /// 🔹 StreamBuilder untuk menampilkan daftar posting
+  
   Widget _buildPostList(BuildContext context, String brand) {
-    // Query langsung dari posts collection dengan filter brand
+    
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('posts')
-          .where('brand', isEqualTo: brand)
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
+      .collection('posts')
+      .where('brand', isEqualTo: brand)
+      .orderBy('createdAt', descending: true)
+      .snapshots(),
+
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -108,7 +109,7 @@ class AdminCommunityChatPage extends StatelessWidget {
 
         final docs = snapshot.data?.docs ?? [];
         
-        // Debug: Print jumlah dokumen yang ditemukan
+        
         print('📊 Found ${docs.length} posts for brand: $brand');
         
         if (docs.isEmpty) return _buildEmptyState(brand);
@@ -122,7 +123,7 @@ class AdminCommunityChatPage extends StatelessWidget {
             final data = doc.data() as Map<String, dynamic>? ?? {};
             final postId = doc.id;
             
-            // Debug: Print data setiap post
+            
             print('📄 Post $index: ${data['title']}');
             
             return _buildPostCard(context, brand, postId, data);
@@ -132,7 +133,7 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  /// 🔹 Widget tampil jika belum ada posting
+  
   Widget _buildEmptyState(String brand) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -160,7 +161,7 @@ class AdminCommunityChatPage extends StatelessWidget {
         ),
       );
 
-  /// 🔹 Cek apakah string adalah base64
+  
   bool _isBase64(String str) {
     if (str.isEmpty) return false;
     
@@ -187,7 +188,7 @@ class AdminCommunityChatPage extends StatelessWidget {
     }
   }
 
-  /// 🔹 Build image widget dengan support base64, network, dan asset
+  
   Widget _buildPostImage(String imagePath) {
     if (imagePath.isEmpty) return const SizedBox.shrink();
 
@@ -228,7 +229,7 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  /// 🔹 Placeholder jika gambar error
+  
   Widget _buildImageError() {
     return Container(
       height: 180.h,
@@ -248,7 +249,7 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  /// 🔹 Card posting
+  
   Widget _buildPostCard(
     BuildContext context,
     String brand,
@@ -284,7 +285,7 @@ class AdminCommunityChatPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header dengan badge admin dan action buttons
+          
           Row(
             children: [
               Container(
@@ -325,7 +326,7 @@ class AdminCommunityChatPage extends StatelessWidget {
             ],
           ),
 
-          // Title
+          
           if (title.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 8.h),
@@ -339,7 +340,7 @@ class AdminCommunityChatPage extends StatelessWidget {
               ),
             ),
 
-          // Categories badges
+          
           if (mainCategory.isNotEmpty || subCategory.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 6.h),
@@ -372,10 +373,10 @@ class AdminCommunityChatPage extends StatelessWidget {
               ),
             ),
 
-          // Image with base64 support
+          
           _buildPostImage(imagePath),
 
-          // Main Price (content field)
+          
           if (content.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 8.h),
@@ -408,7 +409,7 @@ class AdminCommunityChatPage extends StatelessWidget {
               ),
             ),
 
-          // Description
+          
           if (description.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 8.h),
@@ -423,10 +424,10 @@ class AdminCommunityChatPage extends StatelessWidget {
               ),
             ),
 
-          // Purchase options
+          
           if (linksList.isNotEmpty) _buildLinks(context, linksList),
 
-          // Timestamp
+          
           if (createdAt != null)
             Padding(
               padding: EdgeInsets.only(top: 8.h),
@@ -441,7 +442,7 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  /// 🔹 Daftar link toko
+  
   Widget _buildLinks(BuildContext context, List<dynamic> linksList) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -576,13 +577,13 @@ class AdminCommunityChatPage extends StatelessWidget {
           TextButton(
             onPressed: () async {
               try {
-                // Hapus dari collection posts utama
+                
                 await FirebaseFirestore.instance
                     .collection('posts')
                     .doc(postId)
                     .delete();
 
-                // Hapus juga dari subcollection communities jika ada
+                
                 if (communityId != null && communityId.isNotEmpty) {
                   await FirebaseFirestore.instance
                       .collection('communities')

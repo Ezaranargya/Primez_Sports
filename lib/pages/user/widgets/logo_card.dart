@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-/// ============================================================
-/// 🔹 LOGO CARD WIDGET
-/// ============================================================
-/// Digunakan untuk menampilkan brand logos di HomePage
-/// ============================================================
 
-/// Widget version (preferred)
+
+
+
+
+
+
 class LogoCard extends StatelessWidget {
   final String imageUrl;
   final String brandName;
@@ -46,7 +46,7 @@ class LogoCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Brand Logo
+            
             ClipRRect(
               borderRadius: BorderRadius.circular(8.r),
               child: Image.network(
@@ -87,7 +87,7 @@ class LogoCard extends StatelessWidget {
             ),
             SizedBox(height: 8.h),
             
-            // Brand Name
+            
             Text(
               brandName,
               style: TextStyle(
@@ -107,11 +107,11 @@ class LogoCard extends StatelessWidget {
   }
 }
 
-/// ============================================================
-/// 🔹 LOGO CARD FUNCTION (backward compatibility)
-/// ============================================================
-/// Function helper untuk backward compatibility
-/// ============================================================
+
+
+
+
+
 Widget logoCard(String imageUrl, String brandName, VoidCallback onTap) {
   return LogoCard(
     imageUrl: imageUrl,
@@ -120,9 +120,9 @@ Widget logoCard(String imageUrl, String brandName, VoidCallback onTap) {
   );
 }
 
-/// ============================================================
-/// 🔹 ALTERNATIVE: Compact Logo Card
-/// ============================================================
+
+
+
 class CompactLogoCard extends StatelessWidget {
   final String imageUrl;
   final String brandName;
@@ -168,9 +168,9 @@ class CompactLogoCard extends StatelessWidget {
   }
 }
 
-/// ============================================================
-/// 🔹 ALTERNATIVE: Circle Logo Card
-/// ============================================================
+
+
+
 class CircleLogoCard extends StatelessWidget {
   final String imageUrl;
   final String brandName;

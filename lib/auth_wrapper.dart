@@ -9,11 +9,9 @@ import 'package:my_app/screens/login/login_page.dart';
 import 'package:my_app/pages/user/user_home_page.dart';
 import 'package:my_app/admin/pages/admin_home_page.dart';
 
-// PERBAIKAN: AuthWrapper dengan method _getUserRole
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
-  // PENTING: Method ini harus ada di AuthWrapper
   Future<String?> _getUserRole(String uid) async {
     try {
       final doc = await FirebaseFirestore.instance
@@ -39,7 +37,7 @@ class AuthWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // PERBAIKAN: Tampilkan loading indicator yang proper
+        
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
@@ -48,7 +46,7 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // PERBAIKAN: Handle error dengan baik
+        
         if (snapshot.hasError) {
           return Scaffold(
             body: Center(
@@ -80,7 +78,7 @@ class AuthWrapper extends StatelessWidget {
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {
-                      // Restart app
+                      
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
                           builder: (_) => const AuthWrapper(),
@@ -95,12 +93,12 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // PERBAIKAN: Jika user sudah login, load role dan navigate
+        
         if (snapshot.hasData) {
           final user = snapshot.data!;
           print('✅ User is logged in: ${user.email}');
           
-          // Load favorites
+          
           Future.microtask(() {
             try {
               Provider.of<FavoriteProvider>(context, listen: false)
@@ -113,7 +111,7 @@ class AuthWrapper extends StatelessWidget {
           return FutureBuilder<String?>(
             future: _getUserRole(user.uid),
             builder: (context, roleSnapshot) {
-              // PERBAIKAN: Tampilkan loading yang proper
+              
               if (roleSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
                   body: Center(
@@ -129,7 +127,7 @@ class AuthWrapper extends StatelessWidget {
                 );
               }
 
-              // Handle error saat load role
+              
               if (roleSnapshot.hasError) {
                 return Scaffold(
                   body: Center(
@@ -176,18 +174,18 @@ class AuthWrapper extends StatelessWidget {
               final role = roleSnapshot.data;
               print('✅ Navigating to: ${role == 'admin' ? 'Admin' : 'User'} page');
               
-              // PERBAIKAN: Navigate berdasarkan role
+              
               if (role == 'admin') {
                 return const AdminHomePage();
               } else {
-                // PERBAIKAN: Langsung ke UserHomePage, bukan HomePage Base64
+                
                 return const UserHomePage();
               }
             },
           );
         }
 
-        // PERBAIKAN: Jika tidak ada user, tampilkan login page
+        
         print('ℹ️ No user logged in, showing login page');
         return const LoginPage();
       },

@@ -4,12 +4,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/utils/formatter.dart';
-import 'package:my_app/pages/product/widgets/product_image.dart'; // pastikan path sesuai
+import 'package:my_app/pages/product/widgets/product_image.dart'; 
 
-/// ============================================================
-/// 🛍️ WIDGET: NewsProductCard
-/// Card produk dengan gambar (Base64/URL/assets), nama, harga, dan brand.
-/// ============================================================
+
+
+
+
 class NewsProductCard extends StatelessWidget {
   final Product product;
 
@@ -38,9 +38,9 @@ class NewsProductCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// ============================================================
-              /// 🖼️ Gambar Produk (otomatis deteksi Base64 / URL / Asset)
-              /// ============================================================
+              
+              
+              
               ClipRRect(
                 borderRadius: BorderRadius.circular(8.r),
                 child: ProductImage(
@@ -52,14 +52,14 @@ class NewsProductCard extends StatelessWidget {
               ),
               SizedBox(width: 12.w),
 
-              /// ============================================================
-              /// 📋 Detail Produk
-              /// ============================================================
+              
+              
+              
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /// 🔹 Nama produk
+                    
                     Text(
                       product.name,
                       style: TextStyle(
@@ -73,7 +73,7 @@ class NewsProductCard extends StatelessWidget {
                     ),
                     SizedBox(height: 6.h),
 
-                    /// 🔹 Harga
+                    
                     Text(
                       Formatter.formatPrice(product.price),
                       style: TextStyle(
@@ -85,7 +85,7 @@ class NewsProductCard extends StatelessWidget {
                     ),
                     SizedBox(height: 6.h),
 
-                    /// 🔹 Brand
+                    
                     Row(
                       children: [
                         Icon(Icons.storefront,

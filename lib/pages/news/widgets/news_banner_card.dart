@@ -82,13 +82,13 @@ class NewsBannerCard extends StatelessWidget {
     );
   }
 
-  /// 🔹 Widget penampil gambar (mendukung base64, URL, dan asset)
+  
   Widget _buildNewsImage() {
     final image = news.imageUrl;
 
     if (image.isEmpty) return _placeholder();
 
-    // Base64 image
+    
     if (image.startsWith('data:image')) {
       try {
         final base64Data = image.split(',').last;
@@ -105,7 +105,7 @@ class NewsBannerCard extends StatelessWidget {
       }
     }
 
-    // Network image
+    
     if (image.startsWith('http')) {
       return Image.network(
         image,
@@ -116,7 +116,7 @@ class NewsBannerCard extends StatelessWidget {
       );
     }
 
-    // Local asset image
+    
     return Image.asset(
       news.safeImageAsset,
       height: 180.h,
@@ -126,7 +126,7 @@ class NewsBannerCard extends StatelessWidget {
     );
   }
 
-  /// 🔹 Placeholder ketika gambar tidak ada
+  
   Widget _placeholder() {
     return Container(
       height: 180.h,

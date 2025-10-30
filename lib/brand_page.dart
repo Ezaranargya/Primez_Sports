@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
@@ -130,6 +131,37 @@ class _ProductCard extends StatelessWidget {
 
   Widget _buildImage() {
     final url = product.imageUrl;
+    final base64Data = product.imageBase64 ?? '';
+
+    // 🔹 1. Jika Base64 tersedia dan valid, tampilkan dari memory
+    if (base64Data.isNotEmpty) {
+      try {
+        final cleaned = base64Data.replaceFirst(RegExp(r'data:image/[^;]+;base64,'), '');
+        final bytes = base64Decode(cleaned);
+        return Image.memory(
+          bytes,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: Colors.grey[200],
+              child: Center(
+                child: Icon(
+                  Icons.broken_image,
+                  size: 40.sp,
+                  color: Colors.grey,
+                ),
+              ),
+            );
+          },
+        );
+      } catch (_) {
+        // fallback jika base64 gagal didecode
+      }
+    }
+
+    // 🔹 2. Jika URL kosong, tampilkan placeholder
     if (url.isEmpty) {
       return Container(
         color: Colors.grey[200],
@@ -143,7 +175,7 @@ class _ProductCard extends StatelessWidget {
       );
     }
 
-    // jika url remote
+    // 🔹 3. Jika URL dari network
     if (url.startsWith('http')) {
       return Image.network(
         url,
@@ -165,7 +197,7 @@ class _ProductCard extends StatelessWidget {
       );
     }
 
-    // jika local asset (path relatif di assets)
+    // 🔹 4. Jika URL dari asset
     if (!url.startsWith('/')) {
       return Image.asset(
         url,
@@ -187,7 +219,7 @@ class _ProductCard extends StatelessWidget {
       );
     }
 
-    // kemungkinan path file device
+    // 🔹 5. Jika file lokal
     try {
       return Image.file(
         File(url),

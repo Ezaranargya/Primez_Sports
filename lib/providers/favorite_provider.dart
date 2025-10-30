@@ -76,7 +76,7 @@ class FavoriteProvider with ChangeNotifier {
     }
   }
 
-  /// 🔹 Alternative: Load favorites using Stream (real-time updates)
+  
   Stream<List<Product>> favoritesStream() {
     final user = _auth.currentUser;
     if (user == null) {
@@ -118,12 +118,12 @@ class FavoriteProvider with ChangeNotifier {
 
     try {
       if (isFavorite(product.id)) {
-        // Remove from favorites
+        
         await docRef.delete();
         _favorites.removeWhere((p) => p.id == product.id);
         print('🗑️ Removed from favorites: ${product.name}');
       } else {
-        // Add to favorites
+        
         await docRef.set(product.toMap());
         _favorites.add(product);
         print('❤️ Added to favorites: ${product.name}');

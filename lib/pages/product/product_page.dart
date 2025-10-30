@@ -65,13 +65,13 @@ class UserProductPage extends StatelessWidget {
     );
   }
 
-  /// ============================================================
-  /// 🔹 PRODUCT CARD
-  /// ============================================================
+  
+  
+  
   Widget _buildProductCard(Product product) {
     return GestureDetector(
       onTap: () {
-        // Bisa langsung navigasi ke detail
+        
       },
       child: Card(
         child: Padding(
@@ -79,7 +79,7 @@ class UserProductPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Judul produk → Poppins
+              
               Text(
                 product.name,
                 style: GoogleFonts.poppins(
@@ -89,7 +89,7 @@ class UserProductPage extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 4.h),
-              // Deskripsi produk → Inter
+              
               Text(
                 product.description,
                 style: GoogleFonts.inter(

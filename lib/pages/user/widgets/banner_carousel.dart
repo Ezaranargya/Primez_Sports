@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
+import 'package:my_app/pages/product/product_detail_page.dart';
 
 class BannerCarousel extends StatefulWidget {
   final List<Map<String, dynamic>> banners;
-
   final double height;
   final double borderRadius;
   final Color activeColor;
@@ -93,6 +93,14 @@ class _BannerCarouselState extends State<BannerCarousel> {
                       if (widget.onBannerTap != null &&
                           banner['product'] != null) {
                         widget.onBannerTap!(banner['product']);
+                      } else if (banner['product'] != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                UserProductDetailPage(product: banner['product']),
+                          ),
+                        );
                       }
                     },
                     child: Image.asset(
@@ -106,7 +114,6 @@ class _BannerCarouselState extends State<BannerCarousel> {
             ),
           ),
         ),
-
         SizedBox(height: 10.h),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,

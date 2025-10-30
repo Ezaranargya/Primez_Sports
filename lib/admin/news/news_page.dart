@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/models/news_model.dart';
 import 'package:my_app/admin/news/admin_news_form_page.dart';
-import 'package:my_app/admin/news/admin_news_chat_page.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:my_app/pages/product/widgets/product_image.dart';
@@ -86,32 +85,22 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
     );
   }
 
-  void _navigateToChat(String newsId, String newsTitle) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AdminNewsChatPage(
-          newsId: newsId,
-          newsTitle: newsTitle,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text(
-          'Kelola Berita',
+          'Admin News',
           style: TextStyle(
+            color: AppColors.backgroundColor,
             fontFamily: 'Poppins',
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: AppColors.primary,
         elevation: 0,
+        centerTitle: true,
       ),
       body: Column(
         children: [
@@ -255,7 +244,7 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
           return NewsModel.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
         }).toList();
 
-        // Filter berdasarkan search dan category
+        
         final filteredNews = newsList.where((news) {
           final matchesSearch = _searchQuery.isEmpty ||
               news.title.toLowerCase().contains(_searchQuery) ||
@@ -304,7 +293,7 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image Header
+          
           ClipRRect(
             borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
             child: _buildImage(news.imageUrl1),
@@ -315,7 +304,7 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Categories
+                
                 if (news.categories.isNotEmpty)
                   Wrap(
                     spacing: 6.w,
@@ -345,7 +334,7 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
                 
                 SizedBox(height: 8.h),
                 
-                // Title
+                
                 Text(
                   news.title,
                   style: TextStyle(
@@ -360,7 +349,7 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
                 
                 SizedBox(height: 6.h),
                 
-                // Subtitle
+                
                 if (news.subtitle.isNotEmpty)
                   Text(
                     news.subtitle,
@@ -375,7 +364,7 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
                 
                 SizedBox(height: 8.h),
                 
-                // Author & Date
+                
                 Row(
                   children: [
                     if (news.author.isNotEmpty) ...[
@@ -406,24 +395,9 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
                 
                 SizedBox(height: 12.h),
                 
-                // Action Buttons
+                
                 Row(
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _navigateToChat(news.id, news.title),
-                        icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                        label: const Text(
-                          'Chat',
-                          style: TextStyle(fontFamily: 'Poppins'),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: BorderSide(color: AppColors.primary),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => _navigateToForm(news: news),

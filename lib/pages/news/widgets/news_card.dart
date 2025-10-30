@@ -4,9 +4,9 @@ import 'package:my_app/models/news_model.dart';
 import 'package:my_app/pages/news/news_detail_page.dart';
 import 'package:my_app/pages/product/widgets/product_image.dart';
 
-/// ============================================================
-/// 📰 WIDGET: NewsCard
-/// ============================================================
+
+
+
 class NewsCard extends StatelessWidget {
   final NewsModel news;
 
@@ -30,7 +30,7 @@ class NewsCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// 🖼️ Gambar berita
+              
               ClipRRect(
                 borderRadius: BorderRadius.circular(12.r),
                 child: ProductImage(
@@ -46,12 +46,12 @@ class NewsCard extends StatelessWidget {
               ),
               SizedBox(width: 12.w),
 
-              /// 📋 Konten berita
+              
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /// 🔹 Judul
+                    
                     Text(
                       news.title,
                       style: TextStyle(
@@ -65,7 +65,7 @@ class NewsCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4.h),
 
-                    /// 🔹 Subtitle / Deskripsi singkat
+                    
                     if (news.subtitle.isNotEmpty)
                       Text(
                         news.subtitle,
@@ -79,7 +79,7 @@ class NewsCard extends StatelessWidget {
                       ),
                     SizedBox(height: 6.h),
 
-                    /// 🔹 Penulis & Brand
+                    
                     Row(
                       children: [
                         Icon(Icons.person, size: 14.sp, color: Colors.grey[600]),
@@ -121,7 +121,7 @@ class NewsCard extends StatelessWidget {
 
                     SizedBox(height: 4.h),
 
-                    /// 🔹 Kategori (chip kecil)
+                    
                     Wrap(
                       spacing: 6.w,
                       runSpacing: 4.h,

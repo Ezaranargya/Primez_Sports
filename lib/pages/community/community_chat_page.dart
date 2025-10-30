@@ -1,9 +1,16 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:my_app/pages/community/widgets/community_header.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
+import 'package:my_app/utils/image_helper.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 
 class CommunityChatPage extends StatelessWidget {
   final String brand;
@@ -15,24 +22,45 @@ class CommunityChatPage extends StatelessWidget {
     required this.logoPath,
   });
 
+  /// 🔹 Fungsi format untuk harga utama (Rp x.xxx.xxx)
+  String formatCurrency(num price) {
+    final formatter = NumberFormat('#,##0', 'de_DE');
+    return 'Rp ${formatter.format(price)}';
+  }
+
+  /// 🔹 Fungsi format untuk harga di link store (Rp x.xxx.xxx)
+  String formatRupiah(num price) {
+    final formatter = NumberFormat('#,##0', 'de_DE');
+    return 'Rp ${formatter.format(price)}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final Map<String, String> brandLogos = {
+      "Nike": "assets/logo_nike.png",
+      "Jordan": "assets/logo_jordan.png",
+      "Adidas": "assets/logo_adidas.png",
+      "Under Armour": "assets/logo_under_armour.png",
+      "Puma": "assets/logo_puma.png",
+      "Mizuno": "assets/logo_mizuno.png",
+    };
+
+    final logoPath = brandLogos[brand] ?? "assets/default_logo.png";
+
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       body: Column(
         children: [
-          // 🔴 Header merah + card putih
           CommunityHeader(
             brandName: brand,
             logoPath: logoPath,
             onBack: () => Navigator.pop(context),
           ),
-
-          // 🔘 List chat komunitas dari Firestore
+          SizedBox(height: 16.h), // ✅ Tambahkan jarak di sini
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collectionGroup('posts')
+                  .collection('posts')
                   .where('brand', isEqualTo: brand)
                   .orderBy('createdAt', descending: true)
                   .snapshots(),
@@ -67,14 +95,15 @@ class CommunityChatPage extends StatelessWidget {
                   separatorBuilder: (_, __) => SizedBox(height: 12.h),
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>? ?? {};
+                    final data =
+                        docs[index].data() as Map<String, dynamic>? ?? {};
 
                     final title = data['title']?.toString() ?? '';
                     final content = data['content']?.toString() ?? '';
                     final description = data['description']?.toString() ?? '';
                     final imagePath = data['imageUrl']?.toString() ?? '';
                     final linksList = data['links'] as List<dynamic>? ?? [];
-
+                    final price = data['price'];
                     final createdAt = data['createdAt'] is Timestamp
                         ? (data['createdAt'] as Timestamp).toDate()
                         : null;
@@ -97,7 +126,7 @@ class CommunityChatPage extends StatelessWidget {
                         children: [
                           Text(
                             "Admin $brand",
-                            style: TextStyle(
+                            style: GoogleFonts.poppins(
                               fontWeight: FontWeight.bold,
                               fontSize: 14.sp,
                               color: AppColors.primary,
@@ -108,9 +137,23 @@ class CommunityChatPage extends StatelessWidget {
                           if (title.isNotEmpty) ...[
                             Text(
                               title,
-                              style: TextStyle(
+                              style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16.sp,
+                                color: Colors.black,
+                              ),
+                            ),
+                            SizedBox(height: 6.h),
+                          ],
+
+                          if (price != null) ...[
+                            Text(
+                              formatCurrency(
+                                num.tryParse(price.toString()) ?? 0,
+                              ),
+                              style: TextStyle(
+                                fontSize: 15.sp,
+                                fontWeight: FontWeight.w600,
                                 color: Colors.black,
                               ),
                             ),
@@ -121,28 +164,29 @@ class CommunityChatPage extends StatelessWidget {
                             SizedBox(height: 10.h),
                             ClipRRect(
                               borderRadius: BorderRadius.circular(10.r),
-                              child: Image.network(
-                                imagePath,
-                                fit: BoxFit.cover,
-                                height: 180.h,
-                                width: double.infinity,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    height: 150.h,
-                                    color: Colors.grey[200],
-                                    alignment: Alignment.center,
-                                    child: Icon(Icons.image_not_supported_outlined,
-                                        size: 40.sp, color: Colors.grey),
-                                  );
-                                },
-                              ),
+                              child: _isBase64(imagePath)
+                                  ? Image.memory(
+                                      base64Decode(imagePath),
+                                      fit: BoxFit.cover,
+                                      height: 180.h,
+                                      width: double.infinity,
+                                    )
+                                  : Image.network(
+                                      imagePath,
+                                      fit: BoxFit.cover,
+                                      height: 180.h,
+                                      width: double.infinity,
+                                    ),
                             ),
                             SizedBox(height: 10.h),
                           ],
 
                           if (content.isNotEmpty)
                             Text(
-                              content,
+                              // ✅ PERBAIKAN: Cek apakah content adalah angka
+                              num.tryParse(content) != null
+                                  ? formatCurrency(num.parse(content))
+                                  : content,
                               textAlign: TextAlign.justify,
                               style: TextStyle(
                                 fontSize: 14.sp,
@@ -157,11 +201,10 @@ class CommunityChatPage extends StatelessWidget {
                             Text(
                               description,
                               textAlign: TextAlign.justify,
-                              style: TextStyle(
+                              style: GoogleFonts.inter(
                                 fontSize: 13.sp,
                                 color: Colors.black54,
                                 height: 1.6,
-                                fontFamily: 'Poppins',
                               ),
                             ),
                           ],
@@ -178,11 +221,13 @@ class CommunityChatPage extends StatelessWidget {
                             ),
                             SizedBox(height: 8.h),
                             ...linksList.map((linkData) {
-                              final linkMap = linkData as Map<String, dynamic>? ?? {};
+                              final linkMap =
+                                  linkData as Map<String, dynamic>? ?? {};
                               final url = linkMap['url']?.toString() ?? '';
                               final store = linkMap['store']?.toString() ?? '';
                               final price = linkMap['price'];
-                              final logoUrl = linkMap['logoUrl']?.toString() ?? '';
+                              final logoUrl =
+                                  linkMap['logoUrl']?.toString() ?? '';
 
                               if (url.isEmpty) return const SizedBox.shrink();
 
@@ -191,17 +236,11 @@ class CommunityChatPage extends StatelessWidget {
                                 child: GestureDetector(
                                   onTap: () async {
                                     final uri = Uri.tryParse(url);
-                                    if (uri != null && await canLaunchUrl(uri)) {
-                                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                                    } else {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Gagal membuka tautan'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
+                                    if (uri != null &&
+                                        await canLaunchUrl(uri)) {
+                                      await launchUrl(uri,
+                                          mode:
+                                              LaunchMode.externalApplication);
                                     }
                                   },
                                   child: Container(
@@ -215,7 +254,8 @@ class CommunityChatPage extends StatelessWidget {
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
+                                          color:
+                                              Colors.black.withOpacity(0.05),
                                           blurRadius: 4,
                                           offset: const Offset(0, 2),
                                         ),
@@ -227,42 +267,44 @@ class CommunityChatPage extends StatelessWidget {
                                           Container(
                                             width: 40.w,
                                             height: 40.w,
-                                            margin: EdgeInsets.only(right: 10.w),
+                                            margin:
+                                                EdgeInsets.only(right: 10.w),
                                             decoration: BoxDecoration(
                                               color: Colors.grey.shade100,
-                                              borderRadius: BorderRadius.circular(6.r),
+                                              borderRadius:
+                                                  BorderRadius.circular(6.r),
                                             ),
                                             child: ClipRRect(
-                                              borderRadius: BorderRadius.circular(6.r),
-                                              child: Image.network(
-                                                logoUrl,
-                                                fit: BoxFit.contain,
-                                                errorBuilder: (context, error, stackTrace) {
-                                                  return Icon(
-                                                    Icons.store,
-                                                    size: 24.sp,
-                                                    color: Colors.grey,
-                                                  );
-                                                },
-                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(6.r),
+                                              child: buildLogo(logoUrl),
                                             ),
                                           ),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               if (store.isNotEmpty)
                                                 Text(
                                                   store,
                                                   style: TextStyle(
                                                     fontSize: 13.sp,
-                                                    fontWeight: FontWeight.w600,
+                                                    fontWeight:
+                                                        FontWeight.w600,
                                                     color: Colors.black87,
                                                   ),
                                                 ),
                                               if (price != null)
                                                 Text(
-                                                  "Rp ${_formatPrice(price)}",
+                                                  formatRupiah(
+                                                    price is num
+                                                        ? price
+                                                        : num.tryParse(
+                                                                price
+                                                                    .toString()) ??
+                                                            0,
+                                                  ),
                                                   style: TextStyle(
                                                     fontSize: 14.sp,
                                                     fontWeight: FontWeight.bold,
@@ -283,13 +325,25 @@ class CommunityChatPage extends StatelessWidget {
                                 ),
                               );
                             }).toList(),
+                            SizedBox(height: 4.h),
+                            Text(
+                              "*Harga dapat berubah sewaktu-waktu",
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: Colors.redAccent,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
                           ],
 
                           if (createdAt != null) ...[
                             SizedBox(height: 8.h),
                             Text(
                               "Diposting: ${createdAt.day}/${createdAt.month}/${createdAt.year}",
-                              style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: Colors.grey,
+                              ),
                             ),
                           ],
                         ],
@@ -305,16 +359,26 @@ class CommunityChatPage extends StatelessWidget {
     );
   }
 
-  String _formatPrice(dynamic price) {
-    if (price == null) return '0';
+  bool _isBase64(String str) {
+    if (str.isEmpty) return false;
+
     try {
-      final numPrice = price is int ? price : int.parse(price.toString());
-      return numPrice.toString().replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (Match m) => '${m[1]}.',
-      );
-    } catch (e) {
-      return price.toString();
+      if (str.startsWith('http') ||
+          str.startsWith('https') ||
+          str.startsWith('assets/') ||
+          str.contains('.png') ||
+          str.contains('.jpg') ||
+          str.contains('.jpeg') ||
+          str.contains('.webp')) {
+        return false;
+      }
+
+      if (str.length < 100) return false;
+
+      base64Decode(str);
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 }

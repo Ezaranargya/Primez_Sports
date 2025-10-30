@@ -41,16 +41,14 @@ class _AdminProductPageState extends State<AdminProductPage> {
             child: FloatingActionButton(
               backgroundColor: AppColors.primary,
               onPressed: () async {
-                // ✅ Navigate dan tunggu result
                 final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => const AdminAddProductPage(),
                   ),
                 );
-                // ✅ Refresh jika ada perubahan
                 if (result == true && mounted) {
-                  setState(() {});
+                  setState(() {}); // 🔄 refresh setelah tambah produk
                 }
               },
               child: Icon(Icons.add, size: 24.sp, color: Colors.white),
@@ -59,21 +57,10 @@ class _AdminProductPageState extends State<AdminProductPage> {
           body: StreamBuilder<List<Product>>(
             stream: _productService.getAllProducts(),
             builder: (context, snapshot) {
-              // Debug logging
-              print('📊 Connection State: ${snapshot.connectionState}');
-              print('📊 Has Data: ${snapshot.hasData}');
-              print('📊 Data Length: ${snapshot.data?.length ?? 0}');
-              
-              if (snapshot.hasError) {
-                print('❌ Error: ${snapshot.error}');
-              }
-
-              // Loading state
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              // Error state
               if (snapshot.hasError) {
                 return Center(
                   child: Column(
@@ -88,9 +75,7 @@ class _AdminProductPageState extends State<AdminProductPage> {
                       ),
                       SizedBox(height: 16.h),
                       ElevatedButton(
-                        onPressed: () {
-                          setState(() {}); // Retry
-                        },
+                        onPressed: () => setState(() {}),
                         child: const Text('Coba Lagi'),
                       ),
                     ],
@@ -98,7 +83,6 @@ class _AdminProductPageState extends State<AdminProductPage> {
                 );
               }
 
-              // Empty state
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return Center(
                   child: Column(
@@ -114,20 +98,18 @@ class _AdminProductPageState extends State<AdminProductPage> {
                       SizedBox(height: 8.h),
                       Text(
                         'Tap tombol + untuk menambah produk',
-                        style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
+                        style: TextStyle(
+                            fontSize: 12.sp, color: Colors.grey[600]),
                       ),
                     ],
                   ),
                 );
               }
 
-              // Product list
               final products = snapshot.data!;
-              print('✅ Displaying ${products.length} products');
-              
               return RefreshIndicator(
                 onRefresh: () async {
-                  setState(() {}); // Force refresh
+                  setState(() {});
                 },
                 child: ListView.builder(
                   padding: EdgeInsets.all(12.w),
@@ -188,10 +170,10 @@ class _AdminProductPageState extends State<AdminProductPage> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            // ✏️ Tombol edit — langsung kembali ke halaman produk setelah simpan
                             IconButton(
                               icon: Icon(Icons.edit, size: 20.sp),
                               onPressed: () async {
-                                // ✅ Navigate dan tunggu result
                                 final result = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -199,9 +181,8 @@ class _AdminProductPageState extends State<AdminProductPage> {
                                         AdminAddProductPage(product: p),
                                   ),
                                 );
-                                // ✅ Refresh jika ada perubahan
                                 if (result == true && mounted) {
-                                  setState(() {});
+                                  setState(() {}); // refresh otomatis
                                 }
                               },
                             ),
@@ -259,7 +240,6 @@ class _AdminProductPageState extends State<AdminProductPage> {
           );
         }
       } catch (e) {
-        print('❌ Error deleting product: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -273,7 +253,6 @@ class _AdminProductPageState extends State<AdminProductPage> {
   }
 
   Widget _buildProductImage(Product product) {
-    // ✅ PRIORITY 1: Check imageBase64 first (dari AdminAddProductPage)
     if (product.imageBase64 != null && product.imageBase64!.isNotEmpty) {
       try {
         return Image.memory(
@@ -281,19 +260,14 @@ class _AdminProductPageState extends State<AdminProductPage> {
           width: 50.w,
           height: 50.w,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) {
-            print('❌ Error decoding base64 image for ${product.id}');
-            return _buildPlaceholder();
-          },
+          errorBuilder: (_, __, ___) => _buildPlaceholder(),
         );
-      } catch (e) {
-        print('❌ Exception decoding base64: $e');
+      } catch (_) {
+        return _buildPlaceholder();
       }
     }
 
-    // ✅ PRIORITY 2: Check imageUrl
     if (product.imageUrl.isNotEmpty) {
-      // Local file path
       if (product.imageUrl.startsWith('/data')) {
         return Image.file(
           File(product.imageUrl),
@@ -303,8 +277,6 @@ class _AdminProductPageState extends State<AdminProductPage> {
           errorBuilder: (_, __, ___) => _buildPlaceholder(),
         );
       }
-
-      // Asset image
       if (product.imageUrl.startsWith('assets/')) {
         return Image.asset(
           product.imageUrl,
@@ -314,35 +286,15 @@ class _AdminProductPageState extends State<AdminProductPage> {
           errorBuilder: (_, __, ___) => _buildPlaceholder(),
         );
       }
-
-      // Network image
       return Image.network(
         product.imageUrl,
         width: 50.w,
         height: 50.w,
         fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(
-            width: 50.w,
-            height: 50.w,
-            color: Colors.grey[200],
-            child: Center(
-              child: CircularProgressIndicator(
-                value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                    : null,
-                strokeWidth: 2,
-              ),
-            ),
-          );
-        },
         errorBuilder: (_, __, ___) => _buildPlaceholder(),
       );
     }
 
-    // ✅ FALLBACK: No image available
     return _buildPlaceholder();
   }
 

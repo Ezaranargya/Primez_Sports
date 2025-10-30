@@ -1,19 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Script untuk copy notifikasi dari users/{userId}/notifications ke notifications/
-/// 
-/// Cara pakai:
-/// 1. Panggil function ini dari button di admin page atau main.dart
-/// 2. Atau buat page khusus untuk migration
+
+
+
+
+
 class NotificationMigration {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Copy notifikasi dari user tertentu ke collection global
+  
   Future<void> copyFromUserToGlobal(String userId) async {
     try {
       print('🔄 Starting migration for user: $userId');
       
-      // Ambil semua notifikasi dari user
+      
       final notificationsSnapshot = await _firestore
           .collection('users')
           .doc(userId)
@@ -29,7 +29,7 @@ class NotificationMigration {
         try {
           final data = doc.data();
           
-          // Copy ke collection global dengan ID yang sama
+          
           await _firestore
               .collection('notifications')
               .doc(doc.id)
@@ -54,12 +54,12 @@ class NotificationMigration {
     }
   }
 
-  /// Copy semua notifikasi dari semua user ke collection global
+  
   Future<void> copyAllUsersNotificationsToGlobal() async {
     try {
       print('🔄 Starting migration for ALL users...');
       
-      // Ambil semua user
+      
       final usersSnapshot = await _firestore.collection('users').get();
       
       print('👥 Found ${usersSnapshot.docs.length} users');
@@ -70,7 +70,7 @@ class NotificationMigration {
       for (var userDoc in usersSnapshot.docs) {
         print('\n📂 Processing user: ${userDoc.id}');
         
-        // Ambil notifikasi user ini
+        
         final notificationsSnapshot = await _firestore
             .collection('users')
             .doc(userDoc.id)
@@ -83,11 +83,11 @@ class NotificationMigration {
           try {
             final data = notifDoc.data();
             
-            // Copy ke global collection
+            
             await _firestore
                 .collection('notifications')
                 .doc(notifDoc.id)
-                .set(data, SetOptions(merge: true)); // merge untuk avoid overwrite
+                .set(data, SetOptions(merge: true)); 
             
             totalSuccess++;
             print('   ✅ Copied: ${notifDoc.id}');
@@ -109,7 +109,7 @@ class NotificationMigration {
     }
   }
 
-  /// Hapus notifikasi dari user setelah berhasil di-copy
+  
   Future<void> cleanupUserNotifications(String userId) async {
     try {
       print('🗑️ Cleaning up notifications for user: $userId');
@@ -127,7 +127,7 @@ class NotificationMigration {
         batch.delete(doc.reference);
         count++;
         
-        // Batch limit 500
+        
         if (count % 500 == 0) {
           await batch.commit();
           batch = _firestore.batch();

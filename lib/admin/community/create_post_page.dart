@@ -33,16 +33,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
   File? _imageFile;
   bool _isLoading = false;
 
-  // Purchase options list
   final List<Map<String, dynamic>> _purchaseOptions = [];
 
-  // Category values
   String? _mainCategory;
   String? _subCategory;
 
-  // ============================================================
-  // 🔹 STORE LOGO MAPPING
-  // ============================================================
   final Map<String, Map<String, String>> _storeLogos = {
     'tokopedia': {
       'name': 'Tokopedia',
@@ -96,10 +91,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _contentController.text = data['content']?.toString() ?? '';
     _descriptionController.text = data['description']?.toString() ?? '';
     
-    // Handle image - bisa base64 atau URL/path biasa
     final imageUrl = data['imageUrl']?.toString() ?? '';
     if (imageUrl.isNotEmpty) {
-      // Cek apakah base64 atau bukan
       if (_isBase64(imageUrl)) {
         _imageBase64 = imageUrl;
       } else {
@@ -120,7 +113,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     if (str.isEmpty) return false;
     
     try {
-      // Jika ada http, https, assets/, atau extension file -> bukan base64
       if (str.startsWith('http') || 
           str.startsWith('https') || 
           str.startsWith('assets/') ||
@@ -132,12 +124,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
         return false;
       }
       
-      // Base64 biasanya panjang (minimal ratusan karakter untuk image)
       if (str.length < 100) {
         return false;
       }
       
-      // Coba decode, kalau berhasil berarti base64
       base64Decode(str);
       return true;
     } catch (e) {
@@ -208,7 +198,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     setState(() {
       _purchaseOptions[index][field] = value;
       
-      // Auto-detect store and logo when URL changes
       if (field == 'url' && value.toString().isNotEmpty) {
         final storeInfo = _detectStoreFromUrl(value.toString());
         _purchaseOptions[index]['store'] = storeInfo['store']!;
@@ -225,7 +214,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Step 1: Cari communityId berdasarkan brand
       final communityQuery = await FirebaseFirestore.instance
           .collection('communities')
           .where('brand', isEqualTo: widget.brand)
@@ -237,7 +225,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
         communityId = communityQuery.docs.first.id;
       }
 
-      // Prepare post data
       final postData = {
         'brand': widget.brand,
         'title': _titleController.text.trim(),
@@ -250,21 +237,17 @@ class _CreatePostPageState extends State<CreatePostPage> {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      // Tambahkan communityId jika ditemukan
       if (communityId != null) {
         postData['communityId'] = communityId;
       }
 
       if (widget.postId == null) {
-        // Create new post
         postData['createdAt'] = FieldValue.serverTimestamp();
         
-        // Step 2a: Simpan ke collection 'posts' utama
         final postRef = await FirebaseFirestore.instance
             .collection('posts')
             .add(postData);
 
-        // Step 2b: Jika ada communityId, simpan juga ke subcollection komunitas
         if (communityId != null) {
           await FirebaseFirestore.instance
               .collection('communities')
@@ -274,13 +257,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
               .set(postData);
         }
       } else {
-        // Update existing post
         await FirebaseFirestore.instance
             .collection('posts')
             .doc(widget.postId)
             .update(postData);
 
-        // Update juga di subcollection komunitas jika ada
         if (communityId != null) {
           await FirebaseFirestore.instance
               .collection('communities')
@@ -341,7 +322,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Image Picker
                     GestureDetector(
                       onTap: _pickImage,
                       child: Container(
@@ -388,7 +368,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     ),
                     SizedBox(height: 16.h),
 
-                    // Title Field
                     TextFormField(
                       controller: _titleController,
                       decoration: InputDecoration(
@@ -409,7 +388,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     ),
                     SizedBox(height: 16.h),
 
-                    // Description Field
                     TextFormField(
                       controller: _descriptionController,
                       maxLines: 4,
@@ -426,7 +404,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     ),
                     SizedBox(height: 16.h),
 
-                    // Content/Main Price Field
                     TextFormField(
                       controller: _contentController,
                       decoration: InputDecoration(
@@ -442,7 +419,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     ),
                     SizedBox(height: 16.h),
 
-                    // Main Category Dropdown
                     DropdownButtonFormField<String>(
                       value: _mainCategory,
                       decoration: InputDecoration(
@@ -466,7 +442,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     ),
                     SizedBox(height: 16.h),
 
-                    // Sub Category Dropdown
                     DropdownButtonFormField<String>(
                       value: _subCategory,
                       decoration: InputDecoration(
@@ -489,7 +464,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     ),
                     SizedBox(height: 20.h),
 
-                    // Purchase Options Section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -513,7 +487,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     ),
                     SizedBox(height: 8.h),
 
-                    // Purchase Options List
                     if (_purchaseOptions.isEmpty)
                       Container(
                         padding: EdgeInsets.all(16.w),
@@ -548,7 +521,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Store Logo Preview
                               if (hasLogo && option['store'] != 'Other')
                                 Container(
                                   margin: EdgeInsets.only(bottom: 8.h),
@@ -704,7 +676,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                       }),
                     SizedBox(height: 24.h),
 
-                    // Submit Button
                     ElevatedButton(
                       onPressed: _savePost,
                       style: ElevatedButton.styleFrom(

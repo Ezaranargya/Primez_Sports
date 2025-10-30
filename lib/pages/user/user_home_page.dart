@@ -10,7 +10,6 @@ import 'package:my_app/pages/community/community_page.dart';
 import 'package:my_app/pages/news/news_page.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
 import 'package:my_app/providers/favorite_provider.dart';
-import 'package:my_app/pages/user/widgets/product_card.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -19,12 +18,9 @@ class UserHomePage extends StatefulWidget {
   State<UserHomePage> createState() => _UserHomePageState();
 }
 
-class _UserHomePageState extends State<UserHomePage>
-    with SingleTickerProviderStateMixin {
+class _UserHomePageState extends State<UserHomePage> {
   final ProductService _productService = ProductService();
-  
   int selectedIndex = 0;
-  String selectedCategory = 'all';
 
   @override
   void initState() {
@@ -54,16 +50,12 @@ class _UserHomePageState extends State<UserHomePage>
       body: StreamBuilder<List<Product>>(
         stream: _productService.getAllProducts(),
         builder: (context, snapshot) {
-          // 🐛 Debug prints
-          print('📱 Connection State: ${snapshot.connectionState}');
-          print('❌ Has Error: ${snapshot.hasError}');
+          // Debug logs
           if (snapshot.hasError) {
-            print('⚠️ Error: ${snapshot.error}');
+            debugPrint('⚠️ Error: ${snapshot.error}');
           }
-          print('✅ Has Data: ${snapshot.hasData}');
-          print('📊 Data Length: ${snapshot.data?.length ?? 0}');
 
-          // Handle error state
+          // Error state
           if (snapshot.hasError) {
             return Center(
               child: Column(
@@ -98,17 +90,17 @@ class _UserHomePageState extends State<UserHomePage>
             );
           }
 
-          // Handle loading state
+          // Loading state
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(),
             );
           }
 
-          // Get products data
+          // Get products
           final allProducts = snapshot.data ?? [];
 
-          // Handle empty state
+          // Empty state
           if (allProducts.isEmpty) {
             return Center(
               child: Column(
@@ -135,7 +127,7 @@ class _UserHomePageState extends State<UserHomePage>
             );
           }
 
-          // Display pages with products data
+          // Main content with IndexedStack
           return IndexedStack(
             index: selectedIndex,
             children: _pages(allProducts),
@@ -148,22 +140,40 @@ class _UserHomePageState extends State<UserHomePage>
         unselectedItemColor: Colors.grey,
         currentIndex: selectedIndex,
         onTap: onItemTapped,
+        selectedFontSize: 12.sp,
+        unselectedFontSize: 12.sp,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_outline), label: 'Favorite'),
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline), label: 'Komunitas'),
+            icon: Icon(Icons.favorite_outline),
+            activeIcon: Icon(Icons.favorite),
+            label: 'Favorite',
+          ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.newspaper_outlined), label: 'News'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+            icon: Icon(Icons.chat_bubble_outline),
+            activeIcon: Icon(Icons.chat_bubble),
+            label: 'Komunitas',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.newspaper_outlined),
+            activeIcon: Icon(Icons.newspaper),
+            label: 'News',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );
   }
 }
 
-/// 🔹 Alternative: Standalone Product List Page with StreamBuilder
 class UserProductListPage extends StatefulWidget {
   const UserProductListPage({super.key});
 
@@ -181,11 +191,22 @@ class _UserProductListPageState extends State<UserProductListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Semua Produk'),
+        elevation: 0,
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(60.h),
           child: Container(
             height: 60.h,
             padding: EdgeInsets.symmetric(vertical: 8.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -199,8 +220,9 @@ class _UserProductListPageState extends State<UserProductListPage> {
                     label: Text(
                       category == 'all' ? 'Semua' : category,
                       style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.w500,
+                        color: isSelected ? Colors.white : Colors.black87,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                        fontSize: 13.sp,
                       ),
                     ),
                     selected: isSelected,
@@ -209,6 +231,8 @@ class _UserProductListPageState extends State<UserProductListPage> {
                     },
                     selectedColor: Theme.of(context).primaryColor,
                     backgroundColor: Colors.grey[200],
+                    elevation: isSelected ? 2 : 0,
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                   ),
                 );
               },
@@ -221,16 +245,12 @@ class _UserProductListPageState extends State<UserProductListPage> {
             ? _productService.getAllProducts()
             : _productService.getProductsByCategory(selectedCategory),
         builder: (context, snapshot) {
-          // Debug prints
-          print('📱 Connection State: ${snapshot.connectionState}');
-          print('❌ Has Error: ${snapshot.hasError}');
+          // Debug logs
           if (snapshot.hasError) {
-            print('⚠️ Error: ${snapshot.error}');
+            debugPrint('⚠️ Error: ${snapshot.error}');
           }
-          print('✅ Has Data: ${snapshot.hasData}');
-          print('📊 Data Length: ${snapshot.data?.length ?? 0}');
 
-          // Handle error
+          // Error state
           if (snapshot.hasError) {
             return Center(
               child: Column(
@@ -239,28 +259,41 @@ class _UserProductListPageState extends State<UserProductListPage> {
                   Icon(Icons.error_outline, size: 60.sp, color: Colors.red),
                   SizedBox(height: 16.h),
                   Text(
-                    'Error: ${snapshot.error}',
+                    'Terjadi Kesalahan',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14.sp),
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 32.w),
+                    child: Text(
+                      '${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14.sp, color: Colors.grey),
+                    ),
                   ),
                   SizedBox(height: 16.h),
-                  ElevatedButton(
+                  ElevatedButton.icon(
                     onPressed: () => setState(() {}),
-                    child: const Text('Coba Lagi'),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Coba Lagi'),
                   ),
                 ],
               ),
             );
           }
 
-          // Handle loading
+          // Loading state
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
           final products = snapshot.data ?? [];
 
-          // Handle empty
+          // Empty state
           if (products.isEmpty) {
             return Center(
               child: Column(
@@ -271,16 +304,27 @@ class _UserProductListPageState extends State<UserProductListPage> {
                   SizedBox(height: 16.h),
                   Text(
                     'Tidak ada produk',
-                    style: TextStyle(fontSize: 16.sp, color: Colors.grey),
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    selectedCategory == 'all'
+                        ? 'Belum ada produk tersedia'
+                        : 'Tidak ada produk dalam kategori ini',
+                    style: TextStyle(fontSize: 14.sp, color: Colors.grey),
                   ),
                 ],
               ),
             );
           }
 
-          // Display products
+          // Product list
           return ListView.builder(
-            padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 16.w),
+            padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
             itemCount: products.length,
             itemBuilder: (context, index) {
               final product = products[index];
@@ -315,24 +359,41 @@ class _UserProductListPageState extends State<UserProductListPage> {
                                   width: 80.w,
                                   height: 80.w,
                                   fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return Container(
+                                      width: 80.w,
+                                      height: 80.w,
+                                      color: Colors.grey[200],
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          value: progress.expectedTotalBytes != null
+                                              ? progress.cumulativeBytesLoaded /
+                                                  progress.expectedTotalBytes!
+                                              : null,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                   errorBuilder: (_, __, ___) => Container(
                                     width: 80.w,
                                     height: 80.w,
-                                    color: Colors.grey[300],
+                                    color: Colors.grey[200],
                                     child: Icon(Icons.image_not_supported,
-                                        size: 40.sp, color: Colors.grey),
+                                        size: 32.sp, color: Colors.grey[400]),
                                   ),
                                 )
                               : Container(
                                   width: 80.w,
                                   height: 80.w,
-                                  color: Colors.grey[300],
+                                  color: Colors.grey[200],
                                   child: Icon(Icons.image,
-                                      size: 40.sp, color: Colors.grey),
+                                      size: 32.sp, color: Colors.grey[400]),
                                 ),
                         ),
                         SizedBox(width: 12.w),
-                        
+
                         // Product Info
                         Expanded(
                           child: Column(
@@ -341,8 +402,9 @@ class _UserProductListPageState extends State<UserProductListPage> {
                               Text(
                                 product.name,
                                 style: TextStyle(
-                                  fontSize: 16.sp,
+                                  fontSize: 15.sp,
                                   fontWeight: FontWeight.w600,
+                                  height: 1.3,
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -351,7 +413,7 @@ class _UserProductListPageState extends State<UserProductListPage> {
                               Text(
                                 product.brand,
                                 style: TextStyle(
-                                  fontSize: 14.sp,
+                                  fontSize: 13.sp,
                                   color: Colors.grey[600],
                                 ),
                               ),
@@ -368,9 +430,13 @@ class _UserProductListPageState extends State<UserProductListPage> {
                             ],
                           ),
                         ),
-                        
-                        // Arrow icon
-                        Icon(Icons.chevron_right, color: Colors.grey),
+
+                        // Chevron icon
+                        Icon(
+                          Icons.chevron_right,
+                          color: Colors.grey[400],
+                          size: 24.sp,
+                        ),
                       ],
                     ),
                   ),

@@ -8,7 +8,7 @@ import 'package:my_app/pages/product/product_page.dart';
 import 'package:my_app/pages/community/community_page.dart';
 import 'package:my_app/pages/news/news_page.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
-import 'package:my_app/pages/product/widgets/product_image.dart'; // ✅ Import ProductImage
+import 'package:my_app/pages/product/widgets/product_image.dart';
 import 'admin/product/product_page.dart';
 import 'admin/community/community_page.dart';
 import 'admin/news/news_page.dart';
@@ -40,9 +40,6 @@ class _HomePageState extends State<HomePage> {
     _getProductsFromFirestore();
   }
 
-  /// ============================================================
-  /// 🔹 GET PRODUCTS FROM FIRESTORE
-  /// ============================================================
   Future<void> _getProductsFromFirestore() async {
     try {
       print('📦 Fetching products from Firestore...');
@@ -51,7 +48,6 @@ class _HomePageState extends State<HomePage> {
       final products = snapshot.docs.map((doc) {
         final product = Product.fromFirestore(doc);
         
-        // Debug logging
         if (product.imageBase64 != null && product.imageBase64!.isNotEmpty) {
           print('✅ Product ${product.id} has imageBase64 (${product.imageBase64!.length} chars)');
         } else if (product.imageUrl.isNotEmpty) {

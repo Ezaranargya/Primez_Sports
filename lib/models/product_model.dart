@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// ============================================================
-/// 🔹 PURCHASE OPTION MODEL
-/// ============================================================
+/// =============================================================
+/// 🛒 MODEL: PurchaseOption
+/// =============================================================
 class PurchaseOption {
   final String id;
   final String name;
@@ -140,9 +140,9 @@ class PurchaseOption {
   int get hashCode => Object.hash(id, name, size, storeName);
 }
 
-/// ============================================================
-/// 🔹 PRODUCT MODEL (CLEAN VERSION)
-/// ============================================================
+/// =============================================================
+/// 🧩 MODEL: Product (gabungan versi lama + versi lengkap)
+/// =============================================================
 class Product {
   final String id;
   final String name;
@@ -278,22 +278,11 @@ class Product {
     if (imageUrl.isNotEmpty) map['imageUrl'] = imageUrl;
     if (bannerImage.isNotEmpty) map['bannerImage'] = bannerImage;
     if (imageBase64.isNotEmpty) map['imageBase64'] = imageBase64;
-
     if (category.isNotEmpty) map['category'] = category;
     if (subCategory.isNotEmpty) map['subCategory'] = subCategory;
-
-    if (categories.isNotEmpty) {
-      map['categories'] = categories;
-    } else {
-      final cats = <String>[];
-      if (category.isNotEmpty) cats.add(category);
-      if (subCategory.isNotEmpty) cats.add(subCategory);
-      if (cats.isNotEmpty) map['categories'] = cats;
-    }
-
+    if (categories.isNotEmpty) map['categories'] = categories;
     if (purchaseOptions.isNotEmpty) {
-      map['purchaseOptions'] =
-          purchaseOptions.map((po) => po.toMap()).toList();
+      map['purchaseOptions'] = purchaseOptions.map((po) => po.toMap()).toList();
     }
 
     return map;

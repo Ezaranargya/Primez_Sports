@@ -3,14 +3,14 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// Model for Community Post
+
 class CommunityPost {
   final String id;
   final String brand;
   final String title;
   final String content;
   final String description;
-  final String imageBase64; // Changed from imageUrl to imageBase64
+  final String imageBase64; 
   final List<PurchaseLink> links;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -21,7 +21,7 @@ class CommunityPost {
     required this.title,
     this.content = '',
     this.description = '',
-    this.imageBase64 = '', // Changed from imageUrl
+    this.imageBase64 = '', 
     this.links = const [],
     this.createdAt,
     this.updatedAt,
@@ -39,7 +39,7 @@ class CommunityPost {
       title: data['title']?.toString() ?? '',
       content: data['content']?.toString() ?? '',
       description: data['description']?.toString() ?? '',
-      imageBase64: data['imageBase64']?.toString() ?? '', // Changed from imageUrl
+      imageBase64: data['imageBase64']?.toString() ?? '', 
       links: links,
       createdAt: _parseTimestamp(data['createdAt']),
       updatedAt: _parseTimestamp(data['updatedAt']),
@@ -52,7 +52,7 @@ class CommunityPost {
       'title': title,
       'content': content,
       'description': description,
-      'imageBase64': imageBase64, // Changed from imageUrl
+      'imageBase64': imageBase64, 
       'links': links.map((e) => e.toMap()).toList(),
     };
   }
@@ -65,7 +65,7 @@ class CommunityPost {
   }
 }
 
-/// Model for Purchase Link
+
 class PurchaseLink {
   final String url;
   final String store;
@@ -98,7 +98,7 @@ class PurchaseLink {
   }
 }
 
-/// Service for managing community posts
+
 class PostService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -113,13 +113,13 @@ class PostService {
   CollectionReference<Map<String, dynamic>> get _postRef =>
       _firestore.collection(_collection);
 
-  /// Check if current user is admin
+  
   Future<bool> get isAdmin async {
     try {
       final user = _auth.currentUser;
       if (user == null) return false;
 
-      // Check custom claims
+      
       final idTokenResult = await user.getIdTokenResult();
       return idTokenResult.claims?['admin'] == true;
     } catch (e) {
@@ -128,9 +128,9 @@ class PostService {
     }
   }
 
-  // ============================================================
-  // 🔹 CONVERT IMAGE FILE TO BASE64
-  // ============================================================
+  
+  
+  
   Future<String> imageFileToBase64(File imageFile) async {
     try {
       print('🔄 Converting image to base64...');
@@ -144,9 +144,9 @@ class PostService {
     }
   }
 
-  // ============================================================
-  // 🔹 CONVERT BASE64 TO IMAGE FILE
-  // ============================================================
+  
+  
+  
   Future<File> base64ToImageFile(String base64String, String fileName) async {
     try {
       print('🔄 Converting base64 to image file...');
@@ -162,15 +162,15 @@ class PostService {
     }
   }
 
-  // ============================================================
-  // 🔹 CREATE POST
-  // ============================================================
+  
+  
+  
   Future<String> createPost({
     required String brand,
     required String title,
     String? content,
     String? description,
-    String? imageBase64, // Changed from imageUrl
+    String? imageBase64, 
     List<Map<String, dynamic>>? links,
   }) async {
     try {
@@ -189,7 +189,7 @@ class PostService {
         'title': title.trim(),
         'content': content?.trim() ?? '',
         'description': description?.trim() ?? '',
-        'imageBase64': imageBase64 ?? '', // Changed from imageUrl
+        'imageBase64': imageBase64 ?? '', 
         'links': links ?? [],
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -205,15 +205,15 @@ class PostService {
     }
   }
 
-  // ============================================================
-  // 🔹 CREATE POST WITH IMAGE FILE
-  // ============================================================
+  
+  
+  
   Future<String> createPostWithImageFile({
     required String brand,
     required String title,
     String? content,
     String? description,
-    File? imageFile, // Accept File directly
+    File? imageFile, 
     List<Map<String, dynamic>>? links,
   }) async {
     String? imageBase64;
@@ -231,16 +231,16 @@ class PostService {
     );
   }
 
-  // ============================================================
-  // 🔹 UPDATE POST
-  // ============================================================
+  
+  
+  
   Future<void> updatePost({
     required String postId,
     String? brand,
     String? title,
     String? content,
     String? description,
-    String? imageBase64, // Changed from imageUrl
+    String? imageBase64, 
     List<Map<String, dynamic>>? links,
   }) async {
     try {
@@ -258,7 +258,7 @@ class PostService {
       if (title != null) updateData['title'] = title.trim();
       if (content != null) updateData['content'] = content.trim();
       if (description != null) updateData['description'] = description.trim();
-      if (imageBase64 != null) updateData['imageBase64'] = imageBase64; // Changed from imageUrl
+      if (imageBase64 != null) updateData['imageBase64'] = imageBase64; 
       if (links != null) updateData['links'] = links;
 
       await _postRef.doc(postId).update(updateData);
@@ -269,16 +269,16 @@ class PostService {
     }
   }
 
-  // ============================================================
-  // 🔹 UPDATE POST WITH IMAGE FILE
-  // ============================================================
+  
+  
+  
   Future<void> updatePostWithImageFile({
     required String postId,
     String? brand,
     String? title,
     String? content,
     String? description,
-    File? imageFile, // Accept File directly
+    File? imageFile, 
     List<Map<String, dynamic>>? links,
   }) async {
     String? imageBase64;
@@ -297,9 +297,9 @@ class PostService {
     );
   }
 
-  // ============================================================
-  // 🔹 DELETE POST
-  // ============================================================
+  
+  
+  
   Future<void> deletePost(String postId) async {
     try {
       print('🗑️ Deleting post: $postId');
@@ -316,9 +316,9 @@ class PostService {
     }
   }
 
-  // ============================================================
-  // 🔹 GET POSTS BY BRAND
-  // ============================================================
+  
+  
+  
   Stream<List<CommunityPost>> getPostsByBrand(String brand) {
     return _postRef
         .where('brand', isEqualTo: brand)
@@ -331,9 +331,9 @@ class PostService {
     });
   }
 
-  // ============================================================
-  // 🔹 GET ALL POSTS
-  // ============================================================
+  
+  
+  
   Stream<List<CommunityPost>> getAllPosts() {
     return _postRef
         .orderBy('createdAt', descending: true)
@@ -345,9 +345,9 @@ class PostService {
     });
   }
 
-  // ============================================================
-  // 🔹 GET POST BY ID
-  // ============================================================
+  
+  
+  
   Future<CommunityPost?> getPostById(String postId) async {
     try {
       final doc = await _postRef.doc(postId).get();
@@ -359,9 +359,9 @@ class PostService {
     }
   }
 
-  // ============================================================
-  // 🔹 GET POSTS COUNT
-  // ============================================================
+  
+  
+  
   Future<int> getPostsCount({String? brand}) async {
     try {
       Query<Map<String, dynamic>> query = _postRef;
@@ -376,9 +376,9 @@ class PostService {
     }
   }
 
-  // ============================================================
-  // 🔹 CHECK IF POST EXISTS
-  // ============================================================
+  
+  
+  
   Future<bool> postExists(String postId) async {
     try {
       final doc = await _postRef.doc(postId).get();

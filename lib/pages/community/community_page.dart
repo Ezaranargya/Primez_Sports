@@ -52,7 +52,7 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
 
-      /// 🔴 Header Merah (judul Komunitas)
+      
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         title: Text(
@@ -68,7 +68,7 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
         shadowColor: Colors.black.withOpacity(0.25),
       ),
 
-      /// 🔘 Body List Komunitas
+      
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         child: ListView(

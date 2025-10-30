@@ -13,7 +13,7 @@ class EditProductScreen extends StatefulWidget {
 }
 
 class _EditProductScreenState extends State<EditProductScreen> {
-  // =============== STATE & CONTROLLER ===============
+  
   bool _isLoading = false;
   bool _dataReady = false;
   bool _imageChanged = false;
@@ -44,7 +44,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
     'Featured'
   ];
 
-  // =============== INIT ===============
+  
   @override
   void initState() {
     super.initState();
@@ -68,7 +68,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
-  // =============== LOAD DATA DARI FIRESTORE ===============
+  
   Future<void> _loadProduct() async {
     setState(() => _isLoading = true);
 
@@ -144,7 +144,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
-  // =============== PICK GAMBAR ===============
+  
   Future<void> _pickImage() async {
     try {
       final base64 = await ImageHelper.pickImageAsBase64();
@@ -168,7 +168,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
-  // =============== SIMPAN PRODUK ===============
+  
   Future<void> _saveProduct() async {
     if (_namaController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -225,7 +225,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
-  // =============== UI ===============
+  
   @override
   Widget build(BuildContext context) {
     if (!_dataReady) {
@@ -252,7 +252,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ======== GAMBAR ========
+                  
                   GestureDetector(
                     onTap: _pickImage,
                     child: Container(
@@ -263,7 +263,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: ProductImage(
-                          image: _imageBase64 ?? '', // ✅ Ganti dari imageBase64 ke image
+                          image: _imageBase64 ?? '', 
                           height: 200,
                           width: double.infinity,
                         ),
@@ -278,7 +278,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ======== INPUT ========
+                  
                   _buildTextField(
                       _namaController, 'Nama Produk *', Icons.shopping_bag),
                   const SizedBox(height: 16),
@@ -293,7 +293,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                       Icons.attach_money, TextInputType.number),
                   const SizedBox(height: 16),
 
-                  // ======== DROPDOWN ========
+                  
                   _buildDropdownField(
                     label: 'Kategori',
                     selectedValue: _selectedKategori,
@@ -330,7 +330,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
     );
   }
 
-  // ======== REUSABLE WIDGET ========
+  
   Widget _buildTextField(TextEditingController controller, String label,
       IconData icon, [TextInputType? type, int maxLines = 1]) {
     return TextField(

@@ -10,7 +10,7 @@ import 'package:my_app/pages/product/widgets/product_image.dart';
 
 
 class AdminNewsFormPage extends StatefulWidget {
-  final NewsModel? news;
+  final News? news;
 
   const AdminNewsFormPage({super.key, this.news});
 
@@ -27,7 +27,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
   
   DateTime _selectedDate = DateTime.now();
   final List<String> _selectedCategories = [];
-  final List<ContentItem> _contentItems = [];
+  final List<ContentBlock> _contentItems = [];
   
   String? _mainImageBase64;
   bool _isLoading = false;
@@ -58,12 +58,11 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
     _selectedCategories.addAll(news.categories);
     _mainImageBase64 = news.imageUrl1;
     
-    // Load content items with proper type
+    
     for (var item in news.content) {
-      _contentItems.add(ContentItem(
+      _contentItems.add(ContentBlock(
         type: item.type,
-        text: item.text,
-        imageUrl: item.imageUrl,
+        value: item.value,
         caption: item.caption,
       ));
     }
@@ -95,10 +94,10 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         if (isMainImage) {
           _mainImageBase64 = base64String;
         } else if (contentIndex != null) {
-          _contentItems[contentIndex] = ContentItem(
-            type: _contentItems[contentIndex].type,
-            text: _contentItems[contentIndex].text,
-            imageUrl: base64String,
+          // Update image value untuk tipe image
+          _contentItems[contentIndex] = ContentBlock(
+            type: 'image',
+            value: base64String,
             caption: _contentItems[contentIndex].caption,
           );
         }
@@ -122,14 +121,37 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
   }
 
   void _addContentItem() {
-    setState(() {
-      _contentItems.add(ContentItem(
-        type: 'text',
-        text: '',
-        imageUrl: '',
-        caption: '',
-      ));
-    });
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pilih Tipe Konten', style: TextStyle(fontFamily: 'Poppins')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.text_fields),
+              title: const Text('Text', style: TextStyle(fontFamily: 'Poppins')),
+              onTap: () {
+                setState(() {
+                  _contentItems.add(ContentBlock(type: 'text', value: ''));
+                });
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.image),
+              title: const Text('Image', style: TextStyle(fontFamily: 'Poppins')),
+              onTap: () {
+                setState(() {
+                  _contentItems.add(ContentBlock(type: 'image', value: ''));
+                });
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _removeContentItem(int index) {
@@ -163,30 +185,28 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
     setState(() => _isLoading = true);
 
     try {
-      final newsData = {
-        'title': _titleController.text.trim(),
-        'subtitle': _subtitleController.text.trim(),
-        'author': _authorController.text.trim(),
-        'brand': _brandController.text.trim(),
-        'date': Timestamp.fromDate(_selectedDate),
-        'categories': _selectedCategories,
-        'imageUrl1': _mainImageBase64!,
-        'content': _contentItems.map((item) => {
-          'text': item.text ?? '',
-          'imageUrl': item.imageUrl ?? '',
-          'caption': item.caption ?? '',
-        }).toList(),
-      };
+      final news = News(
+        id: widget.news?.id ?? '',
+        title: _titleController.text.trim(),
+        subtitle: _subtitleController.text.trim(),
+        author: _authorController.text.trim(),
+        brand: _brandController.text.trim(),
+        date: _selectedDate,
+        createdAt: widget.news?.createdAt ?? DateTime.now(),
+        categories: _selectedCategories,
+        imageUrl1: _mainImageBase64!,
+        content: _contentItems,
+      );
 
       if (widget.news == null) {
-        // Create new
-        await FirebaseFirestore.instance.collection('news').add(newsData);
+        // Tambah berita baru
+        await FirebaseFirestore.instance.collection('news').add(news.toMap());
       } else {
-        // Update existing
+        // Update berita
         await FirebaseFirestore.instance
             .collection('news')
             .doc(widget.news!.id)
-            .update(newsData);
+            .update(news.toMap());
       }
 
       if (mounted) {
@@ -560,6 +580,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
 
   Widget _buildContentItemCard(int index) {
     final item = _contentItems[index];
+    final isImageType = item.type == 'image';
     
     return Card(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -574,13 +595,23 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Konten ${index + 1}',
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins',
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      isImageType ? Icons.image : Icons.text_fields,
+                      color: AppColors.primary,
+                      size: 20.sp,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Konten ${index + 1} - ${isImageType ? "Image" : "Text"}',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
                 ),
                 IconButton(
                   onPressed: () => _removeContentItem(index),
@@ -589,94 +620,15 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
               ],
             ),
             SizedBox(height: 12.h),
-            TextFormField(
-              initialValue: item.text,
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: 'Teks',
-                hintText: 'Masukkan teks konten',
-                labelStyle: const TextStyle(fontFamily: 'Poppins'),
-                hintStyle: TextStyle(fontFamily: 'Poppins', color: Colors.grey[400]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-              ),
-              onChanged: (value) {
-                _contentItems[index] = ContentItem(
-                  type: item.type,
-                  text: value,
-                  imageUrl: item.imageUrl,
-                  caption: item.caption,
-                );
-              },
-            ),
-            SizedBox(height: 12.h),
-            if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8.r),
-                    child: _buildImagePreview(item.imageUrl!),
-                  ),
-                  Positioned(
-                    top: 8.h,
-                    right: 8.w,
-                    child: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _contentItems[index] = ContentItem(
-                            type: item.type,
-                            text: item.text,
-                            imageUrl: '',
-                            caption: item.caption,
-                          );
-                        });
-                      },
-                      icon: const Icon(Icons.close),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            else
-              InkWell(
-                onTap: () => _pickImage(contentIndex: index),
-                child: Container(
-                  height: 150.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8.r),
-                    border: Border.all(color: Colors.grey[400]!),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_photo_alternate, size: 40.sp, color: Colors.grey),
-                        SizedBox(height: 8.h),
-                        Text(
-                          'Tambah Gambar (Opsional)',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Colors.grey[600],
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            if (item.imageUrl != null && item.imageUrl!.isNotEmpty) ...[
-              SizedBox(height: 12.h),
+            
+            // Jika tipe TEXT
+            if (!isImageType) ...[
               TextFormField(
-                initialValue: item.caption,
+                initialValue: item.value,
+                maxLines: 4,
                 decoration: InputDecoration(
-                  labelText: 'Caption Gambar',
-                  hintText: 'Masukkan caption (opsional)',
+                  labelText: 'Teks',
+                  hintText: 'Masukkan teks konten',
                   labelStyle: const TextStyle(fontFamily: 'Poppins'),
                   hintStyle: TextStyle(fontFamily: 'Poppins', color: Colors.grey[400]),
                   border: OutlineInputBorder(
@@ -684,14 +636,96 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
                   ),
                 ),
                 onChanged: (value) {
-                  _contentItems[index] = ContentItem(
-                    type: item.type,
-                    text: item.text,
-                    imageUrl: item.imageUrl,
-                    caption: value,
+                  _contentItems[index] = ContentBlock(
+                    type: 'text',
+                    value: value,
+                    caption: item.caption,
                   );
                 },
               ),
+            ]
+            // Jika tipe IMAGE
+            else ...[
+              if (item.value.isNotEmpty)
+                Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8.r),
+                      child: _buildImagePreview(item.value),
+                    ),
+                    Positioned(
+                      top: 8.h,
+                      right: 8.w,
+                      child: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _contentItems[index] = ContentBlock(
+                              type: 'image',
+                              value: '',
+                              caption: item.caption,
+                            );
+                          });
+                        },
+                        icon: const Icon(Icons.close),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                InkWell(
+                  onTap: () => _pickImage(contentIndex: index),
+                  child: Container(
+                    height: 150.h,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(color: Colors.grey[400]!),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate, size: 40.sp, color: Colors.grey),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'Pilih Gambar',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: Colors.grey[600],
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              if (item.value.isNotEmpty) ...[
+                SizedBox(height: 12.h),
+                TextFormField(
+                  initialValue: item.caption,
+                  decoration: InputDecoration(
+                    labelText: 'Caption Gambar',
+                    hintText: 'Masukkan caption (opsional)',
+                    labelStyle: const TextStyle(fontFamily: 'Poppins'),
+                    hintStyle: TextStyle(fontFamily: 'Poppins', color: Colors.grey[400]),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    _contentItems[index] = ContentBlock(
+                      type: 'image',
+                      value: item.value,
+                      caption: value,
+                    );
+                  },
+                ),
+              ],
             ],
           ],
         ),
@@ -700,12 +734,12 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
   }
 
   Widget _buildImagePreview(String imageData) {
-  return ProductImage(
-    image: imageData,
-    width: double.infinity,
-    height: 200.h,
-    fit: BoxFit.cover,
-    borderRadius: BorderRadius.circular(12.r),
-  );
-}
+    return ProductImage(
+      image: imageData,
+      width: double.infinity,
+      height: 200.h,
+      fit: BoxFit.cover,
+      borderRadius: BorderRadius.circular(12.r),
+    );
+  }
 }

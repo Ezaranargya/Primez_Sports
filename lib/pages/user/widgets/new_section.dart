@@ -23,20 +23,25 @@ class NewSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Title
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
           child: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 20,
+              fontSize: 20.sp,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12.h),
+
+        // Product Container
         Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(12.w),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12.r),
@@ -48,17 +53,26 @@ class NewSection extends StatelessWidget {
               ),
             ],
           ),
-          padding: const EdgeInsets.all(12),
-          child: SizedBox(
-            height: 230.h, // ✅ Increased height
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: products.length,
-              separatorBuilder: (context, index) => SizedBox(width: 12.w),
-              itemBuilder: (context, index) {
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(products.length, (index) {
                 final product = products[index];
-                return _NewProductCard(product: product);
-              },
+                return Row(
+                  children: [
+                    _NewProductCard(product: product),
+
+                    // Divider (kecuali item terakhir)
+                    if (index != products.length - 1)
+                      Container(
+                        height: 120.h,
+                        width: 1.2.w,
+                        margin: EdgeInsets.symmetric(horizontal: 10.w),
+                        color: Colors.grey.shade300,
+                      ),
+                  ],
+                );
+              }),
             ),
           ),
         ),
@@ -67,9 +81,6 @@ class NewSection extends StatelessWidget {
   }
 }
 
-/// ============================================================
-/// 🔹 NEW PRODUCT CARD (Fixed overflow)
-/// ============================================================
 class _NewProductCard extends StatelessWidget {
   final Product product;
 
@@ -85,69 +96,58 @@ class _NewProductCard extends StatelessWidget {
         ),
       ),
       child: Container(
-        width: 150.w, // ✅ Increased width
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(
-            color: Colors.grey.shade200,
-            width: 1,
-          ),
-        ),
+        width: 130.w,
+        color: Colors.white,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min, // ✅ Prevent overflow
           children: [
-            // ✅ Product Image
-            ProductImage(
+            // Product Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8.r),
+              child: ProductImage(
                 image: product.imageBase64?.isNotEmpty == true
                     ? product.imageBase64
                     : product.imageUrl ?? '',
-                width: double.infinity,
-                height: 130.h, // ✅ Fixed height
+                width: 130.w,
+                height: 130.h,
                 fit: BoxFit.cover,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(12),
                 ),
               ),
-
-            // ✅ Product Info
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(10.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Product Name
-                    Text(
-                      product.name,
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Poppins',
-                        height: 1.2,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                    // Price
-                    Text(
-                      Formatter.formatPrice(product.price),
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+            ),
+            SizedBox(height: 6.h),
+            Container(
+              width: 130.w,
+              alignment: Alignment.center,
+            child: Text(
+              Formatter.formatPrice(product.price),
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
               ),
+              textAlign: TextAlign.center,
+            ),
+            ),
+            SizedBox(height: 3.h),
+            Container(
+            width: 130.w,
+            alignment: Alignment.center,
+            child: Text(
+              product.name,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+                fontFamily: 'Poppins',
+                height: 1.2,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
             ),
           ],
         ),

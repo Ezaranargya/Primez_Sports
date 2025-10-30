@@ -22,7 +22,7 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine dimensions based on layout type
+    
     final cardWidth = width ?? (isHorizontal ? 180.w : 150.w);
     final imgHeight = imageHeight ?? (isHorizontal ? 140.h : 120.h);
 
@@ -52,26 +52,26 @@ class ProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ Product Image (Base64 / URL)
+            
             ProductImage(
               image: product.imageBase64?.isNotEmpty == true
                   ? product.imageBase64
                   : product.imageUrl ?? '',
               width: double.infinity,
-              height: 130.h, // ✅ Fixed height
+              height: 130.h, 
               fit: BoxFit.cover,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(12),
               ),
             ),
 
-            // Product Info
+            
             Padding(
               padding: EdgeInsets.all(isHorizontal ? 12.w : 8.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Price
+                  
                   Text(
                     Formatter.formatPrice(product.price),
                     style: TextStyle(
@@ -85,7 +85,7 @@ class ProductCard extends StatelessWidget {
                   ),
                   SizedBox(height: 4.h),
 
-                  // Name
+                  
                   Text(
                     product.name,
                     style: TextStyle(
@@ -107,9 +107,9 @@ class ProductCard extends StatelessWidget {
   }
 }
 
-/// ============================================================
-/// 🔹 COMPACT PRODUCT CARD (untuk grid view)
-/// ============================================================
+
+
+
 class CompactProductCard extends StatelessWidget {
   final Product product;
 
@@ -142,7 +142,7 @@ class CompactProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ Product Image
+            
             Expanded(
               flex: 6,
               child: ProductImage(
@@ -150,7 +150,7 @@ class CompactProductCard extends StatelessWidget {
                     ? product.imageBase64
                     : product.imageUrl ?? '',
                 width: double.infinity,
-                height: 130.h, // ✅ Fixed height
+                height: 130.h, 
                 fit: BoxFit.cover,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(12),
@@ -158,7 +158,7 @@ class CompactProductCard extends StatelessWidget {
               ),
             ),
 
-            // Product Info
+            
             Expanded(
               flex: 4,
               child: Padding(
@@ -201,9 +201,9 @@ class CompactProductCard extends StatelessWidget {
   }
 }
 
-/// ============================================================
-/// 🔹 LARGE PRODUCT CARD (untuk featured products)
-/// ============================================================
+
+
+
 class LargeProductCard extends StatelessWidget {
   final Product product;
 
@@ -237,20 +237,20 @@ class LargeProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ Product Image
+            
             ProductImage(
               image: product.imageBase64?.isNotEmpty == true
                   ? product.imageBase64
                   : product.imageUrl ?? '',
               width: double.infinity,
-              height: 200.h, // ✅ Fixed height
+              height: 200.h, 
               fit: BoxFit.cover,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(16),
               ),
             ),
 
-            // Product Info
+            
             Padding(
               padding: EdgeInsets.all(16.w),
               child: Column(

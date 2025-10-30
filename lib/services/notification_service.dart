@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Kirim notifikasi ke SEMUA user yang terdaftar
+  
   Future<void> sendNotificationToAllUsers({
     required String title,
     required String message,
@@ -12,12 +12,12 @@ class NotificationService {
     List<String> categories = const [],
   }) async {
     try {
-      // Ambil semua user
+      
       final usersSnapshot = await _firestore.collection('users').get();
       
       print('📤 Sending notification to ${usersSnapshot.docs.length} users...');
       
-      // Data notifikasi
+      
       final notificationData = {
         'title': title,
         'message': message,
@@ -28,7 +28,7 @@ class NotificationService {
         'createdAt': FieldValue.serverTimestamp(),
       };
 
-      // Batch write untuk efisiensi
+      
       WriteBatch batch = _firestore.batch();
       int count = 0;
 
@@ -37,12 +37,12 @@ class NotificationService {
             .collection('users')
             .doc(userDoc.id)
             .collection('notifications')
-            .doc(); // Auto-generate ID
+            .doc(); 
 
         batch.set(notificationRef, notificationData);
         count++;
 
-        // Firestore batch limit adalah 500 operasi
+        
         if (count % 500 == 0) {
           await batch.commit();
           batch = _firestore.batch();
@@ -50,7 +50,7 @@ class NotificationService {
         }
       }
 
-      // Commit sisa batch
+      
       if (count % 500 != 0) {
         await batch.commit();
       }
@@ -62,7 +62,7 @@ class NotificationService {
     }
   }
 
-  /// Kirim notifikasi ke user tertentu
+  
   Future<void> sendNotificationToUser({
     required String userId,
     required String title,
@@ -93,7 +93,7 @@ class NotificationService {
     }
   }
 
-  /// Tandai notifikasi sebagai sudah dibaca
+  
   Future<void> markAsRead(String userId, String notificationId) async {
     try {
       await _firestore
@@ -107,7 +107,7 @@ class NotificationService {
     }
   }
 
-  /// Hapus notifikasi
+  
   Future<void> deleteNotification(String userId, String notificationId) async {
     try {
       await _firestore
@@ -121,7 +121,7 @@ class NotificationService {
     }
   }
 
-  /// Contoh: Kirim notifikasi saat ada berita baru
+  
   Future<void> notifyNewProduct(String productName, String imageUrl) async {
     await sendNotificationToAllUsers(
       title: 'Produk Terbaru!',

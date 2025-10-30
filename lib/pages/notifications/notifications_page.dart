@@ -42,8 +42,7 @@ class NotificationsPage extends StatelessWidget {
         elevation: 0,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // PERBAIKAN: Baca dari collection root 'notifications'
-        // Ambil semua, lalu filter di client-side
+        
         stream: FirebaseFirestore.instance
             .collection('notifications')
             .orderBy('createdAt', descending: true)
@@ -61,8 +60,6 @@ class NotificationsPage extends StatelessWidget {
           
           if (snapshot.hasData) {
             print('   📦 Raw Documents Count: ${snapshot.data!.docs.length}');
-            
-            // Print setiap dokumen
             for (var doc in snapshot.data!.docs) {
               print('   📄 Doc ID: ${doc.id}');
               final data = doc.data() as Map<String, dynamic>;
@@ -160,7 +157,6 @@ class NotificationsPage extends StatelessWidget {
             );
           }
 
-          // Parse semua dokumen
           final allNotifications = snapshot.data!.docs.map((doc) {
             try {
               final data = doc.data() as Map<String, dynamic>;
@@ -176,7 +172,6 @@ class NotificationsPage extends StatelessWidget {
 
           print('📊 Total valid notifications: ${allNotifications.length}');
 
-          // FILTER: Tampilkan global (userId kosong) ATAU personal (userId == current user)
           final notifications = allNotifications.where((notif) {
             final isGlobal = notif.userId.isEmpty;
             final isForCurrentUser = notif.userId == currentUser.uid;
@@ -255,15 +250,12 @@ class NotificationsPage extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Image di kiri
                     _buildNotificationImage(notif.imageUrl),
                     SizedBox(width: 12.w),
-                    // Text di kanan
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Title/Message
                           Text(
                             notif.message.isNotEmpty 
                                 ? notif.message 
@@ -278,7 +270,6 @@ class NotificationsPage extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           SizedBox(height: 6.h),
-                          // Date
                           Text(
                             DateFormat('d/M/yyyy, HH:mm', "id_ID")
                                 .format(notif.createdAt),
@@ -291,7 +282,6 @@ class NotificationsPage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // Unread indicator (dot merah)
                     if (!notif.isRead)
                       Container(
                         margin: EdgeInsets.only(left: 8.w, top: 4.h),
@@ -320,7 +310,6 @@ class NotificationsPage extends StatelessWidget {
       return _buildPlaceholderImage();
     }
 
-    // Network image
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       print('🌐 Loading network image: $imageUrl');
       return ClipRRect(
@@ -357,7 +346,6 @@ class NotificationsPage extends StatelessWidget {
       );
     }
 
-    // Asset image
     print('📁 Loading asset image: $imageUrl');
     return ClipRRect(
       borderRadius: BorderRadius.circular(10.r),

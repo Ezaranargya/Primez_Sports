@@ -9,7 +9,7 @@ class AppNotification {
   final List<String> categories;
   final String imageUrl;
   final bool isRead;
-  final String userId; // Kosong untuk global notification
+  final String userId; 
   final DateTime createdAt;
 
   AppNotification({
@@ -25,9 +25,7 @@ class AppNotification {
     required this.createdAt,
   });
 
-  /// Factory constructor untuk parse dari Firestore
   factory AppNotification.fromFirestore(Map<String, dynamic> data, String id) {
-    // Handle imageUrl atau imageUrl1 (fallback)
     String image = data['imageUrl'] ?? data['imageUrl1'] ?? '';
     
     return AppNotification(
@@ -41,12 +39,11 @@ class AppNotification {
           : [],
       imageUrl: image,
       isRead: data['isRead'] ?? false,
-      userId: data['userId'] ?? '', // Kosong = global notification
+      userId: data['userId'] ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
-  /// Convert ke Map untuk save ke Firestore
   Map<String, dynamic> toMap() {
     return {
       'title': title,
@@ -61,7 +58,6 @@ class AppNotification {
     };
   }
 
-  /// Copy with method untuk update field tertentu
   AppNotification copyWith({
     String? id,
     String? title,
@@ -88,13 +84,10 @@ class AppNotification {
     );
   }
 
-  /// Check apakah ini global notification
   bool get isGlobal => userId.isEmpty;
 
-  /// Check apakah ini personal notification
   bool get isPersonal => userId.isNotEmpty;
 
-  /// Get formatted date untuk display
   String get formattedDate {
     final now = DateTime.now();
     final difference = now.difference(createdAt);
@@ -108,12 +101,10 @@ class AppNotification {
     } else if (difference.inDays < 7) {
       return '${difference.inDays} hari yang lalu';
     } else {
-      // Format: 20 Okt 2025
       return '${createdAt.day} ${_getMonthName(createdAt.month)} ${createdAt.year}';
     }
   }
 
-  /// Helper untuk nama bulan
   String _getMonthName(int month) {
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
@@ -122,15 +113,12 @@ class AppNotification {
     return months[month - 1];
   }
 
-  /// Check apakah image adalah network URL
   bool get isNetworkImage => 
       imageUrl.startsWith('http://') || imageUrl.startsWith('https://');
 
-  /// Check apakah image adalah asset
   bool get isAssetImage => 
       imageUrl.startsWith('assets/') || !isNetworkImage;
 
-  /// Get safe image URL (return placeholder jika kosong)
   String get safeImageUrl => 
       imageUrl.isEmpty ? 'assets/images/placeholder.png' : imageUrl;
 
@@ -150,36 +138,26 @@ class AppNotification {
   int get hashCode => id.hashCode;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// EXTENSION untuk kemudahan grouping/filtering
-// ═══════════════════════════════════════════════════════════════
 
 extension NotificationListExtension on List<AppNotification> {
-  /// Filter hanya notifikasi yang belum dibaca
   List<AppNotification> get unreadOnly => 
       where((notif) => !notif.isRead).toList();
 
-  /// Filter hanya notifikasi global
   List<AppNotification> get globalOnly => 
       where((notif) => notif.isGlobal).toList();
 
-  /// Filter hanya notifikasi personal
   List<AppNotification> get personalOnly => 
       where((notif) => notif.isPersonal).toList();
 
-  /// Filter berdasarkan category
   List<AppNotification> filterByCategory(String category) =>
       where((notif) => notif.categories.contains(category)).toList();
 
-  /// Filter berdasarkan brand
   List<AppNotification> filterByBrand(String brand) =>
       where((notif) => notif.brand.toLowerCase() == brand.toLowerCase())
           .toList();
 
-  /// Hitung jumlah notifikasi belum dibaca
   int get unreadCount => where((notif) => !notif.isRead).length;
 
-  /// Group by date (today, yesterday, older)
   Map<String, List<AppNotification>> groupByDate() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -207,20 +185,17 @@ extension NotificationListExtension on List<AppNotification> {
       }
     }
 
-    // Remove empty groups
     grouped.removeWhere((key, value) => value.isEmpty);
 
     return grouped;
   }
 
-  /// Sort by newest first
   List<AppNotification> sortByNewest() {
     final sorted = List<AppNotification>.from(this);
     sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return sorted;
   }
 
-  /// Sort by oldest first
   List<AppNotification> sortByOldest() {
     final sorted = List<AppNotification>.from(this);
     sorted.sort((a, b) => a.createdAt.compareTo(b.createdAt));

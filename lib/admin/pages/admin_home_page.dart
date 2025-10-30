@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/admin/product/product_page.dart';
 import 'package:my_app/admin/community/community_page.dart';
 import 'package:my_app/admin/news/news_page.dart';
-import 'package:my_app/admin/profile_page.dart'; // ✅ tambahkan halaman profil
+import 'package:my_app/admin/profile_page.dart'; 
 import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/admin/product/admin_product_add_page.dart';
 import 'package:my_app/admin/product/product_detail_page.dart';
@@ -32,7 +32,7 @@ class AdminHomePage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Baris pertama: Product dan Komunitas
+                
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -66,7 +66,7 @@ class AdminHomePage extends StatelessWidget {
 
                 SizedBox(height: 16.h),
 
-                // Baris kedua: News dan Profile
+                
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

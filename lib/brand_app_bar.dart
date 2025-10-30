@@ -34,14 +34,14 @@ class BrandAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
         child: Row(
           children: [
-            // Tombol Back
+            
             IconButton(
               onPressed: onBack,
               icon: Icon(Icons.arrow_back_ios_new, size: 18.sp),
               color: Colors.black87,
             ),
 
-            // Logo brand
+            
             CircleAvatar(
               radius: 16.r,
               backgroundColor: Colors.grey[200],
@@ -56,7 +56,7 @@ class BrandAppBar extends StatelessWidget implements PreferredSizeWidget {
 
             SizedBox(width: 10.w),
 
-            // Judul
+            
             Expanded(
               child: Text(
                 "Kumpulan Brand $brandName Official",
@@ -69,7 +69,7 @@ class BrandAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             ),
 
-            // Tombol Ikuti
+            
             GestureDetector(
               onTap: onFollow,
               child: Container(

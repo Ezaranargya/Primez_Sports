@@ -220,7 +220,7 @@ class _UserNewsPageState extends State<UserNewsPage> {
                       itemBuilder: (context, index) {
                         final news = newsList[index];
                         
-                        // ✅ DEBUG: Print image URL
+                        
                         print('📰 Terbaru #$index - Image URL: ${news.imageUrl1}');
                         
                         return GestureDetector(
@@ -234,7 +234,7 @@ class _UserNewsPageState extends State<UserNewsPage> {
                                 height: 200.h,
                                 fit: BoxFit.cover,
                                 borderRadius: BorderRadius.circular(12.r),
-                                showDebugInfo: true, // ✅ Tampilkan debug info
+                                showDebugInfo: true, 
                               ),
                               Container(
                                 decoration: BoxDecoration(
@@ -370,7 +370,7 @@ class _UserNewsPageState extends State<UserNewsPage> {
         itemBuilder: (context, index) {
           final news = newsList[index];
           
-          // ✅ DEBUG: Print image URL untuk Trending
+          
           print('📰 Trending #$index - Image URL: ${news.imageUrl1}');
           
           return GestureDetector(
@@ -386,7 +386,7 @@ class _UserNewsPageState extends State<UserNewsPage> {
                     height: 110.h,
                     fit: BoxFit.cover,
                     borderRadius: BorderRadius.circular(12.r),
-                    showDebugInfo: true, // ✅ Tampilkan debug info
+                    showDebugInfo: true, 
                   ),
                   SizedBox(height: 8.h),
                   if (news.categories.isNotEmpty)

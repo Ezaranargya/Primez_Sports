@@ -51,16 +51,8 @@ class _AdminCommunityPageState extends State<AdminCommunityPage> {
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         child: ListView(
           children: [
-            Container(
-              margin: EdgeInsets.all(12.w),
-              padding: EdgeInsets.all(12.w),
-              decoration: BoxDecoration(
-                color: AppColors.backgroundColor,
-                borderRadius: BorderRadius.circular(10.r),
-                border: Border.all(color: AppColors.backgroundColor, width: 1.5),
-              ),
-            ),
-            SizedBox(height: 8.h),
+            
+            SizedBox(height: 8.h), 
             ...communities.map(
               (community) => CommunityCard(
                 title: community["name"]!,

@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:google_fonts/google_fonts.dart'; // ✅ Tambahkan untuk Inter font
+import 'package:google_fonts/google_fonts.dart'; 
 
 import 'firebase_options.dart';
 import 'package:my_app/providers/favorite_provider.dart';
@@ -29,7 +29,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🔥 Inisialisasi Firebase
+  
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -74,16 +74,16 @@ class PrimezSportsApp extends StatelessWidget {
           ],
           locale: const Locale('id', 'ID'),
 
-          // ✅ Theme yang sudah digabung: Inter untuk deskripsi, Poppins untuk judul
+          
           theme: ThemeData(
             primaryColor: AppColors.primary,
             scaffoldBackgroundColor: Colors.white,
 
-            // Gunakan kombinasi Inter + Poppins
+            
             textTheme: GoogleFonts.interTextTheme(
               Theme.of(context).textTheme,
             ).copyWith(
-              // Deskripsi / isi teks → Inter
+              
               bodyMedium: GoogleFonts.inter(
                 fontSize: 14,
                 height: 1.4,
@@ -91,7 +91,7 @@ class PrimezSportsApp extends StatelessWidget {
                 color: Colors.black87,
               ),
 
-              // Judul besar → Poppins (lokal font)
+              
               titleLarge: const TextStyle(
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.bold,
@@ -99,7 +99,7 @@ class PrimezSportsApp extends StatelessWidget {
                 color: Colors.black,
               ),
 
-              // Subjudul / Header kecil → Poppins (SemiBold)
+              
               headlineSmall: const TextStyle(
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w600,
@@ -109,7 +109,7 @@ class PrimezSportsApp extends StatelessWidget {
             ),
           ),
 
-          // 👇 Halaman pertama saat aplikasi dibuka
+          
           home: const SplashToAuthWrapper(),
 
           routes: {
@@ -161,7 +161,7 @@ class _SplashToAuthWrapperState extends State<SplashToAuthWrapper> {
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
-  // Ambil role user dari Firestore (admin atau user)
+  
   Future<String?> _getUserRole(String uid) async {
     final doc =
         await FirebaseFirestore.instance.collection('users').doc(uid).get();
@@ -200,17 +200,17 @@ class AuthWrapper extends StatelessWidget {
 
               final role = roleSnapshot.data;
 
-              // 🔥 Arahkan berdasarkan role
+              
               if (role == 'admin') {
-                return const AdminHomePage(); // Halaman admin
+                return const AdminHomePage(); 
               } else {
-                return const UserHomePage(); // Halaman user biasa
+                return const UserHomePage(); 
               }
             },
           );
         }
 
-        // Jika belum login → ke LoginPage
+        
         return const LoginPage();
       },
     );

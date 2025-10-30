@@ -43,7 +43,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
 
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
-    // Navigasi ke halaman login (ganti route sesuai project kamu)
+    
     Navigator.pushReplacementNamed(context, '/login');
   }
 
@@ -64,7 +64,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Card Profil
+            
             Card(
               elevation: 3,
               shape: RoundedRectangleBorder(
@@ -93,7 +93,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
               ),
             ),
             const SizedBox(height: 30),
-            // Tombol Logout
+            
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

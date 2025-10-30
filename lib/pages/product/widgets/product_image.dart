@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
-/// ============================================================
-/// 🖼️ UNIVERSAL IMAGE WIDGET (ENHANCED VERSION)
-/// ============================================================
+
+
+
 class ProductImage extends StatelessWidget {
   final String? imageUrl;
   final String? image;
@@ -11,8 +11,8 @@ class ProductImage extends StatelessWidget {
   final double? height;
   final BoxFit fit;
   final BorderRadius? borderRadius;
-  final Widget? placeholder; // ✅ Custom placeholder
-  final bool showDebugInfo; // ✅ Debug mode
+  final Widget? placeholder; 
+  final bool showDebugInfo; 
 
   const ProductImage({
     super.key,

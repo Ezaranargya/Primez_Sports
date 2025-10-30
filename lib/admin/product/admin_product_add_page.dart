@@ -86,7 +86,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     super.dispose();
   }
 
-  // ✅ Deteksi logo dari URL atau brand
   String _getLogoFromUrl(String url, {String? brand}) {
     final uri = Uri.tryParse(url);
     if (uri != null) {
@@ -109,7 +108,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     return '';
   }
 
-  // ✅ Pilih gambar & ubah ke base64 dengan resize
   Future<void> _pickImage() async {
     try {
       final picker = ImagePicker();
@@ -138,7 +136,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     }
   }
 
-  // ✅ Simpan produk ke Firestore
   Future<void> _saveProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -182,7 +179,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       purchaseOptions: purchaseOptions,
     );
 
-    // 🔍 Debug log
     print('🧾 [DEBUG] Product Data:');
     print('Nama: ${product.name}');
     print('Brand: ${product.brand}');
@@ -218,7 +214,10 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       ),
     );
 
-    if (success) Navigator.pop(context, true);
+    // ✅ Tambahan: langsung arahkan kembali ke halaman sebelumnya (ProductPage)
+    if (success && mounted) {
+      Navigator.pop(context, true);
+    }
   }
 
   InputDecoration _inputDecoration(String label) {
@@ -264,7 +263,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // 🖼️ Gambar Produk
                   GestureDetector(
                     onTap: _pickImage,
                     child: Container(
@@ -300,8 +298,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                     ),
                   ),
                   SizedBox(height: 24.h),
-
-                  // 🧾 Form Input
                   TextFormField(
                     controller: _title,
                     decoration: _inputDecoration('Judul'),
@@ -309,7 +305,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                     style: const TextStyle(color: Colors.black),
                   ),
                   SizedBox(height: 14.h),
-
                   DropdownButtonFormField<String>(
                     decoration: _inputDecoration('Brand'),
                     value: _selectedBrand,
@@ -319,7 +314,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                     style: const TextStyle(color: Colors.black),
                   ),
                   SizedBox(height: 14.h),
-
                   TextFormField(
                     controller: _desc,
                     decoration: _inputDecoration('Deskripsi'),
@@ -327,7 +321,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                     style: const TextStyle(color: Colors.black),
                   ),
                   SizedBox(height: 14.h),
-
                   TextFormField(
                     controller: _mainPrice,
                     decoration: _inputDecoration('Harga Produk Utama'),
@@ -336,8 +329,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                     style: const TextStyle(color: Colors.black),
                   ),
                   SizedBox(height: 20.h),
-
-                  // 🏷️ Kategori
                   Row(
                     children: [
                       Expanded(
@@ -368,8 +359,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                     ],
                   ),
                   SizedBox(height: 24.h),
-
-                  // 🛒 Opsi Pembelian
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -392,7 +381,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                       ),
                     ],
                   ),
-
                   ..._purchaseOptions.asMap().entries.map((entry) {
                     final index = entry.key;
                     final item = entry.value;
@@ -452,10 +440,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                       ),
                     );
                   }),
-
                   SizedBox(height: 32.h),
-
-                  // 💾 Tombol Simpan
                   ElevatedButton(
                     onPressed: _saveProduct,
                     style: ElevatedButton.styleFrom(

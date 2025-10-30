@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:my_app/models/news_model.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/pages/product/widgets/product_image.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class NewsDetailPage extends StatelessWidget {
   final NewsModel news;
@@ -12,229 +13,227 @@ class NewsDetailPage extends StatelessWidget {
   const NewsDetailPage({super.key, required this.news});
 
   @override
-  Widget build(BuildContext context) {
-    final formatDate = DateFormat('dd MMMM yyyy', 'id_ID');
+Widget build(BuildContext context) {
+  final formatDate = DateFormat('dd MMMM yyyy', 'id_ID');
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 300.h,
-            pinned: true,
-            leading: IconButton(
-              icon: Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.arrow_back, color: Colors.black),
+  return Scaffold(
+    backgroundColor: Colors.white,
+    body: CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          expandedHeight: 300.h,
+          pinned: true,
+          leading: IconButton(
+            icon: Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                shape: BoxShape.circle,
               ),
-              onPressed: () => Navigator.pop(context),
+              child: const Icon(Icons.arrow_back, color: Colors.black),
             ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ProductImage(
-                    image: news.imageUrl1,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
-                        ],
-                      ),
+            onPressed: () => Navigator.pop(context),
+          ),
+          flexibleSpace: FlexibleSpaceBar(
+            background: Stack(
+              fit: StackFit.expand,
+              children: [
+                ProductImage(
+                  image: news.imageUrl1,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  borderRadius: BorderRadius.zero,
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.7),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          SliverToBoxAdapter(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(24.r),
-                  topRight: Radius.circular(24.r),
-                ),
+        ),
+        SliverToBoxAdapter(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24.r),
+                topRight: Radius.circular(24.r),
               ),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 20.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (news.categories.isNotEmpty)
-                      Wrap(
-                        spacing: 8.w,
-                        runSpacing: 8.h,
-                        children: news.categories.map((category) {
-                          return Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 6.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20.r),
-                            ),
-                            child: Text(
-                              category.toUpperCase(),
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    
-                    SizedBox(height: 16.h),
-                    Text(
-                      news.title,
-                      style: TextStyle(
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
-                        color: Colors.black87,
-                        height: 1.3,
-                      ),
-                    ),
-
-                    SizedBox(height: 12.h),
-                    if (news.subtitle.isNotEmpty)
-                      Text(
-                        news.subtitle,
-                        textAlign: TextAlign.justify,
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontFamily: 'Poppins',
-                          color: Colors.grey[700],
-                          height: 1.5,
-                        ),
-                      ),
-
-                    SizedBox(height: 16.h),
+            ),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 20.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (news.categories.isNotEmpty)
                     Wrap(
                       spacing: 8.w,
                       runSpacing: 8.h,
-                      children: [
-                        if (news.author.isNotEmpty)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.person_outline,
-                                size: 16.sp,
-                                color: Colors.grey[600],
-                              ),
-                              SizedBox(width: 4.w),
-                              Flexible(
-                                child: Text(
-                                  'By ${news.author}',
-                                  style: TextStyle(
-                                    fontSize: 13.sp,
-                                    color: Colors.grey[600],
-                                    fontFamily: 'Poppins',
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                      children: news.categories.map((category) {
+                        return Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12.w,
+                            vertical: 6.h,
                           ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20.r),
+                          ),
+                          child: Text(
+                            category.toUpperCase(),
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+
+                  SizedBox(height: 16.h),
+                  Text(
+                    news.title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 24.sp,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      height: 1.3,
+                    ),
+                  ),
+
+                  SizedBox(height: 10.h),
+                  if (news.subtitle.isNotEmpty)
+                    Text(
+                      news.subtitle,
+                      textAlign: TextAlign.justify, // ✅ Ganti dari justify ke left
+                      style: GoogleFonts.inter(
+                        fontSize: 15.sp,
+                        color: Colors.black87,
+                        height: 1.35, // ✅ Naik sedikit untuk readability
+                        letterSpacing: -1, // ✅ Hapus letter spacing
+                        wordSpacing: 0, // ✅ Hapus word spacing
+                      ),
+                    ),
+
+                  SizedBox(height: 16.h),
+                  Wrap(
+                    spacing: 8.w,
+                    runSpacing: 8.h,
+                    children: [
+                      if (news.author.isNotEmpty)
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 16.sp,
-                              color: Colors.grey[600],
-                            ),
+                            Icon(Icons.person_outline,
+                                size: 16.sp, color: Colors.grey[600]),
                             SizedBox(width: 4.w),
-                            Text(
-                              formatDate.format(news.date),
-                              style: TextStyle(
-                                fontSize: 13.sp,
-                                color: Colors.grey[600],
-                                fontFamily: 'Poppins',
+                            Flexible(
+                              child: Text(
+                                'By ${news.author}',
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  color: Colors.grey[600],
+                                  fontFamily: 'Poppins',
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.calendar_today,
+                              size: 16.sp, color: Colors.grey[600]),
+                          SizedBox(width: 4.w),
+                          Text(
+                            formatDate.format(news.date),
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: Colors.grey[600],
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
 
-                    SizedBox(height: 24.h),
-                    Divider(color: Colors.grey[300], thickness: 1),
+                  SizedBox(height: 24.h),
+                  Divider(color: Colors.grey[300], thickness: 1),
+                  SizedBox(height: 24.h),
 
-                    SizedBox(height: 24.h),
-                    ...news.content.map((item) => _buildContentItem(item)),
+                  ...news.content.map((item) => _buildContentItem(item)),
 
-                    SizedBox(height: 40.h),
-                  ],
-                ),
+                  SizedBox(height: 40.h),
+                ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
-  Widget _buildContentItem(ContentItem item) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 20.h),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (item.text != null && item.text!.isNotEmpty)
-            Text(
+Widget _buildContentItem(ContentItem item) {
+  return Padding(
+    padding: EdgeInsets.only(bottom: 16.h),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (item.text != null && item.text!.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 4.h),
+            child: Text(
               item.text!,
-              textAlign: TextAlign.justify,
-              style: TextStyle(
+              textAlign: TextAlign.left, // ✅ Ganti dari justify ke left
+              style: GoogleFonts.inter(
                 fontSize: 15.sp,
-                height: 1.6,
+                height: 1.6, // ✅ Naik dari 1.25 untuk readability
+                letterSpacing: 0, // ✅ Hapus letter spacing
+                wordSpacing: 0, // ✅ Hapus word spacing
                 color: Colors.black87,
+              ),
+            ),
+          ),
+
+        if (item.imageUrl != null && item.imageUrl!.isNotEmpty) ...[
+          SizedBox(height: 12.h),
+          ProductImage(
+            image: item.imageUrl!,
+            width: double.infinity,
+            height: 200.h,
+            fit: BoxFit.cover,
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          if (item.caption != null && item.caption!.isNotEmpty) ...[
+            SizedBox(height: 8.h),
+            Text(
+              item.caption!,
+              style: TextStyle(
+                fontSize: 13.sp,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey[600],
                 fontFamily: 'Poppins',
               ),
             ),
-
-          if (item.imageUrl != null && item.imageUrl!.isNotEmpty) ...[
-            SizedBox(height: 12.h),
-            ProductImage(
-              image: item.imageUrl!,
-              width: double.infinity,
-              height: 200.h,
-              fit: BoxFit.cover,
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            if (item.caption != null && item.caption!.isNotEmpty) ...[
-              SizedBox(height: 8.h),
-              Text(
-                item.caption!,
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  fontStyle: FontStyle.italic,
-                  color: const Color.fromARGB(255, 112, 92, 92),
-                  fontFamily: 'Poppins',
-                ),
-              ),
-            ],
           ],
         ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 }
