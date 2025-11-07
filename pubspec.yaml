@@ -1,0 +1,78 @@
+name: my_app
+description: A new Flutter project.
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.7.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 🔗 Deep Linking
+  app_links: ^3.5.0 
+
+  # 🧩 Icons & UI Indicators
+  iconsax: ^0.0.8
+  smooth_page_indicator: ^1.1.0
+
+  # 🧠 State Management & Utilities
+  provider: ^6.1.5
+  flutter_screenutil: ^5.9.3
+
+  # 🎨 Fonts & Style
+  google_fonts: ^6.2.1
+  font_awesome_flutter: ^10.10.0
+
+  # 🌍 Localization
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+
+  # 🔥 Firebase & Cloud
+  firebase_core: ^3.7.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+  firebase_messaging: ^15.1.3
+  firebase_storage: ^12.2.0
+  flutter_local_notifications: ^17.2.3
+
+  # 📸 Image Handling & ML Kit
+  image_picker: ^1.1.1
+  image: ^4.2.0
+  google_mlkit_commons: ^0.11.0
+  google_mlkit_text_recognition: ^0.15.0
+
+  # 🏞️ Carousel & Banner
+  banner_carousel: ^1.2.1
+
+  # 🌐 Networking & Sharing
+  connectivity_plus: ^7.0.0
+  url_launcher: ^6.3.2
+  share_plus: ^12.0.0
+  http: ^1.2.0  # ✅ DITAMBAHKAN untuk kirim FCM notification
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
