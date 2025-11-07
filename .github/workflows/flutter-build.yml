@@ -22,7 +22,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.6'  # Flutter 3.35.6 dengan Dart 3.9.2
+          flutter-version: '3.35.6'
           channel: 'stable'
 
       - name: Cache Flutter dependencies
@@ -48,4 +48,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            android/app/build/outputs/flutter-apk/app-release.apk
