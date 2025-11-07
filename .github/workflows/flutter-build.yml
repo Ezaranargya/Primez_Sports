@@ -13,6 +13,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Free up disk space
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo docker image prune --all --force
+          df -h
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -22,32 +32,33 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.6'
+          flutter-version: '3.35.4'
           channel: 'stable'
-
-      - name: Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            ${{ runner.tool_cache }}/flutter
-          key: ${{ runner.os }}-flutter-${{ hashFiles('pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-flutter-
-
-      - name: Flutter Doctor
-        run: flutter doctor -v
+          cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --release --verbose
+      - name: Clean build
+        run: flutter clean
 
-      - name: Upload APK
+      - name: Build APK
+        run: flutter build apk --release --verbose --split-per-abi
+
+      - name: Upload APK (arm64-v8a)
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            android/app/build/outputs/flutter-apk/app-release.apk
+          name: app-release-arm64-v8a
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+
+      - name: Upload APK (armeabi-v7a)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-armeabi-v7a
+          path: build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+
+      - name: Upload APK (x86_64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-x86_64
+          path: build/app/outputs/flutter-apk/app-x86_64-release.apk
