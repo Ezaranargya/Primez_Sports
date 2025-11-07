@@ -22,7 +22,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'  # Gunakan versi stable terbaru
+          flutter-version: '3.27.0'  # Flutter 3.27.0 dengan Dart 3.7.0
           channel: 'stable'
 
       - name: Flutter Doctor
