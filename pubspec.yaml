@@ -23,7 +23,8 @@ dependencies:
   # 🌍 Localization
   flutter_localizations:
     sdk: flutter
-  intl: ^0.19.0  # ✅ DIUBAH: Dari ^0.20.2 ke ^0.19.0 untuk menghindari konflik dengan pinning Flutter SDK
+  intl: ^0.20.2
+
   # 🔥 Firebase & Cloud
   firebase_core: ^3.7.0
   firebase_auth: ^5.3.1
