@@ -19,7 +19,7 @@ dependencies:
   flutter_screenutil: ^5.9.3
   # 🎨 Fonts & Style
   google_fonts: ^6.2.1
-  font_awesome_flutter: ^10.10.0
+  font_awesome_flutter: ^10.7.0
   # 🌍 Localization
   flutter_localizations:
     sdk: flutter
