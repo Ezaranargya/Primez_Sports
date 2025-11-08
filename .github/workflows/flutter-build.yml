@@ -13,16 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Free up disk space
-      - name: Free Disk Space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          sudo docker image prune --all --force
-          df -h
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -32,34 +22,18 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.4'
+          flutter-version: '3.27.0'
           channel: 'stable'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Clean build
-        run: flutter clean
-
       - name: Build APK
-        run: flutter build apk --release --verbose
-
-      - name: Find APK files
-        run: |
-          echo "Searching for APK files..."
-          find . -name "*.apk" -type f
-          ls -lah build/app/outputs/ || echo "outputs directory not found"
-          ls -lah build/app/outputs/flutter-apk/ || echo "flutter-apk directory not found"
-          ls -lah build/app/outputs/apk/ || echo "apk directory not found"
-          ls -lah android/app/build/outputs/apk/release/ || echo "android apk directory not found"
+        run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
-        if: success() || failure()
         with:
           name: app-release-apk
-          path: |
-            build/app/outputs/flutter-apk/*.apk
-            build/app/outputs/apk/release/*.apk
-            android/app/build/outputs/apk/release/*.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
