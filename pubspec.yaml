@@ -23,8 +23,6 @@ dependencies:
   # 🌍 Localization
   flutter_localizations:
     sdk: flutter
-  intl: ^0.20.2
-
   # 🔥 Firebase & Cloud
   firebase_core: ^3.7.0
   firebase_auth: ^5.3.1
