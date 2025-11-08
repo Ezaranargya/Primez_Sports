@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/product_model.dart';
-import 'package:my_app/pages/user/home_content_page.dart';
 
 class HomeContentPage extends StatefulWidget {
   final List<Product> allProducts;
