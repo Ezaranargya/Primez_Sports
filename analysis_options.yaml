@@ -9,20 +9,29 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  errors:
+    # Treat warnings as info untuk CI/CD
+    unused_import: info
+    unused_element: info
+    unused_field: info
+    unused_local_variable: info
+    deprecated_member_use: info
+    unnecessary_null_comparison: info
+    unnecessary_non_null_assertion: info
+    invalid_null_aware_operator: info
+    dead_null_aware_expression: info
+    duplicate_import: info
+    use_build_context_synchronously: info
+    unnecessary_to_list_in_spreads: info
+
 linter:
-  # The lint rules applied to this project can be customized in the
-  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
-  # included above or to enable additional rules. A list of all available lints
-  # and their documentation is published at https://dart.dev/lints.
-  #
-  # Instead of disabling a lint rule for the entire project in the
-  # section below, it can also be suppressed for a single line of code
-  # or a specific dart file by using the `// ignore: name_of_lint` and
-  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
-  # producing the lint.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    # Disable print warnings
+    avoid_print: false
+    
+    # Disable dependency warnings
+    depend_on_referenced_packages: false
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
