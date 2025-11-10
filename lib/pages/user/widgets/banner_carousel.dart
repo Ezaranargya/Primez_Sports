@@ -38,14 +38,13 @@ class _BannerCarouselState extends State<BannerCarousel> {
   final Map<int, Uint8List> _imageCache = {};
   bool _isInitialized = false;
   
-  // ✅ Multiplier besar untuk infinite scroll
   static const int _infiniteMultiplier = 10000;
   int get _initialPage => widget.banners.isEmpty ? 0 : _infiniteMultiplier * widget.banners.length;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: _initialPage); // ✅ Start di tengah
+    _pageController = PageController(initialPage: _initialPage); 
     _preloadImages();
     if (widget.autoPlay && widget.banners.isNotEmpty) {
       Future.delayed(widget.autoPlayInterval, _autoSlide);
@@ -80,7 +79,6 @@ class _BannerCarouselState extends State<BannerCarousel> {
   void _autoSlide() {
     if (!mounted || widget.banners.isEmpty) return;
     
-    // ✅ Selalu maju ke page berikutnya (infinite loop)
     final currentPageValue = _pageController.page ?? _initialPage.toDouble();
     _pageController.animateToPage(
       currentPageValue.toInt() + 1,
@@ -180,12 +178,12 @@ class _BannerCarouselState extends State<BannerCarousel> {
               width: double.infinity,
               child: PageView.builder(
                 controller: _pageController,
-                itemCount: null, // ✅ null = infinite scrolling
+                itemCount: null, 
                 onPageChanged: (index) {
                   setState(() => _currentPage = index % widget.banners.length);
                 },
                 itemBuilder: (context, index) {
-                  final actualIndex = index % widget.banners.length; // ✅ Loop index
+                  final actualIndex = index % widget.banners.length;
                   final product = widget.banners[actualIndex];
                   return GestureDetector(
                     onTap: () {
