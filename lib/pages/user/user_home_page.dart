@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/services/product_service.dart';
+import 'package:my_app/services/community_service.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/pages/user/home_content_page.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
@@ -22,6 +23,7 @@ class UserHomePage extends StatefulWidget {
 
 class _UserHomePageState extends State<UserHomePage> {
   final ProductService _productService = ProductService();
+  final CommunityService _communityService = CommunityService();
   int selectedIndex = 0;
 
   @override
@@ -44,6 +46,11 @@ class _UserHomePageState extends State<UserHomePage> {
 
   void onItemTapped(int index) {
     setState(() => selectedIndex = index);
+    
+    // ✅ Mark community as visited when user tap on community tab
+    if (index == 2) {
+      _communityService.markCommunityAsVisited();
+    }
   }
 
   @override
@@ -130,41 +137,109 @@ class _UserHomePageState extends State<UserHomePage> {
           );
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
-        currentIndex: selectedIndex,
-        onTap: onItemTapped,
-        selectedFontSize: 12.sp,
-        unselectedFontSize: 12.sp,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_outline),
-            activeIcon: Icon(Icons.favorite),
-            label: 'Favorite',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
-            label: 'Komunitas',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.newspaper_outlined),
-            activeIcon: Icon(Icons.newspaper),
-            label: 'News',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+      bottomNavigationBar: StreamBuilder<int>(
+        stream: _communityService.getUnreadPostsCount(),
+        builder: (context, snapshot) {
+          final unreadCount = snapshot.data ?? 0;
+
+          return BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: Theme.of(context).primaryColor,
+            unselectedItemColor: Colors.grey,
+            currentIndex: selectedIndex,
+            onTap: onItemTapped,
+            selectedFontSize: 12.sp,
+            unselectedFontSize: 12.sp,
+            items: [
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.favorite_outline),
+                activeIcon: Icon(Icons.favorite),
+                label: 'Favorite',
+              ),
+              // ✅ Community dengan badge
+              BottomNavigationBarItem(
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.chat_bubble_outline),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: -6,
+                        top: -6,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            unreadCount > 9 ? '9+' : '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                activeIcon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.chat_bubble),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: -6,
+                        top: -6,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            unreadCount > 9 ? '9+' : '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                label: 'Komunitas',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.newspaper_outlined),
+                activeIcon: Icon(Icons.newspaper),
+                label: 'News',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                activeIcon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+            ],
+          );
+        },
       ),
     );
   }

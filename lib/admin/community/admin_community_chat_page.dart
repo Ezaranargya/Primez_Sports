@@ -265,6 +265,11 @@ class AdminCommunityChatPage extends StatelessWidget {
     final subCategory = data['subCategory']?.toString() ?? '';
     final communityId = data['communityId']?.toString();
 
+    // DEBUG: Check links
+    print('🎯 POST DEBUG: $title');
+    print('🎯 Links count: ${linksList.length}');
+    print('🎯 Links data: $linksList');
+
     final createdAt = data['createdAt'] is Timestamp
         ? (data['createdAt'] as Timestamp).toDate()
         : null;
@@ -444,6 +449,8 @@ class AdminCommunityChatPage extends StatelessWidget {
 
   
   Widget _buildLinks(BuildContext context, List<dynamic> linksList) {
+    print('🔗 _buildLinks dipanggil dengan ${linksList.length} links');
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -461,7 +468,26 @@ class AdminCommunityChatPage extends StatelessWidget {
           final url = linkMap['url']?.toString() ?? '';
           final store = linkMap['store']?.toString() ?? '';
           final price = linkMap['price'];
-          final logoUrl = linkMap['logoUrl']?.toString() ?? '';
+          String logoUrl = linkMap['logoUrl']?.toString() ?? '';
+
+          // DEBUG: Print semua data
+          print('🔍 ========== DEBUG LINK ==========');
+          print('🔍 URL: $url');
+          print('🔍 Store from Firestore: $store');
+          print('🔍 LogoUrl from Firestore: $logoUrl');
+          print('🔍 LogoUrl isEmpty: ${logoUrl.isEmpty}');
+          
+          // PERBAIKAN: Fallback logo detection jika logoUrl kosong
+          if (logoUrl.isEmpty && url.isNotEmpty) {
+            print('⚠️ LogoUrl kosong, mencoba detect dari URL...');
+            logoUrl = _detectLogoFromUrl(url);
+            print('✅ Hasil detect: $logoUrl');
+          } else if (logoUrl.isNotEmpty) {
+            print('✅ LogoUrl sudah ada: $logoUrl');
+          }
+          
+          print('🔍 Final LogoUrl yang digunakan: $logoUrl');
+          print('🔍 ==================================');
 
           if (url.isEmpty) return const SizedBox.shrink();
 
@@ -515,6 +541,7 @@ class AdminCommunityChatPage extends StatelessWidget {
                             logoUrl,
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) {
+                              print('❌ Error loading logo: $logoUrl - $error');
                               return Icon(
                                 Icons.store,
                                 size: 24.sp,
@@ -561,6 +588,43 @@ class AdminCommunityChatPage extends StatelessWidget {
         }).toList(),
       ],
     );
+  }
+
+  // TAMBAHAN: Method helper untuk detect logo
+  String _detectLogoFromUrl(String url) {
+    final lowerUrl = url.toLowerCase();
+    
+    print('🔎 Detecting logo from URL: $lowerUrl');
+    
+    final Map<String, String> storeLogos = {
+      'tokopedia': 'assets/logo_tokopedia.png',
+      'shopee': 'assets/logo_shopee.png',
+      'blibli': 'assets/logo_blibli.jpg',
+      'underarmour': 'assets/logo_under_armour.png',
+      'under-armour': 'assets/logo_under_armour.png',
+      'under armour': 'assets/logo_under_armour.png',
+      'jordan': 'assets/logo_jordan.png',
+      'puma': 'assets/logo_puma.png',
+      'mizuno': 'assets/logo_mizuno.png',
+      'nike': 'assets/logo_nike.png',
+      'adidas': 'assets/logo_adidas.png',
+    };
+    
+    for (var entry in storeLogos.entries) {
+      // Remove spaces and special characters for comparison
+      final cleanKey = entry.key.replaceAll(' ', '').replaceAll('-', '');
+      final cleanUrl = lowerUrl.replaceAll(' ', '').replaceAll('-', '').replaceAll('.', '');
+      
+      print('🔎 Checking: $cleanKey vs $cleanUrl');
+      
+      if (cleanUrl.contains(cleanKey)) {
+        print('✅ MATCH! Detected logo for ${entry.key}: ${entry.value}');
+        return entry.value;
+      }
+    }
+    
+    print('⚠️ No logo detected for URL: $url');
+    return ''; // Return empty string instead of non-existent path
   }
 
   void _showDeleteDialog(BuildContext context, String postId, String? communityId) {

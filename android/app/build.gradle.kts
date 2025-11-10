@@ -72,6 +72,10 @@ android {
             isShrinkResources = false
         }
     }
+    
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 // =======================================
@@ -86,8 +90,33 @@ flutter {
 // =======================================
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-messaging")
     implementation("androidx.multidex:multidex:2.0.1")
+}
+
+// =======================================
+// CUSTOM APK OUTPUT LOCATION
+// =======================================
+afterEvaluate {
+    tasks.named("assembleDebug") {
+        doLast {
+            copy {
+                from(layout.buildDirectory.dir("outputs/apk/debug"))
+                into(rootProject.projectDir.resolve("../build/app/outputs/flutter-apk"))
+                include("*.apk")
+            }
+        }
+    }
+    
+    tasks.named("assembleRelease") {
+        doLast {
+            copy {
+                from(layout.buildDirectory.dir("outputs/apk/release"))
+                into(rootProject.projectDir.resolve("../build/app/outputs/flutter-apk"))
+                include("*.apk")
+            }
+        }
+    }
 }

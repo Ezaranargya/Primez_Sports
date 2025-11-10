@@ -51,8 +51,16 @@ class _CreatePostPageState extends State<CreatePostPage> {
       'name': 'Blibli',
       'logo': 'assets/logo_blibli.jpg',
     },
+    'underarmour': {
+      'name': 'Under Armour Official',
+      'logo': 'assets/logo_under_armour.png',
+    },
+    'under-armour': {
+      'name': 'Under Armour Official',
+      'logo': 'assets/logo_under_armour.png',
+    },
     'under armour': {
-      'name': 'Under armour Official',
+      'name': 'Under Armour Official',
       'logo': 'assets/logo_under_armour.png',
     },
     'jordan': {
@@ -146,8 +154,17 @@ class _CreatePostPageState extends State<CreatePostPage> {
   Map<String, String> _detectStoreFromUrl(String url) {
     final lowerUrl = url.toLowerCase();
     
+    print('🔎 Detecting store from URL: $lowerUrl');
+    
     for (var entry in _storeLogos.entries) {
-      if (lowerUrl.contains(entry.key)) {
+      // Remove spaces, hyphens, and dots for better matching
+      final cleanKey = entry.key.replaceAll(' ', '').replaceAll('-', '');
+      final cleanUrl = lowerUrl.replaceAll(' ', '').replaceAll('-', '').replaceAll('.', '');
+      
+      print('🔎 Checking: $cleanKey in $cleanUrl');
+      
+      if (cleanUrl.contains(cleanKey)) {
+        print('✅ MATCH! Store detected: ${entry.value['name']} - Logo: ${entry.value['logo']}');
         return {
           'store': entry.value['name']!,
           'logoUrl': entry.value['logo']!,
@@ -155,9 +172,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
       }
     }
     
+    print('⚠️ No store detected for URL: $url');
     return {
       'store': 'Other',
-      'logoUrl': 'assets/logos/default.png',
+      'logoUrl': '', // Return empty instead of non-existent path
     };
   }
 

@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
   # 🔗 Deep Linking
   app_links: ^3.5.0 
   # 🧩 Icons & UI Indicators
@@ -23,7 +24,7 @@ dependencies:
   # 🌍 Localization
   flutter_localizations:
     sdk: flutter
-  intl: any  # Pakai versi dari flutter_localizations
+  intl: any  
   # 🔥 Firebase & Cloud
   firebase_core: ^3.7.0
   firebase_auth: ^5.3.1
@@ -42,7 +43,8 @@ dependencies:
   connectivity_plus: ^7.0.0
   url_launcher: ^6.3.2
   share_plus: ^12.0.0
-  http: ^1.2.0  # ✅ DITAMBAHKAN untuk kirim FCM notification
+  http: ^1.2.0  
+
 
 dev_dependencies:
   flutter_test:

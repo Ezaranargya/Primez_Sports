@@ -5,11 +5,14 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:my_app/services/community_service.dart';
+import 'package:my_app/models/community_post_model.dart';
 
 class ProductService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final String _collection = 'products';
+  final CommunityService _communityService = CommunityService();
 
   bool get _isAdmin => true;
 
@@ -17,39 +20,63 @@ class ProductService {
       _firestore.collection(_collection);
 
   Future<void> addProductAndNotify(Product product) async {
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw Exception("User tidak login");
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception("User tidak login");
 
-    final productRef = await _firestore.collection('products').add(product.toMap());
-    print('✅ Produk berhasil disimpan dengan ID: ${productRef.id}');
+      // 1️⃣ Tambah produk ke Firestore
+      final productRef = await _firestore.collection('products').add(product.toMap());
+      print('✅ Produk berhasil disimpan dengan ID: ${productRef.id}');
 
-    final usersSnapshot = await _firestore.collection('users').get();
+      // 2️⃣ Kirim notifikasi ke setiap user
+      final usersSnapshot = await _firestore.collection('users').get();
 
-    for (var userDoc in usersSnapshot.docs) {
-      final userId = userDoc.id;
+      for (var userDoc in usersSnapshot.docs) {
+        final userId = userDoc.id;
 
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('notifications')
-          .add({
-        'title': 'Produk Baru Tersedia!',
-        'message': 'Produk "${product.name}" baru saja ditambahkan oleh admin.',
-        'productId': productRef.id,
-        'timestamp': FieldValue.serverTimestamp(),
-        'isRead': false,
-      });
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('notifications')
+            .add({
+          'title': 'Produk Baru Tersedia!',
+          'message': 'Produk "${product.name}" baru saja ditambahkan oleh admin.',
+          'productId': productRef.id,
+          'timestamp': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+      }
+
+      await _sendFCMNotificationToAllUsers(product);
+
+      // 3️⃣ ✅ AUTO CREATE POST DI COMMUNITY
+      // Generate random content ID (seperti "1967894")
+      final contentId = DateTime.now().millisecondsSinceEpoch.toString().substring(6);
+      
+      // Convert purchase options ke PostLink
+      final links = product.purchaseOptions.map((option) => PostLink(
+        logoUrl1: option.logoUrl,
+        price: option.price,
+        store: option.storeName.isNotEmpty ? option.storeName : 'Toko',
+        url: option.link,
+      )).toList();
+
+      await _communityService.createAdminPost(
+        brand: product.brand,
+        content: contentId,
+        description: product.description,
+        imageUrl1: product.imageBase64.isNotEmpty 
+            ? product.imageBase64 
+            : (product.bannerImage.isNotEmpty ? product.bannerImage : null),
+        links: links,
+      );
+
+      print('✅ Produk baru berhasil ditambahkan, notifikasi terkirim, dan post ke community!');
+    } catch (e) {
+      print('❌ Error addProductAndNotify: $e');
+      throw e;
     }
-
-    await _sendFCMNotificationToAllUsers(product);
-
-    print('✅ Produk baru berhasil ditambahkan dan notifikasi terkirim ke semua user!');
-  } catch (e) {
-    print('❌ Error addProductAndNotify: $e');
-    throw e;
   }
-}
 
   // Method untuk kirim FCM notification ke semua user
   Future<void> _sendFCMNotificationToAllUsers(Product product) async {

@@ -123,7 +123,6 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
     try {
       String? userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId != null) {
-        // ✅ FIX: Gunakan .set() dengan merge: true agar tidak error jika dokumen belum ada
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
