@@ -24,11 +24,9 @@ class ProductService {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("User tidak login");
 
-      // 1️⃣ Tambah produk ke Firestore
       final productRef = await _firestore.collection('products').add(product.toMap());
       print('✅ Produk berhasil disimpan dengan ID: ${productRef.id}');
 
-      // 2️⃣ Kirim notifikasi ke setiap user
       final usersSnapshot = await _firestore.collection('users').get();
 
       for (var userDoc in usersSnapshot.docs) {
@@ -49,11 +47,8 @@ class ProductService {
 
       await _sendFCMNotificationToAllUsers(product);
 
-      // 3️⃣ ✅ AUTO CREATE POST DI COMMUNITY
-      // Generate random content ID (seperti "1967894")
       final contentId = DateTime.now().millisecondsSinceEpoch.toString().substring(6);
-      
-      // Convert purchase options ke PostLink
+     
       final links = product.purchaseOptions.map((option) => PostLink(
         logoUrl1: option.logoUrl,
         price: option.price,
@@ -78,10 +73,8 @@ class ProductService {
     }
   }
 
-  // Method untuk kirim FCM notification ke semua user
   Future<void> _sendFCMNotificationToAllUsers(Product product) async {
     try {
-      // Ambil semua FCM tokens dari collection users
       QuerySnapshot usersSnapshot = await _firestore.collection('users').get();
       
       List<String> fcmTokens = [];
@@ -99,7 +92,6 @@ class ProductService {
         return;
       }
 
-      // Kirim notifikasi menggunakan Firebase Cloud Messaging
       await _sendFCMNotification(
         tokens: fcmTokens,
         title: '🎉 Produk Baru!',
@@ -113,7 +105,6 @@ class ProductService {
     }
   }
 
-  // Method untuk kirim FCM notification via HTTP
   Future<void> _sendFCMNotification({
     required List<String> tokens,
     required String title,
@@ -160,9 +151,6 @@ class ProductService {
     }
   }
 
-  // ================================================================
-  // 🧩 FUNGSI UTAMA SAVE / UPDATE PRODUK
-  // ================================================================
   Future<bool> saveOrUpdateProduct({
     String? productId,
     String? name,
@@ -257,9 +245,6 @@ class ProductService {
     }
   }
 
-  // ================================================================
-  // 🗑️ DELETE PRODUK
-  // ================================================================
   Future<bool> deleteProduct(String id) async {
     if (!_isAdmin) {
       print('❌ User tidak memiliki akses admin');
@@ -276,9 +261,6 @@ class ProductService {
     }
   }
 
-  // ================================================================
-  // 🔄 STREAM DAN FETCH PRODUK
-  // ================================================================
   Stream<List<Product>> getAllProducts() {
     return _productRef.snapshots().map((snapshot) {
       final products = snapshot.docs
@@ -344,9 +326,6 @@ class ProductService {
             .toList());
   }
 
-  // ================================================================
-  // 📸 UPLOAD GAMBAR
-  // ================================================================
   Future<String> uploadImage(File imageFile, String fileName) async {
     try {
       final ref = _storage.ref().child('products/$fileName');
@@ -360,9 +339,6 @@ class ProductService {
     }
   }
 
-  // ================================================================
-  // 🔢 STATISTIK PRODUK
-  // ================================================================
   Future<int> getProductsCount() async {
     try {
       final snapshot = await _productRef.get();

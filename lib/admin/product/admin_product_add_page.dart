@@ -172,9 +172,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     }
   }
 
-  // =========================================================
-  // 🔧 BAGIAN INI DITAMBAHKAN FITUR NOTIFIKASI
-  // =========================================================
   Future<void> _saveProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -200,7 +197,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       );
     }).toList();
 
-    // Gunakan categories langsung, jangan pakai category dan subCategory
     final categoriesList = <String>[];
     if (_selectedCategory1 != null && _selectedCategory1!.isNotEmpty) {
       categoriesList.add(_selectedCategory1!);
@@ -237,11 +233,9 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
 
     try {
       if (widget.product == null) {
-        // ✅ Produk baru → Simpan dan kirim notifikasi
         await _service.addProductAndNotify(product);
         success = true;
       } else {
-        // 🔄 Produk lama → Update tanpa kirim notifikasi
         success = await _service.saveOrUpdateProduct(
           productId: widget.product?.id,
           product: product,
@@ -270,8 +264,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       Navigator.pop(context, true);
     }
   }
-
-  // =========================================================
 
   InputDecoration _inputDecoration(String label) {
     return InputDecoration(
@@ -316,9 +308,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  /// =============================
-                  /// 🖼️ FOTO PRODUK UTAMA
-                  /// =============================
                   GestureDetector(
                     onTap: _pickImage,
                     child: Container(
@@ -355,9 +344,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                     ),
                   ),
 
-                  /// =============================
-                  /// 🏷️ BANNER PRODUK
-                  /// =============================
                   SizedBox(height: 24.h),
                   GestureDetector(
                     onTap: _pickBannerImage,
@@ -398,10 +384,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                   ),
 
                   SizedBox(height: 24.h),
-
-                  /// =============================
-                  /// 📝 FORM DETAIL PRODUK
-                  /// =============================
                   TextFormField(
                     controller: _title,
                     decoration: _inputDecoration('Judul'),

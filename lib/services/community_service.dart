@@ -81,7 +81,6 @@ class CommunityService {
     print('✅ Post deleted: $postId');
   }
 
-  // Method untuk mark posts sebagai sudah dibaca berdasarkan brand
   Future<void> markBrandPostsAsRead(String brand) async {
     try {
       final user = _auth.currentUser;
@@ -101,7 +100,6 @@ class CommunityService {
     }
   }
 
-  // Method untuk cek apakah brand sudah dibaca
   Stream<bool> isBrandRead(String brand) {
     final user = _auth.currentUser;
     if (user == null) return Stream.value(false);
@@ -115,7 +113,6 @@ class CommunityService {
         .map((doc) => doc.exists);
   }
 
-  // Method untuk get unread count per brand
   Stream<Map<String, int>> getUnreadCountsByBrand() {
     return getAllPosts().map((posts) {
       final Map<String, int> counts = {};

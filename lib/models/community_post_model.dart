@@ -6,7 +6,7 @@ class CommunityPost {
   final String content;
   final String description;
   final DateTime createdAt;
-  final String? imageUrl1;  // ✅ Field sesuai Firestore
+  final String? imageUrl1;  
   final List<PostLink> links;
 
   CommunityPost({
@@ -25,7 +25,7 @@ class CommunityPost {
       'content': content,
       'description': description,
       'createdAt': Timestamp.fromDate(createdAt),
-      'imageUrl1': imageUrl1,  // ✅ Sesuai Firestore
+      'imageUrl1': imageUrl1,  
       'links': links.map((link) => link.toMap()).toList(),
     };
   }
@@ -37,7 +37,7 @@ class CommunityPost {
       content: map['content'] ?? '',
       description: map['description'] ?? '',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      imageUrl1: map['imageUrl1'] ?? map['imageUrl'],  // ✅ Fallback ke 'imageUrl'
+      imageUrl1: map['imageUrl1'] ?? map['imageUrl'],  
       links: map['links'] != null
           ? (map['links'] as List)
               .map((link) => PostLink.fromMap(link as Map<String, dynamic>))
@@ -62,7 +62,7 @@ class PostLink {
 
   Map<String, dynamic> toMap() {
     return {
-      'logoUrl1': logoUrl1,  // ✅ Sesuai Firestore
+      'logoUrl1': logoUrl1,  
       'price': price,
       'store': store,
       'url': url,
@@ -71,7 +71,7 @@ class PostLink {
 
   factory PostLink.fromMap(Map<String, dynamic> map) {
     return PostLink(
-      logoUrl1: map['logoUrl1'] ?? map['logoUrl'] ?? '',  // ✅ Fallback
+      logoUrl1: map['logoUrl1'] ?? map['logoUrl'] ?? '',  
       price: (map['price'] is num) 
           ? (map['price'] as num).toDouble() 
           : double.tryParse(map['price']?.toString() ?? '0') ?? 0,

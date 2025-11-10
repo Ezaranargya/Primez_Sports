@@ -99,7 +99,6 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
       await _saveFCMToken(token);
     }
 
-    // ✅ Listen untuk token refresh
     messaging.onTokenRefresh.listen(_saveFCMToken);
     
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {

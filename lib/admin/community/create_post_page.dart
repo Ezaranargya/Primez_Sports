@@ -157,7 +157,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     print('🔎 Detecting store from URL: $lowerUrl');
     
     for (var entry in _storeLogos.entries) {
-      // Remove spaces, hyphens, and dots for better matching
       final cleanKey = entry.key.replaceAll(' ', '').replaceAll('-', '');
       final cleanUrl = lowerUrl.replaceAll(' ', '').replaceAll('-', '').replaceAll('.', '');
       
@@ -175,7 +174,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     print('⚠️ No store detected for URL: $url');
     return {
       'store': 'Other',
-      'logoUrl': '', // Return empty instead of non-existent path
+      'logoUrl': '', 
     };
   }
 

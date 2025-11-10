@@ -19,7 +19,6 @@ class AppNotification {
     required this.isRead,
   });
 
-  /// 🔹 Factory untuk parsing data dari Firestore
   factory AppNotification.fromFirestore(Map<String, dynamic> data, String id) {
     return AppNotification(
       id: id,
@@ -34,7 +33,6 @@ class AppNotification {
     );
   }
 
-  /// 🔹 Konversi model ke format Firestore
   Map<String, dynamic> toFirestore() {
     return {
       'title': title,
@@ -46,7 +44,6 @@ class AppNotification {
     };
   }
 
-  /// 🔹 Membuat salinan dengan nilai tertentu diubah
   AppNotification copyWith({
     String? id,
     String? title,

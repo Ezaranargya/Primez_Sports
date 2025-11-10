@@ -127,12 +127,12 @@ class Product {
     required this.id,
     this.brand = '',
     List<String>? categories,
-    String? category,  // parameter untuk kompatibilitas
-    String? subCategory,  // parameter untuk kompatibilitas
+    String? category,  
+    String? subCategory,  
     this.createdAt,
     this.description = '',
     String? imageBase64,
-    String? imageUrl,  // parameter untuk kompatibilitas
+    String? imageUrl,  
     required this.name,
     this.price = 0.0,
     this.purchaseOptions = const [],
@@ -143,7 +143,6 @@ class Product {
        imageBase64 = imageBase64 ?? imageUrl ?? '',
        bannerImage = bannerImage ?? '';
 
-  // Helper static method untuk build categories
   static List<String> _buildCategories(String? category, String? subCategory) {
     final result = <String>[];
     if (category != null && category.isNotEmpty) result.add(category);
@@ -158,7 +157,6 @@ class Product {
 
   factory Product.fromMap(Map<String, dynamic> data, String docId) {
     try {
-      // Hanya baca field dengan nama Inggris
       final brand = data['brand']?.toString() ?? '';
 
       List<String> categories = [];
@@ -271,7 +269,6 @@ class Product {
         )}';
   }
 
-  // Getter untuk kompatibilitas dengan kode lama
   String get category => categories.isNotEmpty ? categories[0] : '';
   String get subCategory => categories.length > 1 ? categories[1] : '';
   String get imageUrl => imageBase64;
@@ -282,12 +279,12 @@ class Product {
     String? id,
     String? brand,
     List<String>? categories,
-    String? category,  // parameter untuk kompatibilitas
-    String? subCategory,  // parameter untuk kompatibilitas
+    String? category,  
+    String? subCategory,  
     DateTime? createdAt,
     String? description,
     String? imageBase64,
-    String? imageUrl,  // parameter untuk kompatibilitas
+    String? imageUrl, 
     String? name,
     double? price,
     List<PurchaseOption>? purchaseOptions,
@@ -295,7 +292,6 @@ class Product {
     String? userId,
     String? bannerImage,
   }) {
-    // Handle category dan subCategory parameter
     List<String>? newCategories = categories;
     if (newCategories == null && (category != null || subCategory != null)) {
       newCategories = _buildCategories(

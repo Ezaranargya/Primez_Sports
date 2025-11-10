@@ -265,7 +265,6 @@ class AdminCommunityChatPage extends StatelessWidget {
     final subCategory = data['subCategory']?.toString() ?? '';
     final communityId = data['communityId']?.toString();
 
-    // DEBUG: Check links
     print('🎯 POST DEBUG: $title');
     print('🎯 Links count: ${linksList.length}');
     print('🎯 Links data: $linksList');
@@ -470,14 +469,12 @@ class AdminCommunityChatPage extends StatelessWidget {
           final price = linkMap['price'];
           String logoUrl = linkMap['logoUrl']?.toString() ?? '';
 
-          // DEBUG: Print semua data
           print('🔍 ========== DEBUG LINK ==========');
           print('🔍 URL: $url');
           print('🔍 Store from Firestore: $store');
           print('🔍 LogoUrl from Firestore: $logoUrl');
           print('🔍 LogoUrl isEmpty: ${logoUrl.isEmpty}');
           
-          // PERBAIKAN: Fallback logo detection jika logoUrl kosong
           if (logoUrl.isEmpty && url.isNotEmpty) {
             print('⚠️ LogoUrl kosong, mencoba detect dari URL...');
             logoUrl = _detectLogoFromUrl(url);
@@ -590,7 +587,6 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  // TAMBAHAN: Method helper untuk detect logo
   String _detectLogoFromUrl(String url) {
     final lowerUrl = url.toLowerCase();
     
@@ -611,7 +607,6 @@ class AdminCommunityChatPage extends StatelessWidget {
     };
     
     for (var entry in storeLogos.entries) {
-      // Remove spaces and special characters for comparison
       final cleanKey = entry.key.replaceAll(' ', '').replaceAll('-', '');
       final cleanUrl = lowerUrl.replaceAll(' ', '').replaceAll('-', '').replaceAll('.', '');
       
@@ -624,7 +619,7 @@ class AdminCommunityChatPage extends StatelessWidget {
     }
     
     print('⚠️ No logo detected for URL: $url');
-    return ''; // Return empty string instead of non-existent path
+    return ''; 
   }
 
   void _showDeleteDialog(BuildContext context, String postId, String? communityId) {

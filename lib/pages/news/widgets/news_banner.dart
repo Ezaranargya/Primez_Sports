@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/pages/user/widgets/banner_carousel.dart';
-import 'package:my_app/models/product_model.dart'; // ⬅️ penting
+import 'package:my_app/models/product_model.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NewsBanner extends StatelessWidget {
@@ -13,7 +13,6 @@ class NewsBanner extends StatelessWidget {
         .limit(3)
         .get();
 
-    // ✅ ubah setiap dokumen menjadi objek Product
     return snapshot.docs
         .map((doc) => Product.fromMap(doc.data(), doc.id))
         .toList();
@@ -43,7 +42,7 @@ class NewsBanner extends StatelessWidget {
           final products = snapshot.data!;
 
           return BannerCarousel(
-            banners: products, // ✅ Sekarang sudah List<Product>
+            banners: products,
             height: 180.h,
             borderRadius: 16.r,
             activeColor: Colors.redAccent,

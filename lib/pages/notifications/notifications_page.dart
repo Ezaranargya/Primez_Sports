@@ -32,7 +32,6 @@ class NotificationPage extends StatelessWidget {
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          // Tombol untuk mark all as read
           IconButton(
             icon: const Icon(Icons.done_all, color: Colors.white),
             onPressed: () => _markAllAsRead(userId),
@@ -157,10 +156,7 @@ class NotificationPage extends StatelessWidget {
                           )
                         : null,
                     onTap: () {
-                      // Tandai sebagai sudah dibaca
                       _markAsRead(userId, doc.id);
-                      
-                      // Navigate ke detail produk jika ada productId
                       if (productId.isNotEmpty) {
                         Navigator.pushNamed(
                           context,

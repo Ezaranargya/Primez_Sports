@@ -15,7 +15,7 @@ class UserCommunityPage extends StatefulWidget {
 
 class _UserCommunityPageState extends State<UserCommunityPage> {
   final CommunityService _communityService = CommunityService();
-  final Set<String> _readBrands = {}; // ✅ Track brand yang sudah dibaca
+  final Set<String> _readBrands = {}; 
 
   final List<String> _allBrands = [
     'Nike',
@@ -39,10 +39,9 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
   void initState() {
     super.initState();
     _communityService.markCommunityAsVisited();
-    _loadReadBrands(); // ✅ Load brand yang sudah dibaca
+    _loadReadBrands();
   }
 
-  // ✅ Load read brands dari Firestore
   Future<void> _loadReadBrands() async {
     for (var brand in _allBrands) {
       _communityService.isBrandRead(brand).listen((isRead) {
@@ -80,7 +79,6 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
 
           final allPosts = snapshot.data ?? [];
 
-          // ✅ Group posts by brand
           final Map<String, List<CommunityPost>> groupedPosts = {};
           for (var post in allPosts) {
             final brand = post.brand;
@@ -92,7 +90,6 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
 
           return Column(
             children: [
-              // ✅ Brand list - Tampilkan SEMUA brand
               Expanded(
                 child: ListView.builder(
                   padding: EdgeInsets.all(16.w),
@@ -100,15 +97,12 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
                   itemBuilder: (context, index) {
                     final brand = _allBrands[index];
                     final posts = groupedPosts[brand] ?? [];
-                    // ✅ Hanya tampilkan badge jika belum dibaca
                     final unreadCount = _readBrands.contains(brand) ? 0 : posts.length;
 
                     return _buildBrandCard(brand, unreadCount, posts);
                   },
                 ),
               ),
-
-              // ✅ Footer info
               Padding(
                 padding: EdgeInsets.all(16.w),
                 child: Text(
@@ -139,7 +133,6 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
       child: InkWell(
         onTap: posts.isNotEmpty
             ? () async {
-                // ✅ Mark as read sebelum navigate
                 await _communityService.markBrandPostsAsRead(brand);
                 if (mounted) {
                   setState(() {
@@ -179,8 +172,6 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
                         : Icon(Icons.store, size: 24.sp, color: Colors.grey),
                   ),
                   SizedBox(width: 12.w),
-
-                  // Brand name
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,28 +200,27 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
                 ],
               ),
             ),
-            
-            // ✅ Badge di pojok kanan atas - UKURAN LEBIH KECIL
+
             if (count > 0)
               Positioned(
                 right: 12.w,
                 top: 12.h,
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h), // ✅ Padding lebih kecil
+                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                   decoration: BoxDecoration(
                     color: Colors.red,
-                    borderRadius: BorderRadius.circular(10.r), // ✅ Border radius lebih kecil
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
                   constraints: BoxConstraints(
-                    minWidth: 18.w, // ✅ Min width lebih kecil
-                    minHeight: 18.h, // ✅ Min height lebih kecil
+                    minWidth: 18.w,
+                    minHeight: 18.h, 
                   ),
                   child: Center(
                     child: Text(
                       count > 9 ? '9+' : '$count',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 10.sp, // ✅ Font size lebih kecil
+                        fontSize: 10.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -254,7 +244,6 @@ class BrandPostsPage extends StatelessWidget {
     required this.posts,
   });
 
-  // ✅ Tambahkan map untuk logo brand
   final Map<String, String> _brandLogos = const {
     'Nike': 'assets/logo_nike.png',
     'Jordan': 'assets/logo_jordan.png',
@@ -301,7 +290,7 @@ class BrandPostsPage extends StatelessWidget {
   }
 
   Widget _buildPostCard(BuildContext context, CommunityPost post) {
-    final brandLogo = _brandLogos[post.brand] ?? ''; // ✅ Get logo berdasarkan brand
+    final brandLogo = _brandLogos[post.brand] ?? '';
 
     return Card(
       margin: EdgeInsets.only(bottom: 16.h),
@@ -312,10 +301,8 @@ class BrandPostsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               children: [
-                // ✅ Gunakan logo brand sebagai avatar
                 Container(
                   width: 40.w,
                   height: 40.w,
@@ -344,7 +331,6 @@ class BrandPostsPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ✅ Nama admin sesuai brand
                       Text(
                         'Admin ${post.brand}',
                         style: TextStyle(
@@ -380,8 +366,6 @@ class BrandPostsPage extends StatelessWidget {
             Text(post.description, style: TextStyle(fontSize: 14.sp, height: 1.4)),
 
             SizedBox(height: 12.h),
-
-            // Links
             if (post.links.isNotEmpty)
               ...post.links.map((link) => _buildLinkCard(context, link)),
           ],

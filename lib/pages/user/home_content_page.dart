@@ -53,7 +53,6 @@ class _HomeContentPageState extends State<HomeContentPage> {
       debugPrint('   - ${product.name}: ${product.categories}');
     }
 
-    // ✅ Hindari error jika jumlah produk < 3
     final bannerData = filteredProducts.length >= 3
         ? filteredProducts.sublist(0, 3)
         : filteredProducts;
@@ -76,7 +75,6 @@ class _HomeContentPageState extends State<HomeContentPage> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            // ✅ Banner Carousel tetap utuh
             if (bannerData.isNotEmpty) BannerCarousel(banners: bannerData),
             const SizedBox(height: 20),
             if (trendingProducts.isNotEmpty)

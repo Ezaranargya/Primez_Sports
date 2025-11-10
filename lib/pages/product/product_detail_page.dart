@@ -68,7 +68,6 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
   }
 
   void _shareProduct(Product product) {
-    // Ganti dengan dynamic link Anda
     final dynamicLink = 'https://primezsports.page.link/product/${product.id}';
     
     Share.share(

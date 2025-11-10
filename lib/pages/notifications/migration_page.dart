@@ -4,7 +4,6 @@ import 'package:my_app/models/notification_model.dart';
 class NotificationMigration {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// 🔄 Salin notifikasi dari `users/{userId}/notifications` ke koleksi global `notifications`
   Future<void> copyFromUserToGlobal(String userId) async {
     try {
       print('🔄 Starting migration for user: $userId');
@@ -24,9 +23,8 @@ class NotificationMigration {
         try {
           final data = doc.data();
 
-          // Pastikan field sesuai model terbaru
           final notif = AppNotification.fromFirestore(data, doc.id).copyWith(
-            userId: userId, // jaga supaya tetap tahu asal user-nya
+            userId: userId,
             createdAt: data['createdAt'] is Timestamp
                 ? (data['createdAt'] as Timestamp).toDate()
                 : DateTime.now(),
@@ -58,7 +56,6 @@ class NotificationMigration {
     }
   }
 
-  /// 🔄 Migrasi semua user
   Future<void> copyAllUsersNotificationsToGlobal() async {
     try {
       print('🔄 Starting migration for ALL users...');
@@ -119,7 +116,6 @@ class NotificationMigration {
     }
   }
 
-  /// 🧹 Hapus semua notifikasi di `users/{userId}/notifications`
   Future<void> cleanupUserNotifications(String userId) async {
     try {
       print('🗑️ Cleaning up notifications for user: $userId');
@@ -137,7 +133,6 @@ class NotificationMigration {
         batch.delete(doc.reference);
         count++;
 
-        // Commit batch setiap 500 dokumen agar tidak overload
         if (count % 500 == 0) {
           await batch.commit();
           batch = _firestore.batch();

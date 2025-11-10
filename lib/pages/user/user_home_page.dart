@@ -47,7 +47,6 @@ class _UserHomePageState extends State<UserHomePage> {
   void onItemTapped(int index) {
     setState(() => selectedIndex = index);
     
-    // ✅ Mark community as visited when user tap on community tab
     if (index == 2) {
       _communityService.markCommunityAsVisited();
     }
@@ -161,7 +160,6 @@ class _UserHomePageState extends State<UserHomePage> {
                 activeIcon: Icon(Icons.favorite),
                 label: 'Favorite',
               ),
-              // ✅ Community dengan badge
               BottomNavigationBarItem(
                 icon: Stack(
                   clipBehavior: Clip.none,
@@ -264,7 +262,6 @@ class _UserProductListPageState extends State<UserProductListPage> {
         title: const Text('Semua Produk'),
         elevation: 0,
         actions: [
-          // ✅ Notification icon with badge
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('users')
