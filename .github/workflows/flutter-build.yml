@@ -1,7 +1,7 @@
 name: Flutter Build
 
 on:
-  workflow_dispatch:  # Manual trigger only
+  workflow_dispatch:  
 
 jobs:
   build:
@@ -34,3 +34,12 @@ jobs:
         with:
           name: app-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Build Debug APK
+        run: flutter build apk --debug
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
