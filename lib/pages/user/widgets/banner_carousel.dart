@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
+import 'package:my_app/theme/app_colors.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class BannerCarousel extends StatefulWidget {
@@ -19,8 +20,8 @@ class BannerCarousel extends StatefulWidget {
   const BannerCarousel({
     super.key,
     required this.banners,
-    this.height = 160,
-    this.borderRadius = 12,
+    this.height = 200,
+    this.borderRadius = 20,
     this.activeColor = Colors.redAccent,
     this.inactiveColor = Colors.grey,
     this.autoPlay = true,
@@ -44,7 +45,10 @@ class _BannerCarouselState extends State<BannerCarousel> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: _initialPage); 
+    _pageController = PageController(
+      initialPage: _initialPage,
+      viewportFraction: 0.9,
+    );
     _preloadImages();
     if (widget.autoPlay && widget.banners.isNotEmpty) {
       Future.delayed(widget.autoPlayInterval, _autoSlide);
@@ -166,59 +170,156 @@ class _BannerCarouselState extends State<BannerCarousel> {
 
     return Column(
       children: [
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.borderRadius.r),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 4))],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(widget.borderRadius.r),
-            child: SizedBox(
-              height: widget.height.h,
-              width: double.infinity,
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: null, 
-                onPageChanged: (index) {
-                  setState(() => _currentPage = index % widget.banners.length);
-                },
-                itemBuilder: (context, index) {
-                  final actualIndex = index % widget.banners.length;
-                  final product = widget.banners[actualIndex];
-                  return GestureDetector(
-                    onTap: () {
-                      if (widget.onBannerTap != null) {
-                        widget.onBannerTap!(product);
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => UserProductDetailPage(product: product)),
-                        );
-                      }
-                    },
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Container(color: Colors.grey[200]),
-                        _buildBannerImage(product, actualIndex),
+        SizedBox(
+          height: widget.height.h,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: null,
+            onPageChanged: (index) {
+              setState(() => _currentPage = index % widget.banners.length);
+            },
+            itemBuilder: (context, index) {
+              final actualIndex = index % widget.banners.length;
+              final product = widget.banners[actualIndex];
+              
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.w),
+                child: GestureDetector(
+                  onTap: () {
+                    if (widget.onBannerTap != null) {
+                      widget.onBannerTap!(product);
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => UserProductDetailPage(product: product)),
+                      );
+                    }
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(widget.borderRadius.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
                       ],
                     ),
-                  );
-                },
-              ),
-            ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(widget.borderRadius.r),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Container(color: Colors.grey[200]),
+                          _buildBannerImage(product, actualIndex),
+                          
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.black.withOpacity(0.4),
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.6),
+                                ],
+                              ),
+                            ),
+                          ),
+                          
+                          Positioned(
+                            top: 20.h,
+                            left: 20.w,
+                            right: 20.w,
+                            child: Text(
+                              product.name,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24.sp,
+                                fontWeight: FontWeight.bold,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.5),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          
+                          Positioned(
+                            bottom: 20.h,
+                            left: 20.w,
+                            right: 20.w,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  product.formattedPrice,
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 18.sp,
+                                    fontWeight: FontWeight.bold,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black.withOpacity(0.5),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 20.w,
+                                    vertical: 10.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20.r),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    'See details',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
-        SizedBox(height: 10.h),
+        SizedBox(height: 16.h),
         SmoothPageIndicator(
           controller: _pageController,
           count: widget.banners.length,
-          effect: ExpandingDotsEffect(
-            dotHeight: 8,
-            dotWidth: 8,
-            spacing: 6,
+          effect: WormEffect(
+            dotHeight: 8.h,
+            dotWidth: 8.w,
+            spacing: 8.w,
             activeDotColor: widget.activeColor,
-            dotColor: widget.inactiveColor,
+            dotColor: widget.inactiveColor.withOpacity(0.5),
           ),
         ),
       ],
