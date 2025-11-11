@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,6 +17,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _usernameController = TextEditingController();
   final _profileController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  File? _imageFile;
+  final picker = ImagePicker();
+  String? _base64Image;
   bool _isLoading = false;
 
   @override
@@ -30,12 +36,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
             .collection('users')
             .doc(user.uid)
             .get();
-        
+
         if (doc.exists) {
           final data = doc.data();
           setState(() {
             _usernameController.text = data?['username'] ?? user.displayName ?? '';
             _profileController.text = data?['profile'] ?? '';
+            if (data?['photoBase64'] != null && data!['photoBase64'].toString().isNotEmpty) {
+              _base64Image = data['photoBase64'];
+            }
           });
         } else {
           setState(() {
@@ -48,6 +57,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -57,6 +79,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         await user.updateDisplayName(_usernameController.text.trim());
+        
+        String? base64Image = _base64Image;
+        if (_imageFile != null) {
+          final bytes = await _imageFile!.readAsBytes();
+          base64Image = base64Encode(bytes);
+          print("✅ Image converted to Base64 (preview): ${base64Image.substring(0, 30)}...");
+        }
 
         await FirebaseFirestore.instance
             .collection('users')
@@ -64,6 +93,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             .set({
           'username': _usernameController.text.trim(),
           'profile': _profileController.text.trim(),
+          'photoBase64': base64Image,
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
@@ -94,6 +124,53 @@ class _EditProfilePageState extends State<EditProfilePage> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  Widget _buildProfileImage() {
+    return Container(
+      width: 120.w,
+      height: 120.w,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.grey[200],
+        border: Border.all(
+          color: const Color(0xFFFFFFFF),
+          width: 3,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 2,
+            spreadRadius: 2,
+          )
+        ]
+      ),
+      child: ClipOval(
+        child: _imageFile != null
+            ? Image.file(
+                _imageFile!,
+                fit: BoxFit.cover,
+              )
+            : _base64Image != null && _base64Image!.isNotEmpty
+                ? Image.memory(
+                    base64Decode(_base64Image!),
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      print('Error decoding base64: $error');
+                      return Icon(
+                        Icons.person,
+                        size: 60.sp,
+                        color: Colors.grey[400],
+                      );
+                    },
+                  )
+                : Icon(
+                    Icons.person,
+                    size: 60.sp,
+                    color: Colors.grey[400],
+                  ),
+      ),
+    );
   }
 
   @override
@@ -135,34 +212,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 SizedBox(height: 20.h),
                 Stack(
                   children: [
-                    Container(
-                      width: 100.w,
-                      height: 100.w,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.person_outline,
-                        size: 50.sp,
-                        color: Colors.grey[600],
-                      ),
-                    ),
+                    _buildProfileImage(),
                     Positioned(
                       bottom: 0,
                       right: 0,
-                      child: Container(
-                        width: 32.w,
-                        height: 32.w,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE53E3E),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: Icon(
-                          Icons.camera_alt,
-                          size: 16.sp,
-                          color: Colors.white,
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          width: 36.w,
+                          height: 36.w,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE53E3E),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
+                          ),
+                          child: Icon(
+                            Icons.camera_alt,
+                            size: 18.sp,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -247,7 +315,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         fontSize: 14.sp,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Write about yourself, including your favorite sneakers and brands!',
+                        hintText:
+                            'Write about yourself, including your favorite sneakers and brands!',
                         hintStyle: TextStyle(
                           color: Colors.grey[400],
                           fontSize: 14.sp,

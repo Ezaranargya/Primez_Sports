@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -60,6 +61,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
 
     if (result == true && mounted) {
+      setState(() {}); 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Profile berhasil diperbarui'),
@@ -75,6 +77,48 @@ class _UserProfilePageState extends State<UserProfilePage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const FaqPage()),
+    );
+  }
+
+  Widget _buildProfileImage(String? base64Image) {
+    return Container(
+      width: 60.w,
+      height: 60.w,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: const Color(0xFFFFFFFF),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 2,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: base64Image != null && base64Image.isNotEmpty
+            ? Image.memory(
+                base64Decode(base64Image),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  print('Error decoding base64 in profile: $error');
+                  return Icon(
+                    Icons.person_outline,
+                    size: 32.sp,
+                    color: Colors.grey[600],
+                  );
+                },
+              )
+            : Icon(
+                Icons.person_outline,
+                size: 32.sp,
+                color: Colors.grey[600],
+              ),
+      ),
     );
   }
 
@@ -142,6 +186,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
               final userData = snapshot.data?.data() as Map<String, dynamic>?;
               final username = userData?['username'] ?? user?.displayName ?? 'User';
               final profile = userData?['profile'] ?? '';
+              final photoBase64 = userData?['photoBase64'];
 
               return Container(
                 margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
@@ -161,19 +206,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   children: [
                     Row(
                       children: [
-                        Container(
-                          width: 60.w,
-                          height: 60.w,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.person_outline,
-                            size: 32.sp,
-                            color: Colors.grey[600],
-                          ),
-                        ),
+                        _buildProfileImage(photoBase64),
                         SizedBox(width: 16.w),
                         Expanded(
                           child: Column(

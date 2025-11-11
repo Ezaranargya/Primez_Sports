@@ -5,6 +5,7 @@ import 'package:my_app/services/community_service.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
+import 'dart:async';
 
 class UserCommunityPage extends StatefulWidget {
   const UserCommunityPage({super.key});
@@ -15,7 +16,10 @@ class UserCommunityPage extends StatefulWidget {
 
 class _UserCommunityPageState extends State<UserCommunityPage> {
   final CommunityService _communityService = CommunityService();
-  final Set<String> _readBrands = {}; 
+  
+  // Cache read status to prevent flickering
+  final Map<String, bool> _readStatusCache = {};
+  final List<StreamSubscription> _subscriptions = [];
 
   final List<String> _allBrands = [
     'Nike',
@@ -39,22 +43,29 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
   void initState() {
     super.initState();
     _communityService.markCommunityAsVisited();
-    _loadReadBrands();
+    _initializeReadStatus();
   }
 
-  Future<void> _loadReadBrands() async {
+  @override
+  void dispose() {
+    for (var subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+    super.dispose();
+  }
+
+  // Initialize read status for all brands
+  void _initializeReadStatus() {
     for (var brand in _allBrands) {
-      _communityService.isBrandRead(brand).listen((isRead) {
+      final subscription = _communityService.isBrandRead(brand).listen((isRead) {
         if (mounted) {
           setState(() {
-            if (isRead) {
-              _readBrands.add(brand);
-            } else {
-              _readBrands.remove(brand);
-            }
+            _readStatusCache[brand] = isRead;
           });
         }
       });
+      _subscriptions.add(subscription);
     }
   }
 
@@ -79,6 +90,7 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
 
           final allPosts = snapshot.data ?? [];
 
+          // Group posts by brand
           final Map<String, List<CommunityPost>> groupedPosts = {};
           for (var post in allPosts) {
             final brand = post.brand;
@@ -97,9 +109,8 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
                   itemBuilder: (context, index) {
                     final brand = _allBrands[index];
                     final posts = groupedPosts[brand] ?? [];
-                    final unreadCount = _readBrands.contains(brand) ? 0 : posts.length;
 
-                    return _buildBrandCard(brand, unreadCount, posts);
+                    return _buildBrandCard(brand, posts);
                   },
                 ),
               ),
@@ -122,8 +133,14 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
     );
   }
 
-  Widget _buildBrandCard(String brand, int count, List<CommunityPost> posts) {
+  Widget _buildBrandCard(String brand, List<CommunityPost> posts) {
     final logo = _brandLogos[brand] ?? '';
+    
+    // Use cached value if available, otherwise default to false (show badge while loading)
+    final isRead = _readStatusCache[brand] ?? false;
+    final unreadCount = (isRead || posts.isEmpty) ? 0 : posts.length;
+
+    debugPrint('🎯 Building card for $brand: isRead=$isRead (cached), unreadCount=$unreadCount, totalPosts=${posts.length}');
 
     return Card(
       color: posts.isEmpty ? Colors.grey[100] : Colors.white,
@@ -133,18 +150,32 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
       child: InkWell(
         onTap: posts.isNotEmpty
             ? () async {
+                debugPrint('🖱️ Tapped on $brand card');
+                
+                // Update cache immediately for instant UI feedback
+                setState(() {
+                  _readStatusCache[brand] = true;
+                });
+                
+                // Mark as read in Firestore
                 await _communityService.markBrandPostsAsRead(brand);
-                if (mounted) {
-                  setState(() {
-                    _readBrands.add(brand);
-                  });
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => BrandPostsPage(brand: brand, posts: posts),
+                
+                debugPrint('✅ Marked $brand as read, navigating...');
+                
+                if (!mounted) return;
+                
+                // Navigate to brand posts page
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BrandPostsPage(
+                      brand: brand,
+                      posts: posts,
                     ),
-                  );
-                }
+                  ),
+                );
+                
+                debugPrint('⬅️ Returned from $brand posts page');
               }
             : null,
         borderRadius: BorderRadius.circular(12.r),
@@ -164,10 +195,15 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
                     child: logo.isNotEmpty
                         ? Padding(
                             padding: EdgeInsets.all(8.w),
-                            child: Image.asset(logo,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) =>
-                                    Icon(Icons.store, size: 24.sp, color: Colors.grey)),
+                            child: Image.asset(
+                              logo,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.store,
+                                size: 24.sp,
+                                color: Colors.grey,
+                              ),
+                            ),
                           )
                         : Icon(Icons.store, size: 24.sp, color: Colors.grey),
                   ),
@@ -188,7 +224,9 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
                         ),
                         SizedBox(height: 4.h),
                         Text(
-                          posts.isEmpty ? 'Belum ada postingan' : '${posts.length} postingan',
+                          posts.isEmpty
+                              ? 'Belum ada postingan'
+                              : '${posts.length} postingan',
                           style: TextStyle(
                             fontSize: 12.sp,
                             color: Colors.grey[600],
@@ -200,8 +238,7 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
                 ],
               ),
             ),
-
-            if (count > 0)
+            if (unreadCount > 0)
               Positioned(
                 right: 12.w,
                 top: 12.h,
@@ -213,11 +250,11 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
                   ),
                   constraints: BoxConstraints(
                     minWidth: 18.w,
-                    minHeight: 18.h, 
+                    minHeight: 18.h,
                   ),
                   child: Center(
                     child: Text(
-                      count > 9 ? '9+' : '$count',
+                      unreadCount > 9 ? '9+' : '$unreadCount',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 10.sp,
@@ -257,7 +294,10 @@ class BrandPostsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Kumpulan Sepatu Brand $brand', style: const TextStyle(color: Colors.white)),
+        title: Text(
+          'Kumpulan Sepatu Brand $brand',
+          style: const TextStyle(color: Colors.white),
+        ),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -270,13 +310,13 @@ class BrandPostsPage extends StatelessWidget {
                   SizedBox(height: 16.h),
                   Text(
                     'Belum ada postingan',
-                    style: TextStyle(fontSize: 18.sp, color: Colors.white),
+                    style: TextStyle(fontSize: 18.sp, color: Colors.black),
                   ),
                   SizedBox(height: 8.h),
                   Text(
                     'Postingan dari brand $brand akan muncul di sini',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14.sp, color: Colors.white),
+                    style: TextStyle(fontSize: 14.sp, color: Colors.grey),
                   ),
                 ],
               ),
@@ -351,20 +391,28 @@ class BrandPostsPage extends StatelessWidget {
               ],
             ),
             SizedBox(height: 12.h),
-
             if (post.imageUrl1 != null && post.imageUrl1!.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(8.r),
                 child: post.imageUrl1!.startsWith('http')
-                    ? Image.network(post.imageUrl1!,
-                        width: double.infinity, height: 200.h, fit: BoxFit.cover)
-                    : Image.memory(base64Decode(post.imageUrl1!),
-                        width: double.infinity, height: 200.h, fit: BoxFit.cover),
+                    ? Image.network(
+                        post.imageUrl1!,
+                        width: double.infinity,
+                        height: 200.h,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.memory(
+                        base64Decode(post.imageUrl1!),
+                        width: double.infinity,
+                        height: 200.h,
+                        fit: BoxFit.cover,
+                      ),
               ),
-
             SizedBox(height: 12.h),
-            Text(post.description, style: TextStyle(fontSize: 14.sp, height: 1.4)),
-
+            Text(
+              post.description,
+              style: TextStyle(fontSize: 14.sp, height: 1.4),
+            ),
             SizedBox(height: 12.h),
             if (post.links.isNotEmpty)
               ...post.links.map((link) => _buildLinkCard(context, link)),
@@ -375,38 +423,48 @@ class BrandPostsPage extends StatelessWidget {
   }
 
   Widget _buildLinkCard(BuildContext context, PostLink link) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 8.h),
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Row(
-        children: [
-          if (link.logoUrl1.isNotEmpty)
-            Image.asset(link.logoUrl1,
+    return InkWell(
+      onTap: () => _launchURL(link.url),
+      child: Container(
+        margin: EdgeInsets.only(bottom: 8.h),
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8.r),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Row(
+          children: [
+            if (link.logoUrl1.isNotEmpty)
+              Image.asset(
+                link.logoUrl1,
                 width: 32.w,
                 height: 32.w,
-                errorBuilder: (_, __, ___) => Icon(Icons.store, size: 32.sp)),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(link.store,
-                    style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600)),
-                Text(link.formattedPrice,
+                errorBuilder: (_, __, ___) => Icon(Icons.store, size: 32.sp),
+              ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    link.store,
+                    style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    link.formattedPrice,
                     style: TextStyle(
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary)),
-              ],
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Icon(Icons.arrow_forward, color: Colors.black)
-        ],
+            const Icon(Icons.arrow_forward, color: Colors.black),
+          ],
+        ),
       ),
     );
   }

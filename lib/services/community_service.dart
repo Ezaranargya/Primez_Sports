@@ -73,52 +73,191 @@ class CommunityService {
       'links': links.map((link) => link.toMap()).toList(),
     });
 
-    print('✅ Admin post created for brand: $brand');
+    debugPrint('✅ Admin post created for brand: $brand');
   }
 
   Future<void> deletePost(String postId) async {
     await _firestore.collection('posts').doc(postId).delete();
-    print('✅ Post deleted: $postId');
+    debugPrint('✅ Post deleted: $postId');
   }
 
   Future<void> markBrandPostsAsRead(String brand) async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        debugPrint('❌ No user logged in');
+        return;
+      }
+
+      debugPrint('📝 Marking $brand as read...');
 
       await _firestore
           .collection('users')
           .doc(user.uid)
-          .collection('read_posts')
+          .collection('read_brands')
           .doc(brand)
           .set({
         'brand': brand,
-        'readAt': FieldValue.serverTimestamp(),
-      });
+        'lastReadAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      debugPrint('✅ Successfully marked $brand as read');
     } catch (e) {
-      debugPrint('Error marking brand posts as read: $e');
+      debugPrint('❌ Error marking brand posts as read: $e');
     }
   }
 
   Stream<bool> isBrandRead(String brand) {
     final user = _auth.currentUser;
-    if (user == null) return Stream.value(false);
+    if (user == null) {
+      debugPrint('⚠️ No user logged in for isBrandRead');
+      return Stream.value(false);
+    }
+
+    debugPrint('👀 Checking read status for $brand');
 
     return _firestore
         .collection('users')
         .doc(user.uid)
-        .collection('read_posts')
+        .collection('read_brands')
         .doc(brand)
         .snapshots()
-        .map((doc) => doc.exists);
+        .asyncMap((readDoc) async {
+      
+      debugPrint('📊 Read doc exists for $brand: ${readDoc.exists}');
+
+      final postsSnapshot = await _firestore
+          .collection('posts')
+          .where('brand', isEqualTo: brand)
+          .get();
+
+      final totalPosts = postsSnapshot.docs.length;
+      debugPrint('📦 Total posts for $brand: $totalPosts');
+
+      if (totalPosts == 0) {
+        debugPrint('✅ No posts for $brand, returning true (no badge)');
+        return true;
+      }
+
+      if (!readDoc.exists) {
+        debugPrint('🔴 $brand never read, returning false (show badge)');
+        return false;
+      }
+
+      final lastReadAt = readDoc.data()?['lastReadAt'] as Timestamp?;
+      debugPrint('⏰ Last read at for $brand: $lastReadAt');
+
+      if (lastReadAt == null) {
+        debugPrint('🔴 No lastReadAt timestamp, returning false (show badge)');
+        return false;
+      }
+
+      final unreadPosts = postsSnapshot.docs.where((doc) {
+        final data = doc.data();
+        final createdAt = data['createdAt'] as Timestamp?;
+        
+        if (createdAt == null) return false;
+        
+        final isUnread = createdAt.millisecondsSinceEpoch > lastReadAt.millisecondsSinceEpoch;
+        if (isUnread) {
+          debugPrint('🆕 Found unread post in $brand: ${doc.id}');
+        }
+        return isUnread;
+      }).toList();
+
+      final hasUnread = unreadPosts.isNotEmpty;
+      debugPrint('📊 $brand has ${unreadPosts.length} unread posts, returning ${!hasUnread}');
+      
+      return !hasUnread;
+    });
+  }
+
+  Stream<int> getUnreadCountForBrand(String brand) {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(0);
+
+    return _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('read_brands')
+        .doc(brand)
+        .snapshots()
+        .asyncMap((readDoc) async {
+      
+      final postsSnapshot = await _firestore
+          .collection('posts')
+          .where('brand', isEqualTo: brand)
+          .get();
+
+      final totalPosts = postsSnapshot.docs.length;
+
+      if (totalPosts == 0) return 0;
+
+      if (!readDoc.exists) return totalPosts;
+
+      final lastReadAt = readDoc.data()?['lastReadAt'] as Timestamp?;
+      if (lastReadAt == null) return totalPosts;
+
+      final unreadCount = postsSnapshot.docs.where((doc) {
+        final data = doc.data();
+        final createdAt = data['createdAt'] as Timestamp?;
+        
+        if (createdAt == null) return false;
+        return createdAt.millisecondsSinceEpoch > lastReadAt.millisecondsSinceEpoch;
+      }).length;
+
+      return unreadCount;
+    });
   }
 
   Stream<Map<String, int>> getUnreadCountsByBrand() {
-    return getAllPosts().map((posts) {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value({});
+
+    return _firestore
+        .collection('posts')
+        .snapshots()
+        .asyncMap((postsSnapshot) async {
       final Map<String, int> counts = {};
-      for (var post in posts) {
-        counts[post.brand] = (counts[post.brand] ?? 0) + 1;
+      
+      final Map<String, List<QueryDocumentSnapshot>> postsByBrand = {};
+      for (var doc in postsSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>?;
+        final brand = data?['brand'] as String?;
+        if (brand != null) {
+          postsByBrand.putIfAbsent(brand, () => []).add(doc);
+        }
       }
+
+      for (var brand in postsByBrand.keys) {
+        final readDoc = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('read_brands')
+            .doc(brand)
+            .get();
+
+        if (!readDoc.exists) {
+          counts[brand] = postsByBrand[brand]!.length;
+        } else {
+          final lastReadAt = readDoc.data()?['lastReadAt'] as Timestamp?;
+
+          if (lastReadAt == null) {
+            counts[brand] = postsByBrand[brand]!.length;
+          } else {
+            final unreadCount = postsByBrand[brand]!.where((doc) {
+              final data = doc.data() as Map<String, dynamic>?;
+              final createdAt = data?['createdAt'] as Timestamp?;
+              
+              if (createdAt == null) return false;
+              return createdAt.millisecondsSinceEpoch > lastReadAt.millisecondsSinceEpoch;
+            }).length;
+            
+            counts[brand] = unreadCount;
+          }
+        }
+      }
+
       return counts;
     });
   }
