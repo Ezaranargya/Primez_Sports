@@ -15,7 +15,7 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final _usernameController = TextEditingController();
-  final _profileController = TextEditingController();
+  final _bioController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   File? _imageFile;
   final picker = ImagePicker();
@@ -41,7 +41,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           final data = doc.data();
           setState(() {
             _usernameController.text = data?['username'] ?? user.displayName ?? '';
-            _profileController.text = data?['profile'] ?? '';
+            _bioController.text = data?['profile'] ?? '';
             if (data?['photoBase64'] != null && data!['photoBase64'].toString().isNotEmpty) {
               _base64Image = data['photoBase64'];
             }
@@ -92,7 +92,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             .doc(user.uid)
             .set({
           'username': _usernameController.text.trim(),
-          'profile': _profileController.text.trim(),
+          'profile': _bioController.text.trim(),
           'photoBase64': base64Image,
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
@@ -176,7 +176,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void dispose() {
     _usernameController.dispose();
-    _profileController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 
@@ -192,7 +192,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Profile',
+          'Bio',
           style: TextStyle(
             color: Colors.black,
             fontSize: 20.sp,
@@ -299,7 +299,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Profile',
+                      'Bio',
                       style: TextStyle(
                         fontSize: 14.sp,
                         color: Colors.grey[600],
@@ -308,7 +308,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                     SizedBox(height: 8.h),
                     TextFormField(
-                      controller: _profileController,
+                      controller: _bioController,
                       maxLines: 5,
                       style: TextStyle(
                         color: Colors.black,
@@ -316,7 +316,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                       decoration: InputDecoration(
                         hintText:
-                            'Write about yourself, including your favorite sneakers and brands!',
+                            'Silahkan menaruh bio anda disini',
                         hintStyle: TextStyle(
                           color: Colors.grey[400],
                           fontSize: 14.sp,

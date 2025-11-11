@@ -17,9 +17,9 @@ class UserCommunityPage extends StatefulWidget {
 class _UserCommunityPageState extends State<UserCommunityPage> {
   final CommunityService _communityService = CommunityService();
   
-  // Cache read status to prevent flickering
-  final Map<String, bool> _readStatusCache = {};
+  static final Map<String, bool> _staticReadStatusCache = {};
   final List<StreamSubscription> _subscriptions = [];
+  bool _isInitializing = true;
 
   final List<String> _allBrands = [
     'Nike',
@@ -43,7 +43,15 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
   void initState() {
     super.initState();
     _communityService.markCommunityAsVisited();
-    _initializeReadStatus();
+    
+    if (_staticReadStatusCache.isEmpty) {
+      debugPrint('🔄 Cache empty, loading fresh data...');
+      _initializeReadStatus();
+    } else {
+      debugPrint('✅ Using cached read status (${_staticReadStatusCache.length} brands cached)');
+      _isInitializing = false;
+      _subscribeToStreams();
+    }
   }
 
   @override
@@ -55,18 +63,62 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
     super.dispose();
   }
 
-  // Initialize read status for all brands
-  void _initializeReadStatus() {
-    for (var brand in _allBrands) {
-      final subscription = _communityService.isBrandRead(brand).listen((isRead) {
-        if (mounted) {
-          setState(() {
-            _readStatusCache[brand] = isRead;
-          });
+  Future<void> _initializeReadStatus() async {
+    debugPrint('🔄 Initializing read status for all brands...');
+  
+    final futures = _allBrands.map((brand) async {
+      try {
+        final isRead = await _communityService.isBrandRead(brand).first.timeout(
+          const Duration(milliseconds: 800),
+          onTimeout: () {
+            debugPrint('⏱️ Timeout for $brand, using false');
+            return false;
+          },
+        );
+        debugPrint('✅ Initial read status for $brand: $isRead');
+        return MapEntry(brand, isRead);
+      } catch (e) {
+        debugPrint('❌ Error getting initial status for $brand: $e');
+        return MapEntry(brand, false);
+      }
+    }).toList();
+
+    final results = await Future.wait(futures);
+    
+    if (mounted) {
+      setState(() {
+        for (var entry in results) {
+          _staticReadStatusCache[entry.key] = entry.value;
         }
+        _isInitializing = false;
       });
+    }
+
+    debugPrint('✅ All read statuses loaded in parallel');
+
+    _subscribeToStreams();
+  }
+
+  void _subscribeToStreams() {
+    for (var brand in _allBrands) {
+      final subscription = _communityService.isBrandRead(brand).listen(
+        (isRead) {
+          if (mounted && !_isInitializing) {
+            if (_staticReadStatusCache[brand] != isRead) {
+              setState(() {
+                _staticReadStatusCache[brand] = isRead;
+              });
+              debugPrint('🔔 Stream update for $brand: $isRead');
+            }
+          }
+        },
+        onError: (error) {
+          debugPrint('❌ Stream error for $brand: $error');
+        },
+      );
       _subscriptions.add(subscription);
     }
+    debugPrint('✅ Subscribed to ${_subscriptions.length} streams');
   }
 
   @override
@@ -90,7 +142,6 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
 
           final allPosts = snapshot.data ?? [];
 
-          // Group posts by brand
           final Map<String, List<CommunityPost>> groupedPosts = {};
           for (var post in allPosts) {
             final brand = post.brand;
@@ -136,11 +187,10 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
   Widget _buildBrandCard(String brand, List<CommunityPost> posts) {
     final logo = _brandLogos[brand] ?? '';
     
-    // Use cached value if available, otherwise default to false (show badge while loading)
-    final isRead = _readStatusCache[brand] ?? false;
-    final unreadCount = (isRead || posts.isEmpty) ? 0 : posts.length;
-
-    debugPrint('🎯 Building card for $brand: isRead=$isRead (cached), unreadCount=$unreadCount, totalPosts=${posts.length}');
+    final isRead = _staticReadStatusCache[brand] ?? false;
+    
+    final shouldShowBadge = posts.isNotEmpty && !isRead;
+    final unreadCount = shouldShowBadge ? posts.length : 0;
 
     return Card(
       color: posts.isEmpty ? Colors.grey[100] : Colors.white,
@@ -152,19 +202,16 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
             ? () async {
                 debugPrint('🖱️ Tapped on $brand card');
                 
-                // Update cache immediately for instant UI feedback
                 setState(() {
-                  _readStatusCache[brand] = true;
+                  _staticReadStatusCache[brand] = true;
                 });
                 
-                // Mark as read in Firestore
                 await _communityService.markBrandPostsAsRead(brand);
                 
                 debugPrint('✅ Marked $brand as read, navigating...');
                 
                 if (!mounted) return;
                 
-                // Navigate to brand posts page
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
