@@ -1,0 +1,36 @@
+{
+  "name": "primez-sports",
+  "version": "1.0.0",
+  "description": "A new Flutter project.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+  "dev": "vite",
+  "build": "vite build",
+  "preview": "vite preview"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ezaranargya/Primez_Sports.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Ezaranargya/Primez_Sports/issues"
+  },
+  "homepage": "https://github.com/Ezaranargya/Primez_Sports#readme",
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.5",
+    "vite": "^7.2.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.0"
+  }
+}
