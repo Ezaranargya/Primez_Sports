@@ -115,6 +115,20 @@
                     android:host="primez-sports.com" />
             </intent-filter>
 
+            <!-- App Links untuk Firebase Hosting (BARU DITAMBAHKAN) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <data
+                    android:scheme="https"
+                    android:host="primez-sportz-2025.web.app" />
+                <data
+                    android:scheme="https"
+                    android:host="primez-sportz-2025.firebaseapp.com" />
+            </intent-filter>
+
         </activity>
 
         <!-- File Provider -->

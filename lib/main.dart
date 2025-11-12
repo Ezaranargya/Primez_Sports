@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:app_links/app_links.dart';
 
 import 'firebase_options.dart';
@@ -25,8 +26,11 @@ import 'package:my_app/admin/pages/admin_home_page.dart';
 import 'package:my_app/pages/encode.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/models/product_model.dart';
+import 'package:my_app/pages/product/product_detail_page.dart'; 
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+String? _pendingDeepLinkLocation;
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -65,55 +69,152 @@ class PrimezSportsApp extends StatefulWidget {
 }
 
 class _PrimezSportsAppState extends State<PrimezSportsApp> {
+  late final GoRouter _router;
   late AppLinks _appLinks;
 
   @override
   void initState() {
     super.initState();
     _appLinks = AppLinks();
-    
     _setupFirebaseMessaging();
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initDeepLinks();
+    _router = _createRouter();
+    _checkInitialLink();
+  }
+
+  Future<void> _checkInitialLink() async {
+    try {
+      final uri = await _appLinks.getInitialLink();
+      if (uri != null) {
+        debugPrint('🔗 Initial Deep Link Detected: $uri');
+        final location = _parseDeepLink(uri);
+        if (location != null) {
+          debugPrint('🔗 Parsed Initial Location: $location');
+
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            debugPrint('✅ User logged in, navigating immediately');
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) {
+                _router.go(location);
+              }
+            });
+          } else {
+            debugPrint('⏳ User not logged in, saving pending deep link');
+            _pendingDeepLinkLocation = location;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error getting initial link: $e');
+    }
+
+    _appLinks.uriLinkStream.listen((uri) {
+      debugPrint('🔗 Deep Link Stream: $uri');
+      final location = _parseDeepLink(uri);
+      if (location != null && mounted) {
+        debugPrint('🔗 Navigating to: $location');
+
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          _router.go(location);
+        } else {
+          _pendingDeepLinkLocation = location;
+          _router.go('/login'); 
+        }
+      }
     });
+  }
+
+  String? _parseDeepLink(Uri uri) {
+    debugPrint('🔗 Parsing Deep Link:');
+    debugPrint('   Scheme: ${uri.scheme}');
+    debugPrint('   Host: ${uri.host}');
+    debugPrint('   Path: ${uri.path}');
+    debugPrint('   Segments: ${uri.pathSegments}');
+    debugPrint('   Query: ${uri.queryParameters}');
+
+    String? productId;
+
+    if (uri.queryParameters.containsKey('link')) {
+      final deepLink = Uri.parse(uri.queryParameters['link']!);
+      debugPrint('🔗 Extracted Firebase Dynamic Link: $deepLink');
+
+      if (deepLink.pathSegments.length >= 2) {
+        if (deepLink.pathSegments[0] == 'product' || deepLink.pathSegments[0] == 'products') {
+          productId = deepLink.pathSegments[1];
+        }
+      }
+    }
+
+    else if (uri.scheme == 'primezsports') {
+      if (uri.host == 'products' || uri.host == 'product') {
+        if (uri.pathSegments.isNotEmpty) {
+          productId = uri.pathSegments[0];
+        }
+      } else if (uri.pathSegments.isNotEmpty) {
+        if (uri.pathSegments[0] == 'products' || uri.pathSegments[0] == 'product') {
+          if (uri.pathSegments.length > 1) {
+            productId = uri.pathSegments[1];
+          }
+        }
+      }
+    }
+
+    else if (uri.scheme == 'https') {
+      if (uri.pathSegments.isNotEmpty) {
+        if (uri.pathSegments[0] == 'product' || uri.pathSegments[0] == 'products') {
+          if (uri.pathSegments.length > 1) {
+            productId = uri.pathSegments[1];
+          }
+        }
+      }
+    }
+
+    if (productId == null && uri.queryParameters.containsKey('id')) {
+      productId = uri.queryParameters['id'];
+    }
+
+    if (productId != null && productId.isNotEmpty) {
+      debugPrint('✅ Product ID found: $productId');
+      return '/product/$productId';
+    }
+
+    debugPrint('❌ No product ID found in deep link');
+    return null;
   }
 
   void _setupFirebaseMessaging() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
-    
+
     NotificationSettings settings = await messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
-    
+
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       debugPrint('✅ User granted permission');
     }
-    
+
     String? token = await messaging.getToken();
     debugPrint('📱 FCM Token: $token');
-    
+
     if (token != null) {
       await _saveFCMToken(token);
     }
 
     messaging.onTokenRefresh.listen(_saveFCMToken);
-    
+
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('📩 Foreground message: ${message.notification?.title}');
       _showNotificationDialog(message);
     });
-    
+
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('📩 Notification clicked!');
       String? productId = message.data['productId'];
       if (productId != null) {
-        navigatorKey.currentState?.pushNamed(
-          '/product-detail',
-          arguments: productId,
-        );
+        _router.push('/product/$productId');
       }
     });
   }
@@ -129,7 +230,7 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
           'fcmToken': token,
           'lastTokenUpdate': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
-        
+
         debugPrint('✅ FCM Token saved to Firestore: ${token.substring(0, 20)}...');
       }
     } catch (e) {
@@ -155,99 +256,239 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
     }
   }
 
-  void _initDeepLinks() {
-    _appLinks.getInitialAppLink().then((uri) {
-      if (uri != null) {
-        _handleDeepLink(uri);
-      }
-    });
+  Future<String?> _getUserRole(String uid) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
 
-    _appLinks.uriLinkStream.listen((uri) {
-      _handleDeepLink(uri);
-    });
-    
-    _appLinks.uriLinkStream.listen((Uri? uri) {
-      if (uri != null && uri.queryParameters.containsKey('id')) {
-        final productId = uri.queryParameters['id'];
-        navigatorKey.currentState?.pushNamed('/product-detail', arguments: productId);
+      if (doc.exists) {
+        return doc.data()?['role'] as String?;
       }
-    });
+      return null;
+    } catch (e) {
+      debugPrint('Error getting user role: $e');
+      return null;
+    }
   }
 
-  void _handleDeepLink(Uri uri) {
-    debugPrint('🔗 Deep Link Received: $uri');
-    debugPrint('   Scheme: ${uri.scheme}');
-    debugPrint('   Host: ${uri.host}');
-    debugPrint('   Path: ${uri.path}');
-    debugPrint('   Segments: ${uri.pathSegments}');
-    debugPrint('   Query Parameters: ${uri.queryParameters}');
-    
-    String? productId;
-    
-    if (uri.queryParameters.containsKey('link')) {
-      final deepLink = Uri.parse(uri.queryParameters['link']!);
-      debugPrint('🔗 Extracted deep link: $deepLink');
-      
-      if (deepLink.pathSegments.length >= 2 && deepLink.pathSegments[0] == 'product') {
-        productId = deepLink.pathSegments[1];
-      }
-    }
-    
-    else if (uri.scheme == 'primezsports') {
-      if (uri.host == 'products' && uri.pathSegments.isNotEmpty) {
-        productId = uri.pathSegments[0];
-      }
-      else if (uri.host == 'product' && uri.pathSegments.isNotEmpty) {
-        productId = uri.pathSegments[0];
-      }
-      else if (uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'products') {
-        if (uri.pathSegments.length > 1) {
-          productId = uri.pathSegments[1];
-        }
-      }
-      else if (uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'product') {
-        if (uri.pathSegments.length > 1) {
-          productId = uri.pathSegments[1];
-        }
-      }
-    }
-    
-    else if (uri.scheme == 'https') {
-      if (uri.host == 'primezsports.page.link') {
-        if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'product') {
-          productId = uri.pathSegments[1];
-        }
-      }
-      else if (uri.host == 'primez-sports.com') {
-        if (uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'products') {
-          if (uri.pathSegments.length > 1) {
-            productId = uri.pathSegments[1];
+  GoRouter _createRouter() {
+    return GoRouter(
+      navigatorKey: navigatorKey,
+      initialLocation: '/splash',
+      debugLogDiagnostics: true,
+
+      redirect: (context, state) async {
+        final currentLocation = state.matchedLocation;
+        debugPrint('🔀 Redirect check for: $currentLocation');
+
+        if (_pendingDeepLinkLocation != null) {
+          if (!currentLocation.startsWith('/product')) {
+            debugPrint('🔗 Processing pending deep link: $_pendingDeepLinkLocation');
+            final location = _pendingDeepLinkLocation;
+            _pendingDeepLinkLocation = null; 
+            return location;
           }
         }
-        else if (uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'product') {
-          if (uri.pathSegments.length > 1) {
-            productId = uri.pathSegments[1];
+        if (currentLocation.startsWith('/product')) {
+          debugPrint('✅ Allowing navigation to product detail');
+          return null;
+        }
+
+        final user = FirebaseAuth.instance.currentUser;
+        final isLoggedIn = user != null;
+
+        final isGoingToLogin = currentLocation == '/login';
+        final isGoingToRegister = currentLocation == '/register';
+        final isGoingToSplash = currentLocation == '/splash';
+        final isGoingToAuth = currentLocation == '/auth';
+
+        if (!isLoggedIn && !isGoingToLogin && !isGoingToRegister && !isGoingToSplash && !isGoingToAuth) {
+          debugPrint('⚠️ Not logged in, redirecting to login');
+          return '/login';
+        }
+
+        if (isLoggedIn && (isGoingToSplash || isGoingToLogin || isGoingToAuth)) {
+          final role = await _getUserRole(user.uid);
+          if (role == 'admin') {
+            debugPrint('🔀 Redirecting admin to admin-home');
+            return '/admin-home';
+          } else {
+            debugPrint('🔀 Redirecting user to user-home');
+            return '/user-home';
           }
         }
-      }
-    }
-    
-    if (productId == null && uri.queryParameters.containsKey('id')) {
-      productId = uri.queryParameters['id'];
-    }
-    
-    if (productId != null && productId.isNotEmpty) {
-      debugPrint('✅ Navigating to product: $productId');
-      
-      Future.delayed(const Duration(milliseconds: 500), () {
-        navigatorKey.currentState?.pushNamed(
-          '/product-detail',
-          arguments: productId,
-        );
-      });
-    } else {
-      debugPrint('❌ Invalid deep link format');
-    }
+
+        return null;
+      },
+
+      routes: [
+        GoRoute(
+          path: '/splash',
+          builder: (context, state) => const SplashToAuthWrapper(),
+        ),
+
+        GoRoute(
+          path: '/auth',
+          builder: (context, state) => const AuthWrapper(),
+        ),
+
+        GoRoute(
+          path: '/login',
+          builder: (context, state) => const LoginPage(),
+        ),
+
+        GoRoute(
+          path: '/register',
+          builder: (context, state) => const RegisterPage(),
+        ),
+
+        GoRoute(
+          path: '/user-home',
+          builder: (context, state) {
+            if (_pendingDeepLinkLocation != null) {
+              final location = _pendingDeepLinkLocation;
+              _pendingDeepLinkLocation = null;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                context.go(location!);
+              });
+            }
+            return const UserHomePage();
+          },
+        ),
+
+        GoRoute(
+          path: '/admin-home',
+          builder: (context, state) {
+            if (_pendingDeepLinkLocation != null) {
+              final location = _pendingDeepLinkLocation;
+              _pendingDeepLinkLocation = null;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                context.go(location!);
+              });
+            }
+            return const AdminHomePage();
+          },
+        ),
+
+        GoRoute(
+          path: '/home',
+          builder: (context, state) => const HomePage(title: 'Primez Sports'),
+        ),
+
+        GoRoute(
+          path: '/test',
+          builder: (context, state) => const TestLauncherPage(),
+        ),
+
+        GoRoute(
+          path: '/favorite',
+          builder: (context, state) => const UserFavoritesPage(),
+        ),
+
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationPage(),
+        ),
+
+        GoRoute(
+          path: '/encode',
+          builder: (context, state) => const EncodecodeExample(),
+        ),
+
+        GoRoute(
+          path: '/product/:productId', 
+          builder: (context, state) {
+            final productId = state.pathParameters['productId']!;
+            debugPrint('📱 Building ProductDetailLoader for: $productId');
+            return ProductDetailLoader(productId: productId);
+          },
+        ),
+
+        GoRoute(
+          path: '/products/:id',
+          builder: (context, state) {
+            final productId = state.pathParameters['id']!;
+            debugPrint('📱 Building ProductDetailLoader for: $productId');
+            return ProductDetailLoader(productId: productId);
+          },
+        ),
+
+        GoRoute(
+          path: '/product-detail',
+          builder: (context, state) {
+            final productId = state.uri.queryParameters['id'] ?? '';
+            debugPrint('📱 Building ProductDetailLoader for: $productId');
+            return ProductDetailLoader(productId: productId);
+          },
+        ),
+      ],
+
+      errorBuilder: (context, state) => Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: const Text('Halaman Tidak Ditemukan'),
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 80,
+                  color: Colors.grey.shade300,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Halaman Tidak Ditemukan',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Path: ${state.uri}',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/auth'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      'Kembali ke Beranda',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -257,11 +498,11 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        return MaterialApp(
-          navigatorKey: navigatorKey,
+        return MaterialApp.router(
+          routerConfig: _router,
           debugShowCheckedModeBanner: false,
           title: 'Primez Sports',
-          
+
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
@@ -299,29 +540,6 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
               ),
             ),
           ),
-
-          home: const SplashToAuthWrapper(),
-
-          routes: {
-            '/auth': (context) => const AuthWrapper(),
-            '/login': (context) => const LoginPage(),
-            '/register': (context) => const RegisterPage(),
-            '/home': (context) => const HomePage(title: 'Primez Sports'),
-            '/test': (context) => const TestLauncherPage(),
-            '/favorite': (context) => const UserFavoritesPage(),
-            '/notifications': (context) => const NotificationPage(),
-            '/encode': (context) => const EncodecodeExample(),
-          },
-          
-          onGenerateRoute: (settings) {
-            if (settings.name == '/product-detail') {
-              final productId = settings.arguments as String;
-              return MaterialPageRoute(
-                builder: (_) => ProductDetailLoader(productId: productId),
-              );
-            }
-            return null;
-          },
         );
       },
     );
@@ -345,10 +563,7 @@ class _SplashToAuthWrapperState extends State<SplashToAuthWrapper> {
   Future<void> _navigateToAuth() async {
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AuthWrapper()),
-      );
+      context.go('/auth');
     }
   }
 
@@ -367,7 +582,7 @@ class AuthWrapper extends StatelessWidget {
           .collection('users')
           .doc(uid)
           .get();
-      
+
       if (doc.exists) {
         return doc.data()?['role'] as String?;
       }
@@ -395,7 +610,7 @@ class AuthWrapper extends StatelessWidget {
 
         if (snapshot.hasData) {
           final user = snapshot.data!;
-          
+
           Future.microtask(() {
             Provider.of<FavoriteProvider>(context, listen: false)
                 .loadFavorites();
@@ -518,12 +733,7 @@ class ProductDetailLoader extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/auth',
-                      (route) => false,
-                    );
-                  },
+                  onPressed: () => context.go('/auth'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -554,8 +764,9 @@ class ProductDetailLoader extends StatelessWidget {
     Map<String, dynamic> data,
   ) {
     try {
-      final product = Product.fromMap(data, productId);
       
+      final product = Product.fromMap(data, productId);
+
       return UserProductDetailPage(
         product: product,
         showFavoriteInAppBar: false,

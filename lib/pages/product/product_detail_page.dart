@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart'; 
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/providers/favorite_provider.dart';
 import 'package:my_app/providers/widgets/favorite_button.dart';
@@ -236,11 +237,6 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
     if (widget.isAdmin) {
       return [
         IconButton(
-          icon: const Icon(Icons.share),
-          tooltip: 'Share Produk',
-          onPressed: () => _showShareOptions(context, product),
-        ),
-        IconButton(
           icon: const Icon(Icons.edit),
           tooltip: 'Edit Produk',
           onPressed: () {},
@@ -254,11 +250,6 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
     }
     if (widget.showFavoriteInAppBar) {
       return [
-        IconButton(
-          icon: const Icon(Icons.share),
-          tooltip: 'Share Produk',
-          onPressed: () => _showShareOptions(context, product),
-        ),
         FavoriteButton(
           product: product,
           size: 28,
@@ -268,13 +259,15 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
         SizedBox(width: 8.w),
       ];
     }
-    return [
-      IconButton(
-        icon: const Icon(Icons.share),
-        tooltip: 'Share Produk',
-        onPressed: () => _showShareOptions(context, product),
-      ),
-    ];
+    return [];
+  }
+
+  void _handleBackButton(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/user-home');
+    }
   }
 
   Widget _buildProductImage(Product product) {
@@ -373,6 +366,10 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
           return Scaffold(
             backgroundColor: Colors.white,
             appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => _handleBackButton(context),
+              ),
               title: const Text('Memuat...'),
               backgroundColor: const Color(0xFFE53E3E),
               foregroundColor: Colors.white,
@@ -385,6 +382,10 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
         if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
           return Scaffold(
             appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => _handleBackButton(context),
+              ),
               title: Text(
                 snapshot.hasError ? 'Error' : 'Produk Tidak Ditemukan',
               ),
@@ -441,6 +442,11 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
         return Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => _handleBackButton(context),
+              tooltip: 'Kembali',
+            ),
             title: Text(
               product.name,
               maxLines: 1,
