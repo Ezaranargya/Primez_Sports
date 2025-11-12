@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.my_app">
 
@@ -67,14 +68,51 @@
                     android:pathPrefix="/products" />
             </intent-filter>
 
-            <!-- App Links untuk Firebase Dynamic Links -->
+            <!-- App Links untuk Firebase Dynamic Links dan Custom Scheme -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <!-- Custom scheme -->
+                <data android:scheme="primezsports" />
+                
+                <!-- Firebase Dynamic Links -->
+                <data
+                    android:scheme="https"
+                    android:host="primezsports.page.link" />
+            </intent-filter>
+
+            <!-- Tambahan dari awal -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
+                    android:host="primez-sportz-2025.web.app" />
+            </intent-filter>
+
+            <!-- Tambahan intent filter untuk Deep Links -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <!-- Custom scheme -->
+                <data 
+                    android:scheme="primezsports"
+                    android:host="product" />
+                
+                <!-- Firebase Dynamic Links domain -->
+                <data 
+                    android:scheme="https"
                     android:host="primezsports.page.link" />
+                
+                <!-- Jika punya custom domain -->
+                <data 
+                    android:scheme="https"
+                    android:host="primez-sports.com" />
             </intent-filter>
 
         </activity>

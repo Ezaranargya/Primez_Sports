@@ -1,1 +1,30 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"primez-sportz-2025","appId":"1:123279350995:android:4bdafdae552fced25c8826","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"primez-sportz-2025","configurations":{"android":"1:123279350995:android:4bdafdae552fced25c8826","web":"1:123279350995:web:d1d2a4e9f24dec115c8826"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "primez-sportz-2025",
+          "appId": "1:123279350995:android:4bdafdae552fced25c8826",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "primez-sportz-2025",
+          "configurations": {
+            "android": "1:123279350995:android:4bdafdae552fced25c8826",
+            "web": "1:123279350995:web:d1d2a4e9f24dec115c8826"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": " public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}

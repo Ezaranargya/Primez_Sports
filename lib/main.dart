@@ -165,6 +165,13 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
     _appLinks.uriLinkStream.listen((uri) {
       _handleDeepLink(uri);
     });
+    
+    _appLinks.uriLinkStream.listen((Uri? uri) {
+      if (uri != null && uri.queryParameters.containsKey('id')) {
+        final productId = uri.queryParameters['id'];
+        navigatorKey.currentState?.pushNamed('/product-detail', arguments: productId);
+      }
+    });
   }
 
   void _handleDeepLink(Uri uri) {
@@ -173,27 +180,60 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
     debugPrint('   Host: ${uri.host}');
     debugPrint('   Path: ${uri.path}');
     debugPrint('   Segments: ${uri.pathSegments}');
+    debugPrint('   Query Parameters: ${uri.queryParameters}');
     
     String? productId;
     
-    if (uri.scheme == 'primezsports') {
+    if (uri.queryParameters.containsKey('link')) {
+      final deepLink = Uri.parse(uri.queryParameters['link']!);
+      debugPrint('🔗 Extracted deep link: $deepLink');
+      
+      if (deepLink.pathSegments.length >= 2 && deepLink.pathSegments[0] == 'product') {
+        productId = deepLink.pathSegments[1];
+      }
+    }
+    
+    else if (uri.scheme == 'primezsports') {
       if (uri.host == 'products' && uri.pathSegments.isNotEmpty) {
         productId = uri.pathSegments[0];
       }
-
+      else if (uri.host == 'product' && uri.pathSegments.isNotEmpty) {
+        productId = uri.pathSegments[0];
+      }
       else if (uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'products') {
+        if (uri.pathSegments.length > 1) {
+          productId = uri.pathSegments[1];
+        }
+      }
+      else if (uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'product') {
         if (uri.pathSegments.length > 1) {
           productId = uri.pathSegments[1];
         }
       }
     }
     
-    else if (uri.scheme == 'https' && uri.host == 'primez-sports.com') {
-      if (uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'products') {
-        if (uri.pathSegments.length > 1) {
+    else if (uri.scheme == 'https') {
+      if (uri.host == 'primezsports.page.link') {
+        if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'product') {
           productId = uri.pathSegments[1];
         }
       }
+      else if (uri.host == 'primez-sports.com') {
+        if (uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'products') {
+          if (uri.pathSegments.length > 1) {
+            productId = uri.pathSegments[1];
+          }
+        }
+        else if (uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'product') {
+          if (uri.pathSegments.length > 1) {
+            productId = uri.pathSegments[1];
+          }
+        }
+      }
+    }
+    
+    if (productId == null && uri.queryParameters.containsKey('id')) {
+      productId = uri.queryParameters['id'];
     }
     
     if (productId != null && productId.isNotEmpty) {

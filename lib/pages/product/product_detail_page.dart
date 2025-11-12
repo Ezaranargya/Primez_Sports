@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -68,31 +69,212 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
   }
 
   void _shareProduct(Product product) {
-    final dynamicLink = 'https://primezsports.page.link/product/${product.id}';
+    final deepLink = 'primezsports://product/${product.id}';
     
     Share.share(
       'Cek produk ini di Primez Sports!\n\n'
       '${product.name}\n'
       'Harga: ${Formatter.formatPrice(product.price)}\n\n'
-      '🔗 Buka di sini: $dynamicLink',
+      '🔗 Buka di sini: $deepLink',
       subject: 'Produk Primez Sports',
+    );
+  }
+
+  void _showShareOptions(BuildContext context, Product product) {
+    final deepLink = 'primezsports://product/${product.id}';
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Bagikan Produk',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            SizedBox(height: 16.h),
+            Container(
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.link, color: Colors.blue.shade700, size: 18.sp),
+                      SizedBox(width: 8.w),
+                      Text(
+                        'Deep Link',
+                        style: GoogleFonts.inter(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8.h),
+                  Container(
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: SelectableText(
+                      deepLink,
+                      style: GoogleFonts.robotoMono(
+                        fontSize: 12.sp,
+                        color: Colors.blue.shade900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            SizedBox(height: 16.h),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: deepLink));
+                      Navigator.pop(context);
+                      _showSnackBar('Link berhasil disalin!');
+                    },
+                    icon: Icon(Icons.copy, size: 18.sp),
+                    label: Text('Copy Link', style: GoogleFonts.inter(fontSize: 14.sp)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.blue.shade700,
+                      side: BorderSide(color: Colors.blue.shade700),
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _shareProduct(product);
+                    },
+                    icon: Icon(Icons.share, size: 18.sp),
+                    label: Text('Share', style: GoogleFonts.inter(fontSize: 14.sp)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE53E3E),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+            SizedBox(height: 8.h),
+            Container(
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16.sp, color: Colors.grey.shade600),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      'Link ini hanya berfungsi jika aplikasi sudah ter-install',
+                      style: GoogleFonts.inter(
+                        fontSize: 12.sp,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+          ],
+        ),
+      ),
     );
   }
 
   List<Widget> _buildAppBarActions(Product product) {
     if (widget.isAdmin) {
       return [
-        IconButton(icon: const Icon(Icons.edit), tooltip: 'Edit Produk', onPressed: () {}),
-        IconButton(icon: const Icon(Icons.delete), tooltip: 'Hapus Produk', onPressed: () {}),
+        IconButton(
+          icon: const Icon(Icons.share),
+          tooltip: 'Share Produk',
+          onPressed: () => _showShareOptions(context, product),
+        ),
+        IconButton(
+          icon: const Icon(Icons.edit),
+          tooltip: 'Edit Produk',
+          onPressed: () {},
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete),
+          tooltip: 'Hapus Produk',
+          onPressed: () {},
+        ),
       ];
     }
     if (widget.showFavoriteInAppBar) {
       return [
-        FavoriteButton(product: product, size: 28, activeColor: Colors.red, inactiveColor: Colors.white),
+        IconButton(
+          icon: const Icon(Icons.share),
+          tooltip: 'Share Produk',
+          onPressed: () => _showShareOptions(context, product),
+        ),
+        FavoriteButton(
+          product: product,
+          size: 28,
+          activeColor: Colors.red,
+          inactiveColor: Colors.white,
+        ),
         SizedBox(width: 8.w),
       ];
     }
-    return [];
+    return [
+      IconButton(
+        icon: const Icon(Icons.share),
+        tooltip: 'Share Produk',
+        onPressed: () => _showShareOptions(context, product),
+      ),
+    ];
   }
 
   Widget _buildProductImage(Product product) {
@@ -101,7 +283,12 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
         final decodedBytes = base64Decode(product.imageBase64!);
         return ClipRRect(
           borderRadius: BorderRadius.circular(12.r),
-          child: Image.memory(decodedBytes, height: 250.h, width: double.infinity, fit: BoxFit.cover),
+          child: Image.memory(
+            decodedBytes,
+            height: 250.h,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
         );
       }
       if (product.imageUrl.isNotEmpty) {
@@ -118,9 +305,14 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
                 height: 250.h,
                 width: double.infinity,
                 color: Colors.grey.shade200,
-                child: Center(child: CircularProgressIndicator(value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                    : null)),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                  ),
+                ),
               );
             },
             errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
@@ -136,7 +328,12 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
   Widget _buildPlaceholderImage() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12.r),
-      child: Image.asset('assets/images/no_image.png', height: 250.h, width: double.infinity, fit: BoxFit.cover),
+      child: Image.asset(
+        'assets/images/no_image.png',
+        height: 250.h,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      ),
     );
   }
 
@@ -156,7 +353,10 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
           Expanded(
             child: Text(
               'Opsi pembelian tidak tersedia untuk produk ini',
-              style: GoogleFonts.inter(fontSize: 14.sp, color: Colors.orange.shade700),
+              style: GoogleFonts.inter(
+                fontSize: 14.sp,
+                color: Colors.orange.shade700,
+              ),
             ),
           ),
         ],
@@ -172,29 +372,66 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
             backgroundColor: Colors.white,
-            appBar: AppBar(title: const Text('Memuat...'), backgroundColor: const Color(0xFFE53E3E), foregroundColor: Colors.white),
-            body: const Center(child: CircularProgressIndicator(color: Color(0xFFE53E3E))),
+            appBar: AppBar(
+              title: const Text('Memuat...'),
+              backgroundColor: const Color(0xFFE53E3E),
+              foregroundColor: Colors.white,
+            ),
+            body: const Center(
+              child: CircularProgressIndicator(color: Color(0xFFE53E3E)),
+            ),
           );
         }
         if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
           return Scaffold(
-            appBar: AppBar(title: Text(snapshot.hasError ? 'Error' : 'Produk Tidak Ditemukan'), backgroundColor: const Color(0xFFE53E3E), foregroundColor: Colors.white),
+            appBar: AppBar(
+              title: Text(
+                snapshot.hasError ? 'Error' : 'Produk Tidak Ditemukan',
+              ),
+              backgroundColor: const Color(0xFFE53E3E),
+              foregroundColor: Colors.white,
+            ),
             body: Center(
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(snapshot.hasError ? Icons.error_outline : Icons.shopping_bag_outlined, size: 64.sp, color: snapshot.hasError ? Colors.red : Colors.grey.shade400),
-                SizedBox(height: 16.h),
-                Text(
-                  snapshot.hasError ? 'Terjadi kesalahan' : 'Produk tidak ditemukan',
-                  style: snapshot.hasError
-                      ? GoogleFonts.poppins(fontSize: 18.sp, fontWeight: FontWeight.w600)
-                      : GoogleFonts.poppins(fontSize: 18.sp, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
-                ),
-                if (snapshot.hasError)
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 32.w),
-                    child: Text('${snapshot.error}', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 14.sp, color: Colors.grey.shade600)),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    snapshot.hasError
+                        ? Icons.error_outline
+                        : Icons.shopping_bag_outlined,
+                    size: 64.sp,
+                    color: snapshot.hasError ? Colors.red : Colors.grey.shade400,
                   ),
-              ]),
+                  SizedBox(height: 16.h),
+                  Text(
+                    snapshot.hasError
+                        ? 'Terjadi kesalahan'
+                        : 'Produk tidak ditemukan',
+                    style: snapshot.hasError
+                        ? GoogleFonts.poppins(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w600,
+                          )
+                        : GoogleFonts.poppins(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                          ),
+                  ),
+                  if (snapshot.hasError)
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 32.w),
+                      child: Text(
+                        '${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 14.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           );
         }
@@ -204,7 +441,15 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
         return Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
-            title: Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontSize: 18.sp, fontWeight: FontWeight.w600)),
+            title: Text(
+              product.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             backgroundColor: const Color(0xFFE53E3E),
             foregroundColor: Colors.white,
             elevation: 0,
@@ -223,7 +468,12 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
                   Text(
                     product.description,
                     textAlign: TextAlign.justify,
-                    style: GoogleFonts.inter(fontSize: 14.sp, height: 1.3, letterSpacing: 0, color: Colors.grey.shade700),
+                    style: GoogleFonts.inter(
+                      fontSize: 14.sp,
+                      height: 1.3,
+                      letterSpacing: 0,
+                      color: Colors.grey.shade700,
+                    ),
                   ),
                   SizedBox(height: 24.h),
                 ],
@@ -240,7 +490,7 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
                         isFavorite: isFavorite,
                         isLoadingFavorite: _isLoadingFavorite,
                         onFavoriteTap: () => _toggleFavorite(context),
-                        onShareTap: () => _shareProduct(product),
+                        onShareTap: () => _showShareOptions(context, product),
                       );
                     },
                   ),

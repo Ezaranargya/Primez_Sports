@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:my_app/theme/app_colors.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -92,7 +93,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             .doc(user.uid)
             .set({
           'username': _usernameController.text.trim(),
-          'profile': _bioController.text.trim(),
+          'bio': _bioController.text.trim(),
           'photoBase64': base64Image,
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
@@ -185,16 +186,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black, size: 24.sp),
+          icon: Icon(Icons.arrow_back, color: Colors.white, size: 24.sp),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Bio',
+          'Profile',
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontSize: 20.sp,
             fontWeight: FontWeight.w600,
           ),
