@@ -69,7 +69,7 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
   }
 
   void _shareProduct(Product product) {
-    final deepLink = 'primezsports://product/${product.id}';
+    final deepLink = 'https://primez-sportz-2025.web.app/product/${product.id}';
     
     Share.share(
       'Cek produk ini di Primez Sports!\n\n'
@@ -81,7 +81,7 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
   }
 
   void _showShareOptions(BuildContext context, Product product) {
-    final deepLink = 'primezsports://product/${product.id}';
+    final deepLink = 'https://primez-sportz-2025.web.app/product/${product.id}';
     
     showModalBottomSheet(
       context: context,
