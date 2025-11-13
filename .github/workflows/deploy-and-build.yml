@@ -15,10 +15,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.27.0"
+          channel: 'stable'
+          cache: true
 
       - name: Install dependencies
         run: flutter pub get
@@ -36,17 +44,31 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-apk  # Tunggu build APK selesai dulu
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Deploy to Firebase
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.0"
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build web app
+        run: flutter build web --release
+
+      - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PRIMEZ_SPORTS }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PRIMEZ_SPORTZ_2025 }}'
           channelId: 'live'
           projectId: 'primez-sports'
