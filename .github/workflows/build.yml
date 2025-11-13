@@ -1,4 +1,4 @@
-name: Build & Deploy
+name: Build Android APK
 
 on:
   workflow_dispatch: # Bisa dijalankan manual
