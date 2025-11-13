@@ -63,3 +63,12 @@ firebase_options.dart
 # Environment variables
 .env
 .env.local
+
+# Flutter service worker (auto-generated, jangan di-commit)
+web/flutter_service_worker.js
+
+# Build info (auto-generated)
+web/build-info.txt
+
+# Firebase cache
+.firebase/
