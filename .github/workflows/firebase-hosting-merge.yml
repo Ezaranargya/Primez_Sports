@@ -1,32 +1,40 @@
-name: Deploy to Firebase Hosting on merge
+name: Deploy to Firebase Hosting (Manual)
 
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:  # hanya bisa dijalankan manual dari tab "Actions"
 
-# --- START: Penambahan Konkurensi ---
 concurrency:
-  # Membatalkan run yang sedang berjalan jika ada push baru ke main.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-# --- END: Penambahan Konkurensi ---
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Asumsi langkah-langkah deployment ke Firebase Hosting ada di sini
+    if: github.actor != 'github-actions[bot]'  # cegah retrigger dari bot
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      # ... langkah-langkah setup Flutter/build jika diperlukan ...
-      # ... langkah-langkah deployment
-      - name: Deploy to Firebase
+
+      # (Opsional) Setup Flutter jika kamu mau rebuild web
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.0"
+          channel: 'stable'
+          cache: true
+
+      - name: Build web app
+        run: flutter build web --release --no-tree-shake-icons
+
+      - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PRIMEZ_SPORTS }}' # Sesuaikan dengan nama Secret Anda
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PRIMEZ_SPORTS }}'
           channelId: 'live'
-          projectId: 'primez-sports' # Sesuaikan dengan ID project Anda
+          projectId: 'primez-sports'
