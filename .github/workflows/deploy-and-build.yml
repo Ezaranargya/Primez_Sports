@@ -42,7 +42,7 @@ jobs:
 
   deploy-firebase:
     runs-on: ubuntu-latest
-    needs: build-apk  # Tunggu build APK selesai dulu
+    needs: build-apk
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -74,4 +74,4 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PRIMEZ_SPORTZ_2025 }}'
           channelId: 'live'
-          projectId: 'primez-sports'
+          projectId: 'primez-sportz-2025'  # ✅ Ganti ke yang benar
