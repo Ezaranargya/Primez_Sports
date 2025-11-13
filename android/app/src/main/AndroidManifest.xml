@@ -129,6 +129,22 @@
                     android:host="primez-sportz-2025.firebaseapp.com" />
             </intent-filter>
 
+            <!-- KODE TAMBAHAN YANG DIGABUNGKAN -->
+            <!-- Deep Link Configuration (Comprehensive) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <!-- Custom Scheme -->
+                <data android:scheme="primezsports" />
+                
+                <!-- HTTPS Deep Link -->
+                <data 
+                    android:scheme="https"
+                    android:host="primezsports.com" />
+            </intent-filter>
+
         </activity>
 
         <!-- File Provider -->
