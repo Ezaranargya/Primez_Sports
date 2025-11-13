@@ -1,49 +1,35 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch:
-
+  workflow_dispatch:  
 
 jobs:
-  build_apk:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧱 Checkout source code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: 📦 Install dependencies
-        run: npm ci
+      - run: npm ci
+      - run: npm run build
 
-      - name: ⚙️ Build Vite project
-        run: npm run build
-
-      - name: 📲 Install Capacitor CLI
-        run: npm install @capacitor/cli @capacitor/core
-
-      - name: 🔁 Sync Capacitor Android
-        run: |
-          npx cap sync android
-
-      - name: 🧩 Setup Java & Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
           api-levels: 34
-          target: android-34
-          ndk: 26.1.10909125
 
-      - name: 🏗️ Build APK
+      - name: Build APK
         run: |
           cd android
           ./gradlew assembleRelease
 
-      - name: 📤 Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: primez-sports-release
+          name: app-release
           path: android/app/build/outputs/apk/release/app-release.apk
