@@ -1,63 +1,30 @@
-name: Build Android APK
+name: Build Flutter APK
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
-  build_and_deploy:
+  build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          node-version: 18
+          flutter-version: "3.27.0" 
 
       - name: Install dependencies
-        run: npm ci
+        run: flutter pub get
 
-      - name: Build Web
-        run: npm run build
+      - name: Build APK
+        run: flutter build apk --release
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_PRIMEZ_SPORTZ_2025 }}"
-          channelId: live
-          projectId: primez-sportz-2025
-
-  build_android:
-    runs-on: ubuntu-latest
-    needs: build_and_deploy
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Java (JDK 17)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-levels: 34
-          target: android-34
-          ndk: 26.1.10909125
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Android APK
-        run: |
-          cd android
-          chmod +x ./gradlew
-          ./gradlew assembleRelease
-
-      - name: Upload APK Artifact
+      - name: Upload artifact (APK)
         uses: actions/upload-artifact@v4
         with:
-          name: primez-sports-release
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
