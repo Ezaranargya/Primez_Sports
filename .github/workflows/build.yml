@@ -4,6 +4,14 @@ on:
   push:
     branches: [ main ]
 
+# --- START: Penambahan Konkurensi ---
+concurrency:
+  # Membuat grup unik berdasarkan nama workflow (Build Flutter APK) dan branch (main).
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # PENTING: Membatalkan run yang sedang berlangsung jika ada push baru.
+  cancel-in-progress: true
+# --- END: Penambahan Konkurensi ---
+
 jobs:
   build:
     runs-on: ubuntu-latest
