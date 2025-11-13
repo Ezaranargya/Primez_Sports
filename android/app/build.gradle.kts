@@ -16,11 +16,6 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 
-val flutterRoot = localProperties.getProperty("flutter.sdk")
-if (flutterRoot == null) {
-    throw GradleException("Flutter SDK not found. Define location with flutter.sdk in local.properties")
-}
-
 val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
 val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
 
@@ -49,7 +44,10 @@ android {
     
     defaultConfig {
         applicationId = "com.example.my_app"
-        minSdk = flutter.minSdkVersion
+        
+        // minSdk 23 untuk kompatibilitas Firebase Auth 23.2.1+
+        minSdk = 23
+        
         targetSdk = 36
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
@@ -93,6 +91,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-auth")
     implementation("androidx.multidex:multidex:2.0.1")
 }
 
