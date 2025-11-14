@@ -12,6 +12,8 @@ class News {
   final String imageUrl1;
   final String imageAsset;
   final List<ContentBlock> content;
+  final List<String> readBy;
+  final bool isNew;
 
   News({
     required this.id,
@@ -25,7 +27,33 @@ class News {
     required this.imageUrl1,
     required this.content,
     this.imageAsset = '',
+    this.readBy = const [],
+    this.isNew = true,
   });
+
+  bool isReadBy(String userId) {
+    return readBy.contains(userId);
+  }
+
+  News markAsRead(String userId) {
+    if (readBy.contains(userId)) return this;
+
+    return News (
+      id: id,
+      title: title,
+      subtitle: subtitle,
+      author: author,
+      brand: brand,
+      date: date,
+      createdAt: createdAt,
+      categories: categories,
+      imageUrl1: imageUrl1,
+      imageAsset: imageAsset,
+      content: content,
+      readBy: [...readBy, userId],
+      isNew: false,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -39,6 +67,8 @@ class News {
       'imageUrl1': imageUrl1,
       'imageAsset': imageAsset,
       'content': content.map((block) => block.toMap()).toList(),
+      'readBy': readBy,
+      'isNew': isNew,
     };
   }
 
@@ -80,6 +110,8 @@ class News {
                   )
                 ]
           : [],
+          readBy: List<String>.from(map['readBy'] ?? []),
+          isNew: map['isNew'] ?? true,
     );
   }
 

@@ -2,16 +2,80 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:my_app/models/news_model.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/pages/product/widgets/product_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 
-class NewsDetailPage extends StatelessWidget {
+class NewsDetailPage extends StatefulWidget {
   final News news;
 
   const NewsDetailPage({super.key, required this.news});
+
+  @override
+  State<NewsDetailPage> createState() => _NewsDetailPageState();
+}
+
+class _NewsDetailPageState extends State<NewsDetailPage> {
+  String? userId;
+  bool isMarking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentUser();
+    _markAsRead();
+  }
+
+  void _getCurrentUser() {
+    final user = FirebaseAuth.instance.currentUser;
+    setState(() {
+      userId = user?.uid;
+    });
+  }
+
+  Future<void> _markAsRead() async {
+    if (userId == null) {
+      print('⚠️ User not logged in, cannot mark as read');
+      return;
+    }
+
+    // Cek apakah sudah dibaca
+    if (widget.news.isReadBy(userId!)) {
+      print('✅ News already marked as read by user: $userId');
+      return;
+    }
+
+    if (isMarking) return;
+
+    setState(() {
+      isMarking = true;
+    });
+
+    try {
+      print('📖 Marking news as read: ${widget.news.id}');
+
+      // Update di Firestore
+      await FirebaseFirestore.instance
+          .collection('news')
+          .doc(widget.news.id)
+          .update({
+        'readBy': FieldValue.arrayUnion([userId]),
+        'isNew': false,
+      });
+
+      print('✅ News marked as read successfully');
+    } catch (e) {
+      print('❌ Error marking news as read: $e');
+    } finally {
+      setState(() {
+        isMarking = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +98,7 @@ class NewsDetailPage extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   ProductImage(
-                    image: news.imageUrl1,
+                    image: widget.news.imageUrl1,
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.cover,
@@ -70,11 +134,11 @@ class NewsDetailPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (news.categories.isNotEmpty)
+                    if (widget.news.categories.isNotEmpty)
                       Wrap(
                         spacing: 8.w,
                         runSpacing: 8.h,
-                        children: news.categories.map((category) {
+                        children: widget.news.categories.map((category) {
                           return Container(
                             padding: EdgeInsets.symmetric(
                               horizontal: 12.w,
@@ -99,7 +163,7 @@ class NewsDetailPage extends StatelessWidget {
 
                     SizedBox(height: 16.h),
                     Text(
-                      news.title,
+                      widget.news.title,
                       style: GoogleFonts.poppins(
                         fontSize: 24.sp,
                         fontWeight: FontWeight.bold,
@@ -109,9 +173,9 @@ class NewsDetailPage extends StatelessWidget {
                     ),
 
                     SizedBox(height: 10.h),
-                    if (news.subtitle.isNotEmpty)
+                    if (widget.news.subtitle.isNotEmpty)
                       Text(
-                        news.subtitle,
+                        widget.news.subtitle,
                         textAlign: TextAlign.justify,
                         style: GoogleFonts.inter(
                           fontSize: 15.sp,
@@ -127,7 +191,7 @@ class NewsDetailPage extends StatelessWidget {
                       spacing: 8.w,
                       runSpacing: 8.h,
                       children: [
-                        if (news.author.isNotEmpty)
+                        if (widget.news.author.isNotEmpty)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -136,7 +200,7 @@ class NewsDetailPage extends StatelessWidget {
                               SizedBox(width: 4.w),
                               Flexible(
                                 child: Text(
-                                  'By ${news.author}',
+                                  'By ${widget.news.author}',
                                   style: TextStyle(
                                     fontSize: 13.sp,
                                     color: Colors.grey[600],
@@ -154,7 +218,7 @@ class NewsDetailPage extends StatelessWidget {
                                 size: 16.sp, color: Colors.grey[600]),
                             SizedBox(width: 4.w),
                             Text(
-                              formatDate.format(news.date),
+                              formatDate.format(widget.news.date),
                               style: TextStyle(
                                 fontSize: 13.sp,
                                 color: Colors.grey[600],
@@ -170,7 +234,7 @@ class NewsDetailPage extends StatelessWidget {
                     Divider(color: Colors.grey[300], thickness: 1),
                     SizedBox(height: 24.h),
 
-                    ...news.content.map((block) => _buildContentBlock(block)),
+                    ...widget.news.content.map((block) => _buildContentBlock(block)),
 
                     SizedBox(height: 40.h),
                   ],
