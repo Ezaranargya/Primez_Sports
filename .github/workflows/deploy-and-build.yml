@@ -76,4 +76,4 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PRIMEZ_SPORTZ_2025 }}'
           channelId: 'live'
-          projectId: 'primez-sports-2025'
+          projectId: 'primez-sportz-2025'
