@@ -93,7 +93,7 @@ class _NewProductCard extends StatelessWidget {
         ),
       ),
       child: Container(
-        width: 130.w,
+        width: 120.w,
         color: Colors.white,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,11 +104,11 @@ class _NewProductCard extends StatelessWidget {
                 image: product.imageBase64?.isNotEmpty == true
                     ? product.imageBase64
                     : product.imageUrl ?? '',
-                width: 130.w,
-                height: 130.h,
+                width: double.infinity,
+                height: 100.h,
                 fit: BoxFit.cover,
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
+                  top: Radius.circular(10),
                 ),
               ),
             ),

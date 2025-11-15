@@ -95,7 +95,7 @@ class _TrendingProductCard extends StatelessWidget {
         ),
       ),
       child: Container(
-        width: 130.w, 
+        width: 115.w, 
         color: Colors.white,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,10 +108,10 @@ class _TrendingProductCard extends StatelessWidget {
                     ? product.imageBase64
                     : product.imageUrl ?? '',
                 width: double.infinity,
-                height: 130.h, 
+                height: 100.h, 
                 fit: BoxFit.cover,
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
+                  top: Radius.circular(10),
                 ),
               ),
 

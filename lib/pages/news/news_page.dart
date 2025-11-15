@@ -19,7 +19,7 @@ class UserNewsPage extends StatefulWidget {
   State<UserNewsPage> createState() => _UserNewsPageState();
 }
 
-class _UserNewsPageState extends State<UserNewsPage> {
+class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClientMixin {
   int _currentBanner = 0;
   final PageController _pageController = PageController();
   Timer? _autoPlayTimer;
@@ -27,12 +27,17 @@ class _UserNewsPageState extends State<UserNewsPage> {
   List<News> allNews = [];
   bool isLoading = true;
   String? userId;
+  
+  StreamSubscription<QuerySnapshot>? _newsSubscription;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
     _getCurrentUser();
-    fetchNews();
+    _setupNewsListener();
     _startAutoPlay();
   }
 
@@ -48,40 +53,69 @@ class _UserNewsPageState extends State<UserNewsPage> {
     return allNews.where((news) => !news.isReadBy(userId!)).length;
   }
 
+  void _setupNewsListener() {
+    print('📡 Setting up news listener...');
+    
+    _newsSubscription = FirebaseFirestore.instance
+        .collection('news')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            print('🔄 News snapshot received: ${snapshot.docs.length} documents');
+            
+            final allNewsList = snapshot.docs.map((doc) {
+              return News.fromFirestore(doc.data(), doc.id);
+            }).toList();
+
+            for (var news in allNewsList) {
+              final isRead = userId != null && news.isReadBy(userId!);
+              print('📰 ${news.id}: readBy=${news.readBy.length}, isRead=$isRead');
+            }
+
+            if (mounted) {
+              setState(() {
+                allNews = allNewsList;
+                isLoading = false;
+              });
+              
+              final unread = unreadNewsCount;
+              print('📊 Unread count updated: $unread');
+            }
+          },
+          onError: (error) {
+            print('❌ Error in news listener: $error');
+            if (mounted) {
+              setState(() => isLoading = false);
+            }
+          },
+        );
+  }
+
   Future<void> fetchNews() async {
     try {
-      print('📄 Fetching news from Firestore...');
-
+      print('🔄 Manual refresh triggered');
+      
       final newsSnapshot = await FirebaseFirestore.instance
           .collection('news')
           .orderBy('date', descending: true)
           .get();
 
-      print('📦 Found ${newsSnapshot.docs.length} news documents');
-
-      if (newsSnapshot.docs.isEmpty) {
-        print('⚠️ No news found in collection!');
-      }
-
       final allNewsList = newsSnapshot.docs.map((doc) {
         return News.fromFirestore(doc.data(), doc.id);
       }).toList();
 
-      print('✅ Successfully loaded ${allNewsList.length} news');
-
-      setState(() {
-        allNews = allNewsList;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          allNews = allNewsList;
+          isLoading = false;
+        });
+      }
     } catch (e, stackTrace) {
       print('❌ Error loading news: $e');
       print('Stack trace: $stackTrace');
-      setState(() => isLoading = false);
-
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading news: $e')),
-        );
+        setState(() => isLoading = false);
       }
     }
   }
@@ -99,7 +133,9 @@ class _UserNewsPageState extends State<UserNewsPage> {
   }
 
   void _startAutoPlay() {
+    _autoPlayTimer?.cancel();
     _autoPlayTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (!mounted) return;
       if (latestNews.isEmpty) return;
       final itemCount = latestNews.length;
       if (itemCount <= 1) return;
@@ -108,34 +144,46 @@ class _UserNewsPageState extends State<UserNewsPage> {
         _currentBanner = (_currentBanner + 1) % itemCount;
       });
 
-      _pageController.animateToPage(
-        _currentBanner,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
+      if (_pageController.hasClients) {
+        _pageController.animateToPage(
+          _currentBanner,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      }
     });
   }
 
   Future<void> _navigateToDetail(News news) async {
-    await Navigator.push(
+    print('🚀 Navigating to news detail: ${news.id}');
+    print('   Current readBy: ${news.readBy}');
+    
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => NewsDetailPage(news: news),
       ),
     );
     
-    fetchNews();
+    print('⬅️ Returned from detail page. Result: $result');
+    
+    if (result == true) {
+      print('🔄 News was marked as read, waiting for listener update...');
+    }
   }
 
   @override
   void dispose() {
     _autoPlayTimer?.cancel();
     _pageController.dispose();
+    _newsSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+    
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -181,32 +229,31 @@ class _UserNewsPageState extends State<UserNewsPage> {
                     ],
                   ),
                 )
-              : CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
-                        children: [
-                          if (trendingNews.isNotEmpty)
-                            _buildSection('Trending', trendingNews, isHorizontal: true),
-                          
-                          if (latestNews.isNotEmpty)
-                            _buildSection('Terbaru', latestNews, useCarousel: true),
-                          
-                          SizedBox(height: 80.h),
-                        ],
+              : RefreshIndicator(
+                  onRefresh: fetchNews,
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          children: [
+                            if (trendingNews.isNotEmpty)
+                              _buildTrendingSection('Trending', trendingNews),
+                            
+                            if (latestNews.isNotEmpty)
+                              _buildLatestSection('Terbaru', latestNews),
+                            
+                            SizedBox(height: 80.h),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
     );
   }
 
-  Widget _buildSection(
-    String title,
-    List<News> newsList, {
-    bool isHorizontal = false,
-    bool useCarousel = false,
-  }) {
+  // ✅ NEW: Trending Section dengan card seperti product
+  Widget _buildTrendingSection(String title, List<News> newsList) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -222,11 +269,119 @@ class _UserNewsPageState extends State<UserNewsPage> {
             ),
           ),
         ),
+        SizedBox(
+          height: 240.h,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            itemCount: newsList.length,
+            separatorBuilder: (_, __) => SizedBox(width: 12.w),
+            itemBuilder: (context, index) {
+              final news = newsList[index];
+              return _buildTrendingCard(news);
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
-        if (useCarousel)
-          _buildCarousel(newsList)
-        else if (isHorizontal)
-          _buildHorizontalList(newsList),
+  // ✅ NEW: Trending Card (mirip product card)
+  Widget _buildTrendingCard(News news) {
+    return GestureDetector(
+      onTap: () => _navigateToDetail(news),
+      child: Container(
+        width: 160.w,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image
+            ClipRRect(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(12.r),
+                topRight: Radius.circular(12.r),
+              ),
+              child: ProductImage(
+                image: news.imageUrl1,
+                width: 160.w,
+                height: 120.h,
+                fit: BoxFit.cover,
+              ),
+            ),
+            
+            // Content
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(12.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Date (acts as price in product card)
+                    Text(
+                      DateFormat('dd MMM yyyy').format(news.date),
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    
+                    SizedBox(height: 4.h),
+                    
+                    // Title
+                    Text(
+                      news.title,
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                        fontFamily: 'Poppins',
+                        height: 1.3,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ Latest Section dengan carousel (tetap seperti sebelumnya)
+  Widget _buildLatestSection(String title, List<News> newsList) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 12.h),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Poppins',
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        _buildCarousel(newsList),
       ],
     );
   }
@@ -357,123 +512,6 @@ class _UserNewsPageState extends State<UserNewsPage> {
         ),
         SizedBox(height: 12.h),
       ],
-    );
-  }
-
-  Widget _buildHorizontalList(List<News> newsList) {
-    final formatDate = DateFormat('dd MMM yyyy');
-    return SizedBox(
-      height: 270.h,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
-        itemCount: newsList.length,
-        separatorBuilder: (_, __) => SizedBox(width: 12.w),
-        itemBuilder: (context, index) {
-          final news = newsList[index];
-
-          return GestureDetector(
-            onTap: () => _navigateToDetail(news),
-            child: Container(
-              width: 170.w,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(16.r),
-                          topRight: Radius.circular(16.r),
-                        ),
-                        child: ProductImage(
-                          image: news.imageUrl1,
-                          width: 170.w,
-                          height: 140.h,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  Padding(
-                    padding: EdgeInsets.all(12.w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (news.categories.isNotEmpty)
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6.r),
-                            ),
-                            child: Text(
-                              news.categories.first.toUpperCase(),
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: "Poppins",
-                              ),
-                            ),
-                          ),
-                        
-                        SizedBox(height: 8.h),
-                        
-                        Text(
-                          news.title,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                            fontFamily: "Poppins",
-                            height: 1.3,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        
-                        SizedBox(height: 6.h),
-                        
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.access_time,
-                              size: 12.sp,
-                              color: Colors.grey[500],
-                            ),
-                            SizedBox(width: 4.w),
-                            Text(
-                              formatDate.format(news.date),
-                              style: TextStyle(
-                                fontSize: 11.sp,
-                                color: Colors.grey[600],
-                                fontFamily: "Poppins",
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 }

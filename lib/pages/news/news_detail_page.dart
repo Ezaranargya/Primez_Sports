@@ -22,12 +22,17 @@ class NewsDetailPage extends StatefulWidget {
 class _NewsDetailPageState extends State<NewsDetailPage> {
   String? userId;
   bool isMarking = false;
+  bool hasMarkedAsRead = false;
 
   @override
   void initState() {
     super.initState();
     _getCurrentUser();
-    _markAsRead();
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _markAsRead();
+      }
+    });
   }
 
   void _getCurrentUser() {
@@ -38,210 +43,253 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
   }
 
   Future<void> _markAsRead() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
-      print('⚠️ User not logged in, cannot mark as read');
+      print('⚠️ User not logged in');
       return;
     }
 
-    
-    if (widget.news.isReadBy(userId!)) {
-      print('✅ News already marked as read by user: $userId');
+    if (isMarking) {
+      print('⏳ Already marking as read...');
       return;
     }
 
-    if (isMarking) return;
+    if (widget.news.isReadBy(userId)) {
+      print('✅ News already marked as read (from local): ${widget.news.id}');
+      hasMarkedAsRead = false;
+      return;
+    }
 
     setState(() {
       isMarking = true;
     });
 
     try {
-      print('📖 Marking news as read: ${widget.news.id}');
-
-      await FirebaseFirestore.instance
-          .collection('news')
-          .doc(widget.news.id)
-          .update({
-        'readBy': FieldValue.arrayUnion([userId]),
-        'isNew': false,
-      });
-
-      print('✅ News marked as read successfully');
+      print('📖 Attempting to mark news as read: ${widget.news.id}');
+      
+      // ✅ Try Method 1: Update news.readBy array (requires Firestore rules)
+      try {
+        await FirebaseFirestore.instance
+            .collection('news')
+            .doc(widget.news.id)
+            .update({
+          'readBy': FieldValue.arrayUnion([userId]),
+        });
+        
+        print('✅ Method 1 Success: Updated news.readBy array');
+        hasMarkedAsRead = true;
+        
+      } catch (e) {
+        print('⚠️ Method 1 Failed: $e');
+        print('🔄 Trying Method 2: User readNews collection...');
+        
+        // ✅ Fallback Method 2: Save to user's readNews subcollection
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('readNews')
+            .doc(widget.news.id)
+            .set({
+          'newsId': widget.news.id,
+          'readAt': FieldValue.serverTimestamp(),
+          'title': widget.news.title,
+        }, SetOptions(merge: true));
+        
+        print('✅ Method 2 Success: Saved to users/$userId/readNews');
+        hasMarkedAsRead = true;
+      }
+      
     } catch (e) {
-      print('❌ Error marking news as read: $e');
+      print('❌ All methods failed: $e');
+      hasMarkedAsRead = false;
     } finally {
-      setState(() {
-        isMarking = false;
-      });
+      if (mounted) {
+        setState(() {
+          isMarking = false;
+        });
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final formatDate = DateFormat('dd MMMM yyyy', 'id_ID');
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            backgroundColor: Colors.white,
-            expandedHeight: 300.h,
-            pinned: true,
-            leading: IconButton(
-              icon: const Icon(Iconsax.arrow_left, color: Colors.black),
-              onPressed: () => Navigator.pop(context),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ProductImage(
-                    image: widget.news.imageUrl1,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, hasMarkedAsRead);
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              backgroundColor: Colors.white,
+              expandedHeight: 300.h,
+              pinned: true,
+              leading: IconButton(
+                icon: const Icon(Iconsax.arrow_left, color: Colors.black),
+                onPressed: () {
+                  Navigator.pop(context, hasMarkedAsRead);
+                },
               ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(24.r),
-                  topRight: Radius.circular(24.r),
-                ),
-              ),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 20.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    if (widget.news.categories.isNotEmpty)
-                      Wrap(
-                        spacing: 8.w,
-                        runSpacing: 8.h,
-                        children: widget.news.categories.map((category) {
-                          return Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 6.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20.r),
-                            ),
-                            child: Text(
-                              category.toUpperCase(),
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-
-                    SizedBox(height: 16.h),
-                    Text(
-                      widget.news.title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                        height: 1.3,
-                      ),
+                    ProductImage(
+                      image: widget.news.imageUrl1,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                      borderRadius: BorderRadius.zero,
                     ),
-
-                    SizedBox(height: 10.h),
-                    if (widget.news.subtitle.isNotEmpty)
-                      Text(
-                        widget.news.subtitle,
-                        textAlign: TextAlign.justify,
-                        style: GoogleFonts.inter(
-                          fontSize: 15.sp,
-                          color: Colors.black87,
-                          height: 1.35,
-                          letterSpacing: -1,
-                          wordSpacing: 0,
-                        ),
-                      ),
-
-                    SizedBox(height: 16.h),
-                    Wrap(
-                      spacing: 8.w,
-                      runSpacing: 8.h,
-                      children: [
-                        if (widget.news.author.isNotEmpty)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.person_outline,
-                                  size: 16.sp, color: Colors.grey[600]),
-                              SizedBox(width: 4.w),
-                              Flexible(
-                                child: Text(
-                                  'By ${widget.news.author}',
-                                  style: TextStyle(
-                                    fontSize: 13.sp,
-                                    color: Colors.grey[600],
-                                    fontFamily: 'Poppins',
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.calendar_today,
-                                size: 16.sp, color: Colors.grey[600]),
-                            SizedBox(width: 4.w),
-                            Text(
-                              formatDate.format(widget.news.date),
-                              style: TextStyle(
-                                fontSize: 13.sp,
-                                color: Colors.grey[600],
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.7),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-
-                    SizedBox(height: 24.h),
-                    Divider(color: Colors.grey[300], thickness: 1),
-                    SizedBox(height: 24.h),
-
-                    ...widget.news.content.map((block) => _buildContentBlock(block)),
-
-                    SizedBox(height: 40.h),
                   ],
                 ),
               ),
             ),
-          ),
-        ],
+            SliverToBoxAdapter(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24.r),
+                    topRight: Radius.circular(24.r),
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 20.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (widget.news.categories.isNotEmpty)
+                        Wrap(
+                          spacing: 8.w,
+                          runSpacing: 8.h,
+                          children: widget.news.categories.map((category) {
+                            return Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 6.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20.r),
+                              ),
+                              child: Text(
+                                category.toUpperCase(),
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                      SizedBox(height: 16.h),
+                      Text(
+                        widget.news.title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 24.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                          height: 1.3,
+                        ),
+                      ),
+
+                      SizedBox(height: 10.h),
+                      if (widget.news.subtitle.isNotEmpty)
+                        Text(
+                          widget.news.subtitle,
+                          textAlign: TextAlign.justify,
+                          style: GoogleFonts.inter(
+                            fontSize: 15.sp,
+                            color: Colors.black87,
+                            height: 1.35,
+                            letterSpacing: -1,
+                            wordSpacing: 0,
+                          ),
+                        ),
+
+                      SizedBox(height: 16.h),
+                      Wrap(
+                        spacing: 8.w,
+                        runSpacing: 8.h,
+                        children: [
+                          if (widget.news.author.isNotEmpty)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.person_outline,
+                                    size: 16.sp, color: Colors.grey[600]),
+                                SizedBox(width: 4.w),
+                                Flexible(
+                                  child: Text(
+                                    'By ${widget.news.author}',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: Colors.grey[600],
+                                      fontFamily: 'Poppins',
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.calendar_today,
+                                  size: 16.sp, color: Colors.grey[600]),
+                              SizedBox(width: 4.w),
+                              Text(
+                                formatDate.format(widget.news.date),
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  color: Colors.grey[600],
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 24.h),
+                      Divider(color: Colors.grey[300], thickness: 1),
+                      SizedBox(height: 24.h),
+
+                      ...widget.news.content.map((block) => _buildContentBlock(block)),
+
+                      SizedBox(height: 40.h),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

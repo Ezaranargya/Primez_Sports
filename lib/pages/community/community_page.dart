@@ -380,6 +380,7 @@ class BrandPostsPage extends StatelessWidget {
     final brandLogo = _brandLogos[post.brand] ?? '';
 
     return Card(
+      color: AppColors.backgroundColor,
       margin: EdgeInsets.only(bottom: 16.h),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       elevation: 2,
@@ -451,7 +452,7 @@ class BrandPostsPage extends StatelessWidget {
                     : Image.memory(
                         base64Decode(post.imageUrl1!),
                         width: double.infinity,
-                        height: 200.h,
+                        height: 180.h,
                         fit: BoxFit.cover,
                       ),
               ),

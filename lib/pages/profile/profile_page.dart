@@ -41,6 +41,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       builder: (dialogContext) => WillPopScope(
         onWillPop: () async => false,
         child: AlertDialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -54,10 +55,23 @@ class _UserProfilePageState extends State<UserProfilePage> {
           content: const Text("Apakah Anda yakin ingin keluar?"),
           actions: [
             TextButton(
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.black87,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.r)
+                )
+              ),
               onPressed: () => Navigator.of(dialogContext).pop(false),
               child: const Text("Batal"),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.backgroundColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.r)
+                )
+              ),
               onPressed: () => Navigator.of(dialogContext).pop(true),
               child: const Text("Ya, Keluar"),
             ),

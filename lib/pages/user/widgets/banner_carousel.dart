@@ -20,8 +20,8 @@ class BannerCarousel extends StatefulWidget {
   const BannerCarousel({
     super.key,
     required this.banners,
-    this.height = 200,
-    this.borderRadius = 20,
+    this.height = 160,
+    this.borderRadius = 15,
     this.activeColor = Colors.redAccent,
     this.inactiveColor = Colors.grey,
     this.autoPlay = true,
@@ -38,9 +38,10 @@ class _BannerCarouselState extends State<BannerCarousel> {
   int _currentPage = 0;
   final Map<int, Uint8List> _imageCache = {};
   bool _isInitialized = false;
-  
+
   static const int _infiniteMultiplier = 10000;
-  int get _initialPage => widget.banners.isEmpty ? 0 : _infiniteMultiplier * widget.banners.length;
+  int get _initialPage =>
+      widget.banners.isEmpty ? 0 : _infiniteMultiplier * widget.banners.length;
 
   @override
   void initState() {
@@ -49,7 +50,9 @@ class _BannerCarouselState extends State<BannerCarousel> {
       initialPage: _initialPage,
       viewportFraction: 0.9,
     );
+
     _preloadImages();
+
     if (widget.autoPlay && widget.banners.isNotEmpty) {
       Future.delayed(widget.autoPlayInterval, _autoSlide);
     }
@@ -77,19 +80,21 @@ class _BannerCarouselState extends State<BannerCarousel> {
         print('❌ Error preloading image $i: $e');
       }
     }
+
     if (mounted) setState(() => _isInitialized = true);
   }
 
   void _autoSlide() {
     if (!mounted || widget.banners.isEmpty) return;
-    
+
     final currentPageValue = _pageController.page ?? _initialPage.toDouble();
+
     _pageController.animateToPage(
       currentPageValue.toInt() + 1,
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOut,
     );
-    
+
     if (widget.autoPlay) {
       Future.delayed(widget.autoPlayInterval, _autoSlide);
     }
@@ -114,15 +119,23 @@ class _BannerCarouselState extends State<BannerCarousel> {
         errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
       );
     }
+
     try {
       if (product.bannerImage.isNotEmpty) {
-        return Image.memory(base64Decode(product.bannerImage), fit: BoxFit.cover);
+        return Image.memory(
+          base64Decode(product.bannerImage),
+          fit: BoxFit.cover,
+        );
       } else if (product.imageBase64.isNotEmpty) {
-        return Image.memory(base64Decode(product.imageBase64), fit: BoxFit.cover);
+        return Image.memory(
+          base64Decode(product.imageBase64),
+          fit: BoxFit.cover,
+        );
       }
     } catch (e) {
       print('❌ Error decoding image: $e');
     }
+
     return _buildPlaceholder();
   }
 
@@ -135,7 +148,13 @@ class _BannerCarouselState extends State<BannerCarousel> {
           children: [
             Icon(Icons.image_outlined, size: 50.w, color: Colors.grey[600]),
             SizedBox(height: 8.h),
-            Text('No Banner Image', style: TextStyle(color: Colors.grey[600], fontSize: 14.sp)),
+            Text(
+              'No Banner Image',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14.sp,
+              ),
+            ),
           ],
         ),
       ),
@@ -151,7 +170,12 @@ class _BannerCarouselState extends State<BannerCarousel> {
           color: Colors.grey[200],
           borderRadius: BorderRadius.circular(widget.borderRadius.r),
         ),
-        child: Center(child: Text('No Banners Available', style: TextStyle(color: Colors.grey[600]))),
+        child: Center(
+          child: Text(
+            'No Banners Available',
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+        ),
       );
     }
 
@@ -163,7 +187,10 @@ class _BannerCarouselState extends State<BannerCarousel> {
           borderRadius: BorderRadius.circular(widget.borderRadius.r),
         ),
         child: Center(
-          child: CircularProgressIndicator(color: widget.activeColor, strokeWidth: 2),
+          child: CircularProgressIndicator(
+            color: widget.activeColor,
+            strokeWidth: 2,
+          ),
         ),
       );
     }
@@ -181,7 +208,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
             itemBuilder: (context, index) {
               final actualIndex = index % widget.banners.length;
               final product = widget.banners[actualIndex];
-              
+
               return Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8.w),
                 child: GestureDetector(
@@ -191,7 +218,9 @@ class _BannerCarouselState extends State<BannerCarousel> {
                     } else {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => UserProductDetailPage(product: product)),
+                        MaterialPageRoute(
+                          builder: (_) => UserProductDetailPage(product: product),
+                        ),
                       );
                     }
                   },
@@ -207,13 +236,14 @@ class _BannerCarouselState extends State<BannerCarousel> {
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(widget.borderRadius.r),
+                      borderRadius:
+                          BorderRadius.circular(widget.borderRadius.r),
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
                           Container(color: Colors.grey[200]),
                           _buildBannerImage(product, actualIndex),
-                          
+
                           Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -227,7 +257,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
                               ),
                             ),
                           ),
-                          
+
                           Positioned(
                             top: 20.h,
                             left: 20.w,
@@ -249,14 +279,13 @@ class _BannerCarouselState extends State<BannerCarousel> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          
+
                           Positioned(
                             bottom: 20.h,
                             left: 20.w,
                             right: 20.w,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Text(
                                   product.formattedPrice,
@@ -272,7 +301,6 @@ class _BannerCarouselState extends State<BannerCarousel> {
                                     ],
                                   ),
                                 ),
-                                
                                 Container(
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 20.w,
@@ -310,7 +338,9 @@ class _BannerCarouselState extends State<BannerCarousel> {
             },
           ),
         ),
+
         SizedBox(height: 16.h),
+
         SmoothPageIndicator(
           controller: _pageController,
           count: widget.banners.length,

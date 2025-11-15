@@ -14,6 +14,7 @@ import 'package:my_app/pages/community/community_page.dart';
 import 'package:my_app/pages/news/news_page.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
 import 'package:my_app/providers/favorite_provider.dart';
+import 'dart:async';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -35,22 +36,78 @@ class _UserHomePageState extends State<UserHomePage> {
     });
   }
 
+  // ✅ PERBAIKAN: Tanpa StreamZip, gunakan manual combination
   Stream<int> _getUnreadNewsCountStream() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return Stream.value(0);
+    
+    if (userId == null) {
+      print('⚠️ No user logged in for news count');
+      return Stream.value(0);
+    }
 
+    print('📡 Setting up news count stream for userId: $userId');
+
+    // ✅ Listen to news collection changes
     return FirebaseFirestore.instance
         .collection('news')
         .snapshots()
-        .map((snapshot) {
+        .asyncMap((newsSnapshot) async {
       try {
-        final newsList = snapshot.docs
-            .map((doc) => News.fromFirestore(doc.data(), doc.id))
-            .toList();
-
-        return newsList.where((news) => !news.isReadBy(userId)).length;
+        // ✅ Get user's read news collection
+        final userReadNewsSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('readNews')
+            .get();
+        
+        final userReadNewsIds = userReadNewsSnapshot.docs.map((doc) => doc.id).toSet();
+        
+        int unreadCount = 0;
+        
+        print('📊 Processing ${newsSnapshot.docs.length} news documents');
+        print('📚 User has read ${userReadNewsIds.length} news (from user collection)');
+        
+        for (var doc in newsSnapshot.docs) {
+          try {
+            final newsId = doc.id;
+            final data = doc.data() as Map<String, dynamic>;
+            
+            // Method 1: Check news.readBy array
+            List<String> readByList = [];
+            if (data.containsKey('readBy') && data['readBy'] != null) {
+              final readByField = data['readBy'];
+              if (readByField is List) {
+                for (var item in readByField) {
+                  if (item != null) {
+                    readByList.add(item.toString());
+                  }
+                }
+              }
+            }
+            
+            final isReadFromNewsDoc = readByList.contains(userId);
+            final isReadFromUserDoc = userReadNewsIds.contains(newsId);
+            
+            // If read by EITHER method, consider as read
+            final isRead = isReadFromNewsDoc || isReadFromUserDoc;
+            
+            if (!isRead) {
+              unreadCount++;
+            }
+            
+            print('📰 $newsId: newsDoc=$isReadFromNewsDoc, userDoc=$isReadFromUserDoc, isRead=$isRead');
+            
+          } catch (e) {
+            print('❌ Error processing news ${doc.id}: $e');
+            continue;
+          }
+        }
+        
+        print('🔢 Final Unread Count: $unreadCount');
+        return unreadCount;
+        
       } catch (e) {
-        print('Error fetching unread news count: $e');
+        print('❌ Error in unread count calculation: $e');
         return 0;
       }
     });
@@ -82,9 +139,6 @@ class _UserHomePageState extends State<UserHomePage> {
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             debugPrint('⚠️ Error: ${snapshot.error}');
-          }
-
-          if (snapshot.hasError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -166,7 +220,18 @@ class _UserHomePageState extends State<UserHomePage> {
           return StreamBuilder<int>(
             stream: _getUnreadNewsCountStream(),
             builder: (context, newsSnapshot) {
-              final newsUnreadCount = newsSnapshot.data ?? 0;
+              int newsUnreadCount = 0;
+              
+              if (newsSnapshot.hasData) {
+                newsUnreadCount = newsSnapshot.data!;
+                print('🔔 Badge Update - News Unread: $newsUnreadCount');
+              } else if (newsSnapshot.hasError) {
+                print('❌ News Stream Error: ${newsSnapshot.error}');
+                newsUnreadCount = 0;
+              } else if (newsSnapshot.connectionState == ConnectionState.waiting) {
+                print('⏳ News stream waiting...');
+                newsUnreadCount = 0;
+              }
 
               return BottomNavigationBar(
                 type: BottomNavigationBarType.fixed,
@@ -188,132 +253,24 @@ class _UserHomePageState extends State<UserHomePage> {
                     label: 'Favorite',
                   ),
                   BottomNavigationBarItem(
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(Icons.chat_bubble_outline),
-                        if (communityUnreadCount > 0)
-                          Positioned(
-                            right: -6,
-                            top: -6,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              child: Text(
-                                communityUnreadCount > 9 ? '9+' : '$communityUnreadCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                      ],
+                    icon: _buildBadgeIcon(
+                      Icons.chat_bubble_outline,
+                      communityUnreadCount,
                     ),
-                    activeIcon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(Icons.chat_bubble),
-                        if (communityUnreadCount > 0)
-                          Positioned(
-                            right: -6,
-                            top: -6,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              child: Text(
-                                communityUnreadCount > 9 ? '9+' : '$communityUnreadCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                      ],
+                    activeIcon: _buildBadgeIcon(
+                      Icons.chat_bubble,
+                      communityUnreadCount,
                     ),
                     label: 'Komunitas',
                   ),
                   BottomNavigationBarItem(
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(Icons.newspaper_outlined),
-                        if (newsUnreadCount > 0)
-                          Positioned(
-                            right: -6,
-                            top: -6,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              child: Text(
-                                newsUnreadCount > 9 ? '9+' : '$newsUnreadCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                      ],
+                    icon: _buildBadgeIcon(
+                      Icons.newspaper_outlined,
+                      newsUnreadCount,
                     ),
-                    activeIcon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Icon(Icons.newspaper),
-                        if (newsUnreadCount > 0)
-                          Positioned(
-                            right: -6,
-                            top: -6,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              child: Text(
-                                newsUnreadCount > 9 ? '9+' : '$newsUnreadCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                      ],
+                    activeIcon: _buildBadgeIcon(
+                      Icons.newspaper,
+                      newsUnreadCount,
                     ),
                     label: 'News',
                   ),
@@ -328,6 +285,40 @@ class _UserHomePageState extends State<UserHomePage> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildBadgeIcon(IconData icon, int count) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon),
+        if (count > 0)
+          Positioned(
+            right: -6,
+            top: -6,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 16,
+                minHeight: 16,
+              ),
+              child: Text(
+                count > 9 ? '9+' : '$count',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
