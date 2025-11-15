@@ -43,7 +43,7 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
       return;
     }
 
-    // Cek apakah sudah dibaca
+    
     if (widget.news.isReadBy(userId!)) {
       print('✅ News already marked as read by user: $userId');
       return;
@@ -58,7 +58,6 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     try {
       print('📖 Marking news as read: ${widget.news.id}');
 
-      // Update di Firestore
       await FirebaseFirestore.instance
           .collection('news')
           .doc(widget.news.id)

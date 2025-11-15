@@ -38,7 +38,7 @@ class News {
   News markAsRead(String userId) {
     if (readBy.contains(userId)) return this;
 
-    return News (
+    return News(
       id: id,
       title: title,
       subtitle: subtitle,
@@ -110,12 +110,16 @@ class News {
                   )
                 ]
           : [],
-          readBy: List<String>.from(map['readBy'] ?? []),
-          isNew: map['isNew'] ?? true,
+      readBy: map.containsKey('readBy') && map['readBy'] != null
+          ? List<String>.from(map['readBy'])
+          : [],
+      isNew: map.containsKey('isNew') && map['isNew'] != null
+          ? (map['isNew'] as bool)
+          : true,
     );
   }
 
-    factory News.fromFirestore(Map<String, dynamic> data, String id) {
+  factory News.fromFirestore(Map<String, dynamic> data, String id) {
     return News.fromMap(data, id);
   }
 
@@ -132,7 +136,8 @@ class News {
 }
 
 class ContentBlock {
-  final String type;   final String value;
+  final String type;
+  final String value;
   final String? caption;
 
   ContentBlock({
@@ -146,7 +151,7 @@ class ContentBlock {
       'type': type,
       'value': value,
       'caption': caption ?? '',
-            if (type == 'text') 'text': value,
+      if (type == 'text') 'text': value,
       if (type == 'image') 'imageUrl': value,
     };
   }
@@ -155,7 +160,7 @@ class ContentBlock {
     final type = map['type'] ?? 'text';
     String value = '';
 
-        if (type == 'text') {
+    if (type == 'text') {
       value = map['value'] ?? map['text'] ?? '';
     } else if (type == 'image') {
       value = map['value'] ?? map['imageUrl'] ?? '';
@@ -168,7 +173,7 @@ class ContentBlock {
     );
   }
 
-    String? get text => type == 'text' ? value : null;
+  String? get text => type == 'text' ? value : null;
   String? get imageUrl => type == 'image' ? value : null;
 }
 

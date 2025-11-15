@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:my_app/home_page.dart';
+import 'package:go_router/go_router.dart'; // ✅ TAMBAHKAN INI
+import 'package:my_app/screens/register/register_page.dart';
 import 'package:my_app/theme/app_colors.dart';
-
-import '../../register/register_page.dart';
+import 'package:my_app/screens/register/widgets/register_form.dart';
 import 'package:my_app/admin/pages/admin_home_page.dart';
 import 'package:my_app/pages/user/user_home_page.dart';
 import 'login_button.dart';
@@ -23,6 +23,13 @@ class _LoginFormState extends State<LoginForm> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   Future<String> _getUserRole(String uid, String email) async {
     try {
       DocumentSnapshot userDoc =
@@ -32,6 +39,7 @@ class _LoginFormState extends State<LoginForm> {
         final data = userDoc.data() as Map<String, dynamic>;
         return data['role'] ?? 'user';
       } else {
+        // Logika pembuatan role default jika dokumen user tidak ada
         final defaultRole = email.contains('admin') ? 'admin' : 'user';
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'email': email,
@@ -41,107 +49,91 @@ class _LoginFormState extends State<LoginForm> {
         return defaultRole;
       }
     } catch (_) {
+      // Fallback jika ada error Firestore
       return email.contains('admin') ? 'admin' : 'user';
     }
   }
 
   Future<void> _login() async {
-  final email = _emailController.text.trim();
-  final password = _passwordController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-  if (email.isEmpty || password.isEmpty) {
-    _showSnackBar("Email & Password tidak boleh kosong");
-    return;
-  }
-
-  setState(() => _isLoading = true);
-
-  try {
-    print("🔐 Memulai login...");
-    
-    final credential = await FirebaseAuth.instance
-        .signInWithEmailAndPassword(email: email, password: password);
-
-    print("✅ Login Firebase berhasil: ${credential.user?.email}");
-    print("📝 UID: ${credential.user?.uid}");
-
-    final role = await _getUserRole(credential.user!.uid, credential.user!.email!);
-    print("👤 Role yang didapat: '$role'");
-    print("🔍 Role == 'admin': ${role == 'admin'}");
-    print("🔍 Role toLowerCase: '${role.toLowerCase()}'");
-    
-    if (!mounted) {
-      print("⚠️ Widget tidak mounted setelah getUserRole");
+    if (email.isEmpty || password.isEmpty) {
+      _showSnackBar("Email & Password tidak boleh kosong");
       return;
     }
 
-    print("🚀 Memulai navigasi untuk role: $role");
+    setState(() => _isLoading = true);
 
-    setState(() => _isLoading = false);
+    try {
+      print("🔐 Memulai login...");
+      
+      final credential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
 
-    if (role.toLowerCase().trim() == 'admin') {
-      print("📍 Navigasi ke AdminHomePage...");
+      print("✅ Login Firebase berhasil: ${credential.user?.email}");
       
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) {
-            print("🏗️ Building AdminHomePage...");
-            return const AdminHomePage();
-          },
-        ),
-        (route) => false,
-      ).then((_) {
-        print("✅ Navigasi ke AdminHomePage selesai");
-      }).catchError((error) {
-        print("❌ Error navigasi AdminHomePage: $error");
-      });
+      final User user = credential.user!;
+      final role = await _getUserRole(user.uid, user.email!);
       
-    } else {
-      print("📍 Navigasi ke UserHomePage...");
+      print("👤 Role yang didapat: '$role'");
       
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) {
-            print("🏗️ Building UserHomePage...");
-            return const UserHomePage();
-          },
-        ),
-        (route) => false,
-      ).then((_) {
-        print("✅ Navigasi ke UserHomePage selesai");
-      }).catchError((error) {
-        print("❌ Error navigasi UserHomePage: $error");
-      });
-    }
+      if (!mounted) {
+        print("⚠️ Widget tidak mounted setelah getUserRole");
+        return;
+      }
 
-    _showSnackBar("Login berhasil sebagai $role");
-    
-  } on FirebaseAuthException catch (e) {
-    print("❌ FirebaseAuthException: ${e.code} - ${e.message}");
-    if (mounted) {
+      // Matikan loading state dulu
       setState(() => _isLoading = false);
-      _showSnackBar(e.message ?? "Login gagal");
-    }
-  } catch (e, stackTrace) {
-    print("❌ Error tidak terduga: $e");
-    print("📋 Stack trace: $stackTrace");
-    if (mounted) {
-      setState(() => _isLoading = false);
-      _showSnackBar("Terjadi kesalahan: $e");
+
+      print("🚀 Menjadwalkan navigasi untuk role: $role");
+
+      // ✅ GUNAKAN GoRouter untuk navigasi setelah login
+      Future.microtask(() {
+        if (!mounted) return;
+
+        print("📍 Navigasi ke ${role.toLowerCase().trim() == 'admin' ? 'Admin' : 'User'}HomePage...");
+
+        // Gunakan GoRouter, bukan Navigator
+        if (role.toLowerCase().trim() == 'admin') {
+          context.go('/admin-home');
+        } else {
+          context.go('/user-home');
+        }
+      });
+
+      _showSnackBar("Login berhasil sebagai $role");
+      
+    } on FirebaseAuthException catch (e) {
+      print("❌ FirebaseAuthException: ${e.code} - ${e.message}");
+      if (mounted) {
+        setState(() => _isLoading = false);
+        String errorMessage = "Login gagal. Cek kembali email dan password Anda.";
+        if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+           errorMessage = "Email atau password yang Anda masukkan salah.";
+        }
+        _showSnackBar(errorMessage);
+      }
+    } catch (e, stackTrace) {
+      print("❌ Error tidak terduga: $e");
+      print("📋 Stack trace: $stackTrace");
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnackBar("Terjadi kesalahan: $e");
+      }
     }
   }
-}
 
-void _showSnackBar(String message) {
-  if (!mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: message.contains('berhasil') ? Colors.green : Colors.red,
-      duration: const Duration(seconds: 2),
-    ),
-  );
-}
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: message.contains('berhasil') ? Colors.green : Colors.red,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -149,10 +141,7 @@ void _showSnackBar(String message) {
       child: Center(
         child: Container(
           width: 300.w,
-          padding: EdgeInsets.symmetric(horizontal: 16.w,vertical: 20.h),
-          constraints: BoxConstraints(
-            maxHeight: 0.8.sh,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(12.r),
@@ -181,11 +170,11 @@ void _showSnackBar(String message) {
 
               TextField(
                 controller: _emailController,
-                style: TextStyle(color: Colors.black),
+                style: const TextStyle(color: Colors.black),
                 decoration: InputDecoration(
                   hintText: "Email",
                   hintStyle: TextStyle(fontSize: 14.sp),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12.w,vertical: 10.h),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.r),
                   ),
@@ -199,12 +188,12 @@ void _showSnackBar(String message) {
 
               TextField(
                 controller: _passwordController,
-                style: TextStyle(color: Colors.black),
+                style: const TextStyle(color: Colors.black),
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   hintText: "Password",
                   hintStyle: TextStyle(fontSize: 14.sp),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12.w,vertical: 10.h),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.r),
                   ),
@@ -237,29 +226,33 @@ void _showSnackBar(String message) {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Belum punya akun?",
-                    style: TextStyle(fontSize: 13.sp, color: Colors.grey, fontFamily: 'Poppins'),
+                    "Belum punya akun? ",
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: Colors.grey,
+                      fontFamily: 'Poppins',
+                    ),
                   ),
-                  InkWell(
+
+                  GestureDetector(
                     onTap: () {
-                      Navigator.pushReplacement(
-                        context, 
-                        MaterialPageRoute(builder: (_) => const RegisterPage()),
-                        );
+                      print("👉 DAFTAR DIKLIK");
+                      // ✅ GUNAKAN context.go() atau context.push() BUKAN Navigator.push()
+                      context.push('/register'); // atau context.go('/register')
                     },
                     child: Text(
                       "Daftar",
                       style: TextStyle(
                         fontFamily: 'Poppins',
-                        fontSize: 13.sp, 
-                        color: AppColors.primary, 
-                        fontWeight: FontWeight.w600, 
+                        fontSize: 13.sp,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
                         decoration: TextDecoration.underline,
-                        ),
+                      ),
                     ),
-                  )
+                  ),
                 ],
-              ),
+              )
             ],
           ),
         ),

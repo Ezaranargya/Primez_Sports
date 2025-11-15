@@ -160,78 +160,80 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
   }
 
   Future<void> _saveNews() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_mainImageBase64 == null || _mainImageBase64!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Silakan pilih gambar utama'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    if (_selectedCategories.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Silakan pilih minimal satu kategori'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final news = News(
-        id: widget.news?.id ?? '',
-        title: _titleController.text.trim(),
-        subtitle: _subtitleController.text.trim(),
-        author: _authorController.text.trim(),
-        brand: _brandController.text.trim(),
-        date: _selectedDate,
-        createdAt: widget.news?.createdAt ?? DateTime.now(),
-        categories: _selectedCategories,
-        imageUrl1: _mainImageBase64!,
-        content: _contentItems,
-      );
-
-      if (widget.news == null) {
-                await FirebaseFirestore.instance.collection('news').add(news.toMap());
-      } else {
-                await FirebaseFirestore.instance
-            .collection('news')
-            .doc(widget.news!.id)
-            .update(news.toMap());
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.news == null 
-                  ? 'Berita berhasil ditambahkan' 
-                  : 'Berita berhasil diperbarui'
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      setState(() => _isLoading = false);
-    }
+  if (!_formKey.currentState!.validate()) return;
+  if (_mainImageBase64 == null || _mainImageBase64!.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Silakan pilih gambar utama'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
   }
+
+  if (_selectedCategories.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Silakan pilih minimal satu kategori'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  setState(() => _isLoading = true);
+
+  try {
+    final news = News(
+      id: widget.news?.id ?? '',
+      title: _titleController.text.trim(),
+      subtitle: _subtitleController.text.trim(),
+      author: _authorController.text.trim(),
+      brand: _brandController.text.trim(),
+      date: _selectedDate,
+      createdAt: widget.news?.createdAt ?? DateTime.now(),
+      categories: _selectedCategories,
+      imageUrl1: _mainImageBase64!,
+      content: _contentItems,
+      readBy: widget.news?.readBy ?? [],
+      isNew: widget.news == null ? true : widget.news!.isNew,
+    );
+
+    if (widget.news == null) {
+      await FirebaseFirestore.instance.collection('news').add(news.toMap());
+    } else {
+      await FirebaseFirestore.instance
+          .collection('news')
+          .doc(widget.news!.id)
+          .update(news.toMap());
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.news == null 
+                ? 'Berita berhasil ditambahkan' 
+                : 'Berita berhasil diperbarui'
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  } finally {
+    setState(() => _isLoading = false);
+  }
+}
 
   @override
   Widget build(BuildContext context) {

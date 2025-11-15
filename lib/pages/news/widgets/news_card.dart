@@ -8,20 +8,19 @@ import 'package:my_app/pages/news/news_detail_page.dart';
 
 class NewsCard extends StatelessWidget {
   final News news;
-  final String userId; // ✅ TAMBAHKAN PARAMETER INI
+  final String? userId; 
 
   const NewsCard({
     super.key,
     required this.news,
-    required this.userId, // ✅ TAMBAHKAN PARAMETER INI
+    this.userId, 
   });
 
   @override
   Widget build(BuildContext context) {
     final formatDate = DateFormat('dd MMM yyyy');
     
-    // ✅ Cek apakah user sudah membaca news ini
-    final isRead = userId.isNotEmpty && news.isReadBy(userId);
+    final isRead = userId != null && userId!.isNotEmpty && news.isReadBy(userId!);
 
     return GestureDetector(
       onTap: () {
@@ -33,10 +32,10 @@ class NewsCard extends StatelessWidget {
         );
       },
       child: Container(
+        margin: EdgeInsets.only(bottom: 12.h),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.r),
-          // ✅ Border biru untuk news yang belum dibaca
           border: !isRead ? Border.all(
             color: Colors.blue,
             width: 2,
@@ -52,7 +51,6 @@ class NewsCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Section
             Stack(
               children: [
                 ClipRRect(
@@ -67,42 +65,16 @@ class NewsCard extends StatelessWidget {
                     fit: BoxFit.cover,
                   ),
                 ),
-                // ✅ Badge BARU untuk unread news
-                if (!isRead)
-                  Positioned(
-                    top: 8.h,
-                    left: 8.w,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 8.w,
-                        vertical: 4.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(6.r),
-                      ),
-                      child: Text(
-                        'BARU',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
 
-            // Content Section
             Expanded(
               child: Padding(
                 padding: EdgeInsets.all(12.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min, 
                   children: [
-                    // Category Badge
                     if (news.categories.isNotEmpty)
                       Container(
                         padding: EdgeInsets.symmetric(
@@ -125,8 +97,6 @@ class NewsCard extends StatelessWidget {
                       ),
 
                     SizedBox(height: 8.h),
-
-                    // Title
                     Text(
                       news.title,
                       style: TextStyle(
@@ -140,8 +110,6 @@ class NewsCard extends StatelessWidget {
                     ),
 
                     SizedBox(height: 6.h),
-
-                    // Subtitle
                     if (news.subtitle.isNotEmpty)
                       Text(
                         news.subtitle,
@@ -150,13 +118,11 @@ class NewsCard extends StatelessWidget {
                           color: Colors.grey[600],
                           fontFamily: 'Poppins',
                         ),
-                        maxLines: 2,
+                        maxLines: 1, 
                         overflow: TextOverflow.ellipsis,
                       ),
 
-                    const Spacer(),
-
-                    // Date & Author
+                    SizedBox(height: 8.h), 
                     Row(
                       children: [
                         Icon(

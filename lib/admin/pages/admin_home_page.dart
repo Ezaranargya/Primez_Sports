@@ -1,19 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
+import 'package:my_app/screens/login/login_page.dart'; // Import LoginPage untuk navigasi logout
 import 'package:my_app/admin/product/product_page.dart';
 import 'package:my_app/admin/community/community_page.dart';
 import 'package:my_app/admin/news/news_page.dart';
 import 'package:my_app/admin/profile_page.dart'; 
 import 'package:my_app/theme/app_colors.dart';
-import 'package:my_app/admin/product/admin_product_add_page.dart';
-import 'package:my_app/admin/product/product_detail_page.dart';
-import 'package:my_app/admin/product/edit_product_screen.dart';
+// Import yang tidak terpakai di sini dihapus: AdminProductAddPage, ProductDetailPage, EditProductScreen
 
 class AdminHomePage extends StatelessWidget {
   const AdminHomePage({super.key});
 
+  // Fungsi untuk melakukan logout
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (context.mounted) {
+        // Navigasi kembali ke LoginPage dan hapus semua rute sebelumnya
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      print("Error saat admin logout: $e");
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal logout. Silakan coba lagi.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Ambil informasi pengguna yang sedang login
+    final user = FirebaseAuth.instance.currentUser;
+    final userEmail = user?.email ?? 'Admin';
+
     return ScreenUtilInit(
       designSize: const Size(375, 812),
       builder: (context, _) {
@@ -22,17 +47,54 @@ class AdminHomePage extends StatelessWidget {
           appBar: AppBar(
             backgroundColor: AppColors.primary,
             title: const Text(
-              'Admin',
-              style: TextStyle(color: AppColors.backgroundColor),
+              'Admin Dashboard',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             centerTitle: true,
             elevation: 0,
+            actions: [
+              // Tombol Logout di AppBar
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                onPressed: () => _logout(context),
+                tooltip: 'Logout',
+              ),
+            ],
           ),
-          body: Center(
+          body: SingleChildScrollView(
+            padding: EdgeInsets.all(16.w),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                
+                // Info Selamat Datang dan Email
+                Container(
+                  padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 8.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Halo, Selamat datang!',
+                        style: TextStyle(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        'Anda masuk sebagai: $userEmail',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 20.h),
+
+                // Baris 1: Product & Komunitas
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -66,7 +128,7 @@ class AdminHomePage extends StatelessWidget {
 
                 SizedBox(height: 16.h),
 
-                
+                // Baris 2: News & Profile
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

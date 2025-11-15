@@ -26,7 +26,9 @@ import 'package:my_app/admin/pages/admin_home_page.dart';
 import 'package:my_app/pages/encode.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/models/product_model.dart';
+import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/pages/product/product_detail_page.dart'; 
+
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -39,6 +41,16 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ Tambahkan error handler untuk hot reload
+  FlutterError.onError = (FlutterErrorDetails details) {
+    // Abaikan error _debugLocked saat development
+    if (details.exception.toString().contains('_debugLocked')) {
+      debugPrint('⚠️ Hot reload error ignored: ${details.exception}');
+      return;
+    }
+    FlutterError.presentError(details);
+  };
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -119,7 +131,7 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
           _router.go(location);
         } else {
           _pendingDeepLinkLocation = location;
-          _router.go('/login'); 
+          _router.go('/login');
         }
       }
     });
@@ -144,9 +156,7 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
           productId = deepLink.pathSegments[1];
         }
       }
-    }
-
-    else if (uri.scheme == 'primezsports') {
+    } else if (uri.scheme == 'primezsports') {
       if (uri.host == 'products' || uri.host == 'product') {
         if (uri.pathSegments.isNotEmpty) {
           productId = uri.pathSegments[0];
@@ -158,9 +168,7 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
           }
         }
       }
-    }
-
-    else if (uri.scheme == 'https') {
+    } else if (uri.scheme == 'https') {
       if (uri.pathSegments.isNotEmpty) {
         if (uri.pathSegments[0] == 'product' || uri.pathSegments[0] == 'products') {
           if (uri.pathSegments.length > 1) {
@@ -276,21 +284,26 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
   GoRouter _createRouter() {
     return GoRouter(
       navigatorKey: navigatorKey,
-      initialLocation: '/splash',
+      initialLocation: '/',
       debugLogDiagnostics: true,
+      restorationScopeId: 'app', // ✅ Tambahkan ini untuk hot reload
 
       redirect: (context, state) async {
         final currentLocation = state.matchedLocation;
         debugPrint('🔀 Redirect check for: $currentLocation');
 
+        // 1. Tangani Deep Link yang tertunda (setelah login atau setelah splash)
         if (_pendingDeepLinkLocation != null) {
+          // Jika deep link tertunda dan bukan navigasi ke detail produk (untuk mencegah loop/navigasi ganda)
           if (!currentLocation.startsWith('/product')) {
             debugPrint('🔗 Processing pending deep link: $_pendingDeepLinkLocation');
             final location = _pendingDeepLinkLocation;
-            _pendingDeepLinkLocation = null; 
+            _pendingDeepLinkLocation = null;
             return location;
           }
         }
+
+        // 2. Izinkan navigasi ke Product Detail tanpa otentikasi
         if (currentLocation.startsWith('/product')) {
           debugPrint('✅ Allowing navigation to product detail');
           return null;
@@ -301,37 +314,42 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
 
         final isGoingToLogin = currentLocation == '/login';
         final isGoingToRegister = currentLocation == '/register';
-        final isGoingToSplash = currentLocation == '/splash';
-        final isGoingToAuth = currentLocation == '/auth';
+        final isGoingToRoot = currentLocation == '/';
 
-        if (!isLoggedIn && !isGoingToLogin && !isGoingToRegister && !isGoingToSplash && !isGoingToAuth) {
+        // 3. PENTING: Izinkan akses ke halaman register
+        if (isGoingToRegister) {
+          debugPrint('✅ Allowing navigation to register');
+          return null;
+        }
+
+        // 4. Jika belum login dan mencoba mengakses rute yang dilindungi (kecuali login dan root)
+        if (!isLoggedIn && !isGoingToLogin && !isGoingToRoot) {
           debugPrint('⚠️ Not logged in, redirecting to login');
           return '/login';
         }
 
-        if (isLoggedIn && (isGoingToSplash || isGoingToLogin || isGoingToAuth)) {
+        // 5. Jika sudah login dan mencoba mengakses root path '/' atau login/register
+        if (isLoggedIn && (isGoingToRoot || isGoingToLogin || isGoingToRegister)) {
+          // Hanya saat berada di root atau mencoba ke login/register, kita periksa peran dan arahkan
           final role = await _getUserRole(user.uid);
+
           if (role == 'admin') {
-            debugPrint('🔀 Redirecting admin to admin-home');
+            debugPrint('🔀 Redirecting logged-in admin to /admin-home');
             return '/admin-home';
           } else {
-            debugPrint('🔀 Redirecting user to user-home');
+            debugPrint('🔀 Redirecting logged-in user to /user-home');
             return '/user-home';
           }
         }
 
+        // 6. Izinkan navigasi lainnya
         return null;
       },
 
       routes: [
         GoRoute(
-          path: '/splash',
-          builder: (context, state) => const SplashToAuthWrapper(),
-        ),
-
-        GoRoute(
-          path: '/auth',
-          builder: (context, state) => const AuthWrapper(),
+          path: '/',
+          builder: (context, state) => const _AuthDecisionWrapper(),
         ),
 
         GoRoute(
@@ -347,6 +365,7 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
         GoRoute(
           path: '/user-home',
           builder: (context, state) {
+            // Logika deep link di sini hanya sebagai fallback, logika utama sudah ada di redirect global
             if (_pendingDeepLinkLocation != null) {
               final location = _pendingDeepLinkLocation;
               _pendingDeepLinkLocation = null;
@@ -354,6 +373,12 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
                 context.go(location!);
               });
             }
+            // Tambahkan provider loadFavorites di sini jika Anda ingin memuatnya segera setelah login
+            Future.microtask(() {
+              if (FirebaseAuth.instance.currentUser != null) {
+                Provider.of<FavoriteProvider>(context, listen: false).loadFavorites();
+              }
+            });
             return const UserHomePage();
           },
         ),
@@ -398,7 +423,7 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
         ),
 
         GoRoute(
-          path: '/product/:productId', 
+          path: '/product/:productId',
           builder: (context, state) {
             final productId = state.pathParameters['productId']!;
             debugPrint('📱 Building ProductDetailLoader for: $productId');
@@ -465,7 +490,7 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => context.go('/auth'),
+                    onPressed: () => context.go('/'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -502,6 +527,10 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
           routerConfig: _router,
           debugShowCheckedModeBanner: false,
           title: 'Primez Sports',
+          // Tambahkan ini untuk mengatasi error hot reload
+          builder: (context, child) {
+            return child ?? const SizedBox.shrink();
+          },
 
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
@@ -546,106 +575,40 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
   }
 }
 
-class SplashToAuthWrapper extends StatefulWidget {
-  const SplashToAuthWrapper({super.key});
+class _AuthDecisionWrapper extends StatefulWidget {
+  const _AuthDecisionWrapper();
 
   @override
-  State<SplashToAuthWrapper> createState() => _SplashToAuthWrapperState();
+  State<_AuthDecisionWrapper> createState() => _AuthDecisionWrapperState();
 }
 
-class _SplashToAuthWrapperState extends State<SplashToAuthWrapper> {
+class _AuthDecisionWrapperState extends State<_AuthDecisionWrapper> {
   @override
   void initState() {
     super.initState();
-    _navigateToAuth();
+    _navigateToNextRoute();
   }
 
-  Future<void> _navigateToAuth() async {
+  Future<void> _navigateToNextRoute() async {
+    // Penundaan untuk efek splash (3 detik seperti sebelumnya)
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
-      context.go('/auth');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const SplashScreen();
-  }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  Future<String?> _getUserRole(String uid) async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
-
-      if (doc.exists) {
-        return doc.data()?['role'] as String?;
+      // Mengarahkan ke root path '/' lagi (meskipun sudah di sana)
+      // Ini memaksa GoRouter untuk mengeksekusi redirect-nya
+      // yang akan memeriksa status otentikasi dan peran.
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        context.go('/'); // Memicu redirect
+      } else {
+        context.go('/login'); // Langsung ke login jika belum login
       }
-      return null;
-    } catch (e) {
-      debugPrint('Error getting user role: $e');
-      return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-              ),
-            ),
-          );
-        }
-
-        if (snapshot.hasData) {
-          final user = snapshot.data!;
-
-          Future.microtask(() {
-            Provider.of<FavoriteProvider>(context, listen: false)
-                .loadFavorites();
-          });
-
-          return FutureBuilder<String?>(
-            future: _getUserRole(user.uid),
-            builder: (context, roleSnapshot) {
-              if (roleSnapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                );
-              }
-
-              if (roleSnapshot.hasError || !roleSnapshot.hasData) {
-                return const LoginPage();
-              }
-
-              final role = roleSnapshot.data;
-              if (role == 'admin') {
-                return const AdminHomePage();
-              } else {
-                return const UserHomePage();
-              }
-            },
-          );
-        }
-
-        return const LoginPage();
-      },
-    );
+    // Menampilkan SplashScreen
+    return const SplashScreen();
   }
 }
 
@@ -733,7 +696,7 @@ class ProductDetailLoader extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => context.go('/auth'),
+                  onPressed: () => context.go('/'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -764,7 +727,6 @@ class ProductDetailLoader extends StatelessWidget {
     Map<String, dynamic> data,
   ) {
     try {
-      
       final product = Product.fromMap(data, productId);
 
       return UserProductDetailPage(

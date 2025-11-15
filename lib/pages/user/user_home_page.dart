@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/models/product_model.dart';
+import 'package:my_app/models/news_model.dart';
 import 'package:my_app/services/product_service.dart';
 import 'package:my_app/services/community_service.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -31,6 +32,27 @@ class _UserHomePageState extends State<UserHomePage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<FavoriteProvider>().loadFavorites();
+    });
+  }
+
+  Stream<int> _getUnreadNewsCountStream() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return Stream.value(0);
+
+    return FirebaseFirestore.instance
+        .collection('news')
+        .snapshots()
+        .map((snapshot) {
+      try {
+        final newsList = snapshot.docs
+            .map((doc) => News.fromFirestore(doc.data(), doc.id))
+            .toList();
+
+        return newsList.where((news) => !news.isReadBy(userId)).length;
+      } catch (e) {
+        print('Error fetching unread news count: $e');
+        return 0;
+      }
     });
   }
 
@@ -138,104 +160,171 @@ class _UserHomePageState extends State<UserHomePage> {
       ),
       bottomNavigationBar: StreamBuilder<int>(
         stream: _communityService.getUnreadPostsCount(),
-        builder: (context, snapshot) {
-          final unreadCount = snapshot.data ?? 0;
+        builder: (context, communitySnapshot) {
+          final communityUnreadCount = communitySnapshot.data ?? 0;
 
-          return BottomNavigationBar(
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: Theme.of(context).primaryColor,
-            unselectedItemColor: Colors.grey,
-            currentIndex: selectedIndex,
-            onTap: onItemTapped,
-            selectedFontSize: 12.sp,
-            unselectedFontSize: 12.sp,
-            items: [
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
-                label: 'Home',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.favorite_outline),
-                activeIcon: Icon(Icons.favorite),
-                label: 'Favorite',
-              ),
-              BottomNavigationBarItem(
-                icon: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Icon(Icons.chat_bubble_outline),
-                    if (unreadCount > 0)
-                      Positioned(
-                        right: -6,
-                        top: -6,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          child: Text(
-                            unreadCount > 9 ? '9+' : '$unreadCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+          return StreamBuilder<int>(
+            stream: _getUnreadNewsCountStream(),
+            builder: (context, newsSnapshot) {
+              final newsUnreadCount = newsSnapshot.data ?? 0;
+
+              return BottomNavigationBar(
+                type: BottomNavigationBarType.fixed,
+                selectedItemColor: Theme.of(context).primaryColor,
+                unselectedItemColor: Colors.grey,
+                currentIndex: selectedIndex,
+                onTap: onItemTapped,
+                selectedFontSize: 12.sp,
+                unselectedFontSize: 12.sp,
+                items: [
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.home_outlined),
+                    activeIcon: Icon(Icons.home),
+                    label: 'Home',
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.favorite_outline),
+                    activeIcon: Icon(Icons.favorite),
+                    label: 'Favorite',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(Icons.chat_bubble_outline),
+                        if (communityUnreadCount > 0)
+                          Positioned(
+                            right: -6,
+                            top: -6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                communityUnreadCount > 9 ? '9+' : '$communityUnreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                            textAlign: TextAlign.center,
                           ),
-                        ),
-                      ),
-                  ],
-                ),
-                activeIcon: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Icon(Icons.chat_bubble),
-                    if (unreadCount > 0)
-                      Positioned(
-                        right: -6,
-                        top: -6,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          child: Text(
-                            unreadCount > 9 ? '9+' : '$unreadCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                      ],
+                    ),
+                    activeIcon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(Icons.chat_bubble),
+                        if (communityUnreadCount > 0)
+                          Positioned(
+                            right: -6,
+                            top: -6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                communityUnreadCount > 9 ? '9+' : '$communityUnreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                            textAlign: TextAlign.center,
                           ),
-                        ),
-                      ),
-                  ],
-                ),
-                label: 'Komunitas',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.newspaper_outlined),
-                activeIcon: Icon(Icons.newspaper),
-                label: 'News',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
-                label: 'Profile',
-              ),
-            ],
+                      ],
+                    ),
+                    label: 'Komunitas',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(Icons.newspaper_outlined),
+                        if (newsUnreadCount > 0)
+                          Positioned(
+                            right: -6,
+                            top: -6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                newsUnreadCount > 9 ? '9+' : '$newsUnreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    activeIcon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(Icons.newspaper),
+                        if (newsUnreadCount > 0)
+                          Positioned(
+                            right: -6,
+                            top: -6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                newsUnreadCount > 9 ? '9+' : '$newsUnreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    label: 'News',
+                  ),
+                  const BottomNavigationBarItem(
+                    icon: Icon(Icons.person_outline),
+                    activeIcon: Icon(Icons.person),
+                    label: 'Profile',
+                  ),
+                ],
+              );
+            },
           );
         },
       ),

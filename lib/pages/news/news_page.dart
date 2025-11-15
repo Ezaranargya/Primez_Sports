@@ -90,11 +90,13 @@ class _UserNewsPageState extends State<UserNewsPage> {
       .where((n) => n.categories.any((c) => c.toLowerCase().contains('trending')))
       .toList();
 
-  List<News> get soccerNews => allNews
-      .where((n) => n.categories.any((c) => c.toLowerCase().contains('soccer')))
-      .toList();
-
-  List<News> get latestNews => allNews.take(5).toList();
+  List<News> get latestNews {
+    final trendingIds = trendingNews.map((n) => n.id).toSet();
+    return allNews
+        .where((n) => !trendingIds.contains(n.id))
+        .take(5)
+        .toList();
+  }
 
   void _startAutoPlay() {
     _autoPlayTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
@@ -114,7 +116,6 @@ class _UserNewsPageState extends State<UserNewsPage> {
     });
   }
 
-  // ✅ PERBAIKAN: Refresh data setelah kembali dari detail
   Future<void> _navigateToDetail(News news) async {
     await Navigator.push(
       context,
@@ -123,7 +124,6 @@ class _UserNewsPageState extends State<UserNewsPage> {
       ),
     );
     
-    // ✅ Refresh news list setelah kembali
     fetchNews();
   }
 
@@ -139,40 +139,17 @@ class _UserNewsPageState extends State<UserNewsPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        centerTitle: true,
+        backgroundColor: AppColors.primary,
         elevation: 0,
-        title: Row(
-          children: [
-            Text(
-              'Berita',
-              style: TextStyle(
-                color: Colors.black87,
-                fontSize: 20.sp,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
-              ),
-            ),
-            // ✅ Badge counter di AppBar
-            if (unreadNewsCount > 0) ...[
-              SizedBox(width: 8.w),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(
-                  '$unreadNewsCount',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins',
-                  ),
-                ),
-              ),
-            ],
-          ],
+        title: Text(
+          'Berita',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20.sp,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
+          ),
         ),
       ),
       body: isLoading
@@ -209,12 +186,12 @@ class _UserNewsPageState extends State<UserNewsPage> {
                     SliverToBoxAdapter(
                       child: Column(
                         children: [
-                          if (latestNews.isNotEmpty)
-                            _buildSection('Terbaru', latestNews, useCarousel: true),
                           if (trendingNews.isNotEmpty)
                             _buildSection('Trending', trendingNews, isHorizontal: true),
-                          if (soccerNews.isNotEmpty)
-                            _buildSection('Soccer', soccerNews, isVertical: true),
+                          
+                          if (latestNews.isNotEmpty)
+                            _buildSection('Terbaru', latestNews, useCarousel: true),
+                          
                           SizedBox(height: 80.h),
                         ],
                       ),
@@ -228,7 +205,6 @@ class _UserNewsPageState extends State<UserNewsPage> {
     String title,
     List<News> newsList, {
     bool isHorizontal = false,
-    bool isVertical = false,
     bool useCarousel = false,
   }) {
     return Column(
@@ -250,14 +226,11 @@ class _UserNewsPageState extends State<UserNewsPage> {
         if (useCarousel)
           _buildCarousel(newsList)
         else if (isHorizontal)
-          _buildHorizontalList(newsList)
-        else if (isVertical)
-          _buildVerticalCards(newsList),
+          _buildHorizontalList(newsList),
       ],
     );
   }
 
-  // ✅ Carousel dengan badge BARU
   Widget _buildCarousel(List<News> newsList) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -287,7 +260,6 @@ class _UserNewsPageState extends State<UserNewsPage> {
                 itemCount: newsList.length,
                 itemBuilder: (context, index) {
                   final news = newsList[index];
-                  final isRead = userId != null && news.isReadBy(userId!);
 
                   return GestureDetector(
                     onTap: () => _navigateToDetail(news),
@@ -313,31 +285,6 @@ class _UserNewsPageState extends State<UserNewsPage> {
                             ),
                           ),
                         ),
-                        // ✅ Badge BARU untuk unread news
-                        if (!isRead)
-                          Positioned(
-                            top: 12.h,
-                            right: 12.w,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 8.w,
-                                vertical: 4.h,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(8.r),
-                              ),
-                              child: Text(
-                                'BARU',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                            ),
-                          ),
                         Positioned(
                           bottom: 16.h,
                           left: 16.w,
@@ -413,37 +360,30 @@ class _UserNewsPageState extends State<UserNewsPage> {
     );
   }
 
-  // ✅ Horizontal list dengan badge & border
   Widget _buildHorizontalList(List<News> newsList) {
     final formatDate = DateFormat('dd MMM yyyy');
     return SizedBox(
-      height: 230.h,
+      height: 270.h,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.symmetric(horizontal: 16.w),
-        itemCount: newsList.length > 3 ? 3 : newsList.length,
+        itemCount: newsList.length,
         separatorBuilder: (_, __) => SizedBox(width: 12.w),
         itemBuilder: (context, index) {
           final news = newsList[index];
-          final isRead = userId != null && news.isReadBy(userId!);
 
           return GestureDetector(
             onTap: () => _navigateToDetail(news),
             child: Container(
-              width: 160.w,
+              width: 170.w,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12.r),
-                // ✅ Border biru untuk unread news
-                border: !isRead ? Border.all(
-                  color: Colors.blue,
-                  width: 2,
-                ) : null,
+                borderRadius: BorderRadius.circular(16.r),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -452,85 +392,78 @@ class _UserNewsPageState extends State<UserNewsPage> {
                 children: [
                   Stack(
                     children: [
-                      ProductImage(
-                        image: news.imageUrl1,
-                        width: 160.w,
-                        height: 110.h,
-                        fit: BoxFit.cover,
+                      ClipRRect(
                         borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(12.r),
-                          topRight: Radius.circular(12.r),
+                          topLeft: Radius.circular(16.r),
+                          topRight: Radius.circular(16.r),
+                        ),
+                        child: ProductImage(
+                          image: news.imageUrl1,
+                          width: 170.w,
+                          height: 140.h,
+                          fit: BoxFit.cover,
                         ),
                       ),
-                      // ✅ Badge BARU untuk unread
-                      if (!isRead)
-                        Positioned(
-                          top: 6.h,
-                          right: 6.w,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 6.w,
-                              vertical: 3.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(6.r),
-                            ),
-                            child: Text(
-                              'BARU',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9.sp,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
-                          ),
-                        ),
                     ],
                   ),
+                  
                   Padding(
-                    padding: EdgeInsets.all(8.w),
+                    padding: EdgeInsets.all(12.w),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (news.categories.isNotEmpty)
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4.r),
+                              borderRadius: BorderRadius.circular(6.r),
                             ),
                             child: Text(
                               news.categories.first.toUpperCase(),
                               style: TextStyle(
                                 color: AppColors.primary,
-                                fontSize: 9.sp,
+                                fontSize: 10.sp,
                                 fontWeight: FontWeight.w600,
                                 fontFamily: "Poppins",
                               ),
                             ),
                           ),
-                        SizedBox(height: 6.h),
+                        
+                        SizedBox(height: 8.h),
+                        
                         Text(
                           news.title,
                           style: TextStyle(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.bold,
                             color: Colors.black87,
                             fontFamily: "Poppins",
+                            height: 1.3,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          formatDate.format(news.date),
-                          style: TextStyle(
-                            fontSize: 10.sp,
-                            color: Colors.grey,
-                            fontFamily: "Poppins",
-                          ),
+                        
+                        SizedBox(height: 6.h),
+                        
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 12.sp,
+                              color: Colors.grey[500],
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              formatDate.format(news.date),
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: Colors.grey[600],
+                                fontFamily: "Poppins",
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -540,43 +473,6 @@ class _UserNewsPageState extends State<UserNewsPage> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  // ✅ Vertical cards dengan badge (gunakan NewsCard widget)
-  Widget _buildVerticalCards(List<News> newsList) {
-    final displayNews = newsList.length > 3 ? newsList.sublist(0, 3) : newsList;
-
-    if (userId == null) {
-      return Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
-        child: Column(
-          children: displayNews.map((news) {
-            return Padding(
-              padding: EdgeInsets.only(bottom: 12.h),
-              child: NewsCard(
-                news: news,
-                userId: '',
-              ),
-            );
-          }).toList(),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Column(
-        children: displayNews.map((news) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: 12.h),
-            child: NewsCard(
-              news: news,
-              userId: userId!,
-            ),
-          );
-        }).toList(),
       ),
     );
   }
