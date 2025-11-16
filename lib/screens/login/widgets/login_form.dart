@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart'; // ✅ TAMBAHKAN INI
 import 'package:my_app/auth/register/register_page.dart';
 import 'package:my_app/theme/app_colors.dart';
-import 'package:my_app/screens/register/widgets/register_form.dart';
+import 'package:my_app/auth/register/widgets/register_form.dart';
 import 'package:my_app/admin/pages/admin_home_page.dart';
 import 'package:my_app/pages/user/user_home_page.dart';
 import 'login_button.dart';

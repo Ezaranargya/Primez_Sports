@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:go_router/go_router.dart'; // Import GoRouter
+import 'package:go_router/go_router.dart';
 import 'package:my_app/pages/profile/edit_profile_page.dart';
 import 'package:my_app/pages/profile/faq_page.dart';
 import 'package:my_app/theme/app_colors.dart';
@@ -85,21 +85,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
     setState(() => _isLoggingOut = true);
 
     try {
-      // 1. Hapus token FCM dari Firestore
       await _deleteFCMToken();
 
-      // 2. Lakukan Sign Out
       await FirebaseAuth.instance.signOut();
 
       if (!mounted) return;
 
-      // 3. Navigasi menggunakan GoRouter.go() untuk memastikan stack navigasi bersih
-      // Ini akan membawa user ke halaman login yang dikelola oleh GoRouter redirect.
       Future.microtask(() {
         if (mounted) {
-          // Menggunakan context.go('/login') atau context.go('/')
-          // agar GoRouter redirect di main.dart yang menangani
-          // pengalihan ke /login/userhome bekerja dengan benar.
           context.go('/login'); 
         }
       });
@@ -179,7 +172,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      // Menangani kasus di mana user tiba-tiba menjadi null (misalnya, sesi kedaluwarsa)
       return const Center(child: Text("Sesi pengguna tidak valid. Silakan login kembali."));
     }
 

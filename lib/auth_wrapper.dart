@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:my_app/providers/favorite_provider.dart';
-import 'package:my_app/screens/login/login_page.dart';
+import 'package:my_app/auth/login/login_page.dart';
 import 'package:my_app/pages/user/user_home_page.dart';
 import 'package:my_app/admin/pages/admin_home_page.dart';
 
