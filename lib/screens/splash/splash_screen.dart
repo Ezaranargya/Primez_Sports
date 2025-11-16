@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../screens/login/login_page.dart';
+import '../../auth/login/login_page.dart'; 
 import 'widgets/splash_content.dart';
 
 class SplashScreen extends StatefulWidget{

@@ -4,7 +4,7 @@ import 'package:my_app/admin/product/product_page.dart';
 import 'package:my_app/admin/community/community_page.dart';
 import 'package:my_app/admin/news/news_page.dart';
 import 'profile_page.dart';
-import '../models/product_model.dart'; 
+import 'package:my_app/models/product_model.dart'; 
 
 class AdminNav extends StatefulWidget {
   const AdminNav({super.key});

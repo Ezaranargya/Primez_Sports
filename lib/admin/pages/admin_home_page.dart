@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
-import 'package:my_app/screens/login/login_page.dart'; // Import LoginPage untuk navigasi logout
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:my_app/auth/login/login_page.dart'; // ✅ PERBAIKAN: screens → auth
 import 'package:my_app/admin/product/product_page.dart';
 import 'package:my_app/admin/community/community_page.dart';
 import 'package:my_app/admin/news/news_page.dart';
 import 'package:my_app/admin/profile_page.dart'; 
 import 'package:my_app/theme/app_colors.dart';
-// Import yang tidak terpakai di sini dihapus: AdminProductAddPage, ProductDetailPage, EditProductScreen
 
 class AdminHomePage extends StatelessWidget {
   const AdminHomePage({super.key});
 
-  // Fungsi untuk melakukan logout
   Future<void> _logout(BuildContext context) async {
     try {
       await FirebaseAuth.instance.signOut();
       if (context.mounted) {
-        // Navigasi kembali ke LoginPage dan hapus semua rute sebelumnya
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginPage()),
           (route) => false,
@@ -35,7 +32,6 @@ class AdminHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ambil informasi pengguna yang sedang login
     final user = FirebaseAuth.instance.currentUser;
     final userEmail = user?.email ?? 'Admin';
 
@@ -53,7 +49,6 @@ class AdminHomePage extends StatelessWidget {
             centerTitle: true,
             elevation: 0,
             actions: [
-              // Tombol Logout di AppBar
               IconButton(
                 icon: const Icon(Icons.logout, color: Colors.white),
                 onPressed: () => _logout(context),
@@ -66,7 +61,6 @@ class AdminHomePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Info Selamat Datang dan Email
                 Container(
                   padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 8.w),
                   child: Column(
@@ -94,7 +88,6 @@ class AdminHomePage extends StatelessWidget {
 
                 SizedBox(height: 20.h),
 
-                // Baris 1: Product & Komunitas
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -128,7 +121,6 @@ class AdminHomePage extends StatelessWidget {
 
                 SizedBox(height: 16.h),
 
-                // Baris 2: News & Profile
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

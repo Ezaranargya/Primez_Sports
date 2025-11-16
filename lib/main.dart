@@ -14,8 +14,8 @@ import 'package:app_links/app_links.dart';
 import 'firebase_options.dart';
 import 'package:my_app/providers/favorite_provider.dart';
 import 'package:my_app/screen/test_launcher_page.dart';
-import 'package:my_app/screens/register/register_page.dart';
-import 'package:my_app/screens/login/login_page.dart';
+import 'package:my_app/auth/register/register_page.dart';
+import 'package:my_app/auth/login/login_page.dart';
 import 'package:my_app/screens/splash/splash_screen.dart';
 import 'package:my_app/pages/user/user_home_page.dart';
 import 'package:my_app/pages/favorite/favorite_page.dart';
@@ -27,7 +27,6 @@ import 'package:my_app/pages/encode.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
-import 'package:my_app/pages/product/product_detail_page.dart'; 
 
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
