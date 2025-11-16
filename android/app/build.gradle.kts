@@ -46,7 +46,7 @@ android {
         applicationId = "com.example.my_app"
         
         // minSdk 23 untuk kompatibilitas Firebase Auth 23.2.1+
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         
         targetSdk = 36
         versionCode = flutterVersionCode.toInt()
