@@ -45,7 +45,7 @@ android {
     defaultConfig {
         applicationId = "com.example.my_app"
         
-        // minSdk 23 untuk kompatibilitas Firebase Auth 23.2.1+
+        // ✅ FIXED: minSdk 23 untuk Firebase Auth 23.2.1+
         minSdk = flutter.minSdkVersion
         
         targetSdk = 36
