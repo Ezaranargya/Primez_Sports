@@ -40,10 +40,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ✅ Tambahkan error handler untuk hot reload
   FlutterError.onError = (FlutterErrorDetails details) {
-    // Abaikan error _debugLocked saat development
     if (details.exception.toString().contains('_debugLocked')) {
       debugPrint('⚠️ Hot reload error ignored: ${details.exception}');
       return;
@@ -285,15 +282,13 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
       navigatorKey: navigatorKey,
       initialLocation: '/',
       debugLogDiagnostics: true,
-      restorationScopeId: 'app', // ✅ Tambahkan ini untuk hot reload
+      restorationScopeId: 'app', 
 
       redirect: (context, state) async {
         final currentLocation = state.matchedLocation;
         debugPrint('🔀 Redirect check for: $currentLocation');
 
-        // 1. Tangani Deep Link yang tertunda (setelah login atau setelah splash)
         if (_pendingDeepLinkLocation != null) {
-          // Jika deep link tertunda dan bukan navigasi ke detail produk (untuk mencegah loop/navigasi ganda)
           if (!currentLocation.startsWith('/product')) {
             debugPrint('🔗 Processing pending deep link: $_pendingDeepLinkLocation');
             final location = _pendingDeepLinkLocation;
@@ -302,7 +297,6 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
           }
         }
 
-        // 2. Izinkan navigasi ke Product Detail tanpa otentikasi
         if (currentLocation.startsWith('/product')) {
           debugPrint('✅ Allowing navigation to product detail');
           return null;
@@ -315,21 +309,17 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
         final isGoingToRegister = currentLocation == '/register';
         final isGoingToRoot = currentLocation == '/';
 
-        // 3. PENTING: Izinkan akses ke halaman register
         if (isGoingToRegister) {
           debugPrint('✅ Allowing navigation to register');
           return null;
         }
 
-        // 4. Jika belum login dan mencoba mengakses rute yang dilindungi (kecuali login dan root)
         if (!isLoggedIn && !isGoingToLogin && !isGoingToRoot) {
           debugPrint('⚠️ Not logged in, redirecting to login');
           return '/login';
         }
 
-        // 5. Jika sudah login dan mencoba mengakses root path '/' atau login/register
         if (isLoggedIn && (isGoingToRoot || isGoingToLogin || isGoingToRegister)) {
-          // Hanya saat berada di root atau mencoba ke login/register, kita periksa peran dan arahkan
           final role = await _getUserRole(user.uid);
 
           if (role == 'admin') {
@@ -341,7 +331,6 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
           }
         }
 
-        // 6. Izinkan navigasi lainnya
         return null;
       },
 
@@ -364,7 +353,6 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
         GoRoute(
           path: '/user-home',
           builder: (context, state) {
-            // Logika deep link di sini hanya sebagai fallback, logika utama sudah ada di redirect global
             if (_pendingDeepLinkLocation != null) {
               final location = _pendingDeepLinkLocation;
               _pendingDeepLinkLocation = null;
@@ -372,7 +360,6 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
                 context.go(location!);
               });
             }
-            // Tambahkan provider loadFavorites di sini jika Anda ingin memuatnya segera setelah login
             Future.microtask(() {
               if (FirebaseAuth.instance.currentUser != null) {
                 Provider.of<FavoriteProvider>(context, listen: false).loadFavorites();
@@ -526,7 +513,6 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
           routerConfig: _router,
           debugShowCheckedModeBanner: false,
           title: 'Primez Sports',
-          // Tambahkan ini untuk mengatasi error hot reload
           builder: (context, child) {
             return child ?? const SizedBox.shrink();
           },
@@ -589,24 +575,19 @@ class _AuthDecisionWrapperState extends State<_AuthDecisionWrapper> {
   }
 
   Future<void> _navigateToNextRoute() async {
-    // Penundaan untuk efek splash (3 detik seperti sebelumnya)
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
-      // Mengarahkan ke root path '/' lagi (meskipun sudah di sana)
-      // Ini memaksa GoRouter untuk mengeksekusi redirect-nya
-      // yang akan memeriksa status otentikasi dan peran.
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        context.go('/'); // Memicu redirect
+        context.go('/'); 
       } else {
-        context.go('/login'); // Langsung ke login jika belum login
+        context.go('/login'); 
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Menampilkan SplashScreen
     return const SplashScreen();
   }
 }
