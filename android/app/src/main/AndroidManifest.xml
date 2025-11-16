@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.my_app">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ✅ HAPUS package="com.example.my_app" - sudah di build.gradle -->
+    <!-- ✅ TIDAK ADA <uses-sdk> - dihandle oleh build.gradle.kts -->
 
     <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <application
         android:label="Primez Sports"
@@ -35,20 +40,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- Deep Link VERSI 1: dengan host -->
-            <!-- Format: primezsports://products/PRODUCT_ID -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="primezsports"
-                    android:host="products"
-                    android:pathPattern="/.*" />
-            </intent-filter>
-
-            <!-- Deep Link VERSI 2: tanpa host (lebih fleksibel) -->
-            <!-- Format: primezsports:///products/PRODUCT_ID -->
+            <!-- ✅ Deep Link - Custom Scheme (primezsports://) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -56,71 +48,21 @@
                 <data android:scheme="primezsports" />
             </intent-filter>
 
-            <!-- App Link dengan HTTPS Domain -->
-            <!-- Format: https://primez-sports.com/products/PRODUCT_ID -->
+            <!-- ✅ App Links - Firebase Dynamic Links -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="primez-sports.com"
-                    android:pathPrefix="/products" />
-            </intent-filter>
-
-            <!-- App Links untuk Firebase Dynamic Links dan Custom Scheme -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                
-                <!-- Custom scheme -->
-                <data android:scheme="primezsports" />
-                
-                <!-- Firebase Dynamic Links -->
                 <data
                     android:scheme="https"
                     android:host="primezsports.page.link" />
             </intent-filter>
 
-            <!-- Tambahan dari awal -->
+            <!-- ✅ App Links - Firebase Hosting -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="primez-sportz-2025.web.app" />
-            </intent-filter>
-
-            <!-- Tambahan intent filter untuk Deep Links -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                
-                <!-- Custom scheme -->
-                <data 
-                    android:scheme="primezsports"
-                    android:host="product" />
-                
-                <!-- Firebase Dynamic Links domain -->
-                <data 
-                    android:scheme="https"
-                    android:host="primezsports.page.link" />
-                
-                <!-- Jika punya custom domain -->
-                <data 
-                    android:scheme="https"
-                    android:host="primez-sports.com" />
-            </intent-filter>
-
-            <!-- App Links untuk Firebase Hosting (BARU DITAMBAHKAN) -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                
                 <data
                     android:scheme="https"
                     android:host="primez-sportz-2025.web.app" />
@@ -129,18 +71,15 @@
                     android:host="primez-sportz-2025.firebaseapp.com" />
             </intent-filter>
 
-            <!-- KODE TAMBAHAN YANG DIGABUNGKAN -->
-            <!-- Deep Link Configuration (Comprehensive) -->
+            <!-- ✅ App Links - Custom Domain (jika ada) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                
-                <!-- Custom Scheme -->
-                <data android:scheme="primezsports" />
-                
-                <!-- HTTPS Deep Link -->
-                <data 
+                <data
+                    android:scheme="https"
+                    android:host="primez-sports.com" />
+                <data
                     android:scheme="https"
                     android:host="primezsports.com" />
             </intent-filter>
@@ -163,7 +102,7 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Firebase Cloud Messaging - Notification Icon & Color -->
+        <!-- Firebase Cloud Messaging -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_notification" />
@@ -176,7 +115,7 @@
 
     </application>
 
-    <!-- Queries (untuk deep linking / text processing) -->
+    <!-- Queries (untuk deep linking & browsing) -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
