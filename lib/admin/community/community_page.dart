@@ -30,6 +30,9 @@ class _AdminCommunityPageState extends State<AdminCommunityPage> {
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
+        iconTheme: IconThemeData(
+          color: Colors.white,
+        ),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

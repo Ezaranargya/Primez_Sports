@@ -10,10 +10,7 @@ class RegisterPage extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // ✅ Background dengan gambar
           const RegisterBackground(),
-          
-          // ✅ Form di atas background
           SafeArea(
             child: const RegisterForm(),
           ),

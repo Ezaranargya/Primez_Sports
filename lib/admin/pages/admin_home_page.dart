@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:my_app/auth/login/login_page.dart'; // ✅ PERBAIKAN: screens → auth
+import 'package:my_app/auth/login/login_page.dart'; 
 import 'package:my_app/admin/product/product_page.dart';
 import 'package:my_app/admin/community/community_page.dart';
 import 'package:my_app/admin/news/news_page.dart';
@@ -43,18 +43,11 @@ class AdminHomePage extends StatelessWidget {
           appBar: AppBar(
             backgroundColor: AppColors.primary,
             title: const Text(
-              'Admin Dashboard',
+              'Admin',
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             centerTitle: true,
             elevation: 0,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white),
-                onPressed: () => _logout(context),
-                tooltip: 'Logout',
-              ),
-            ],
           ),
           body: SingleChildScrollView(
             padding: EdgeInsets.all(16.w),
@@ -66,22 +59,6 @@ class AdminHomePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Halo, Selamat datang!',
-                        style: TextStyle(
-                          fontSize: 22.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        'Anda masuk sebagai: $userEmail',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Colors.grey[600],
-                        ),
-                      ),
                     ],
                   ),
                 ),

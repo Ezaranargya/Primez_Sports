@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/theme/app_colors.dart';
 
 class LoginBackground extends StatelessWidget {
   const LoginBackground({super.key});
@@ -8,7 +9,7 @@ class LoginBackground extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: const Color(0xFFFAFAFA), // ✅ Warna putih keabu-abuan
+      color: AppColors.primary,
     );
   }
 }

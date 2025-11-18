@@ -46,7 +46,7 @@ android {
         applicationId = "com.example.my_app"
         
         // ✅ FIXED: minSdk 23 untuk Firebase Auth 23.2.1+
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         
         targetSdk = 36
         versionCode = flutterVersionCode.toInt()
@@ -87,13 +87,15 @@ flutter {
 // DEPENDENCIES
 // =======================================
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-auth")
     implementation("androidx.multidex:multidex:2.0.1")
 }
+
 
 // =======================================
 // CUSTOM APK OUTPUT LOCATION

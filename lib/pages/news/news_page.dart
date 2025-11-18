@@ -252,7 +252,6 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
     );
   }
 
-  // ✅ NEW: Trending Section dengan card seperti product
   Widget _buildTrendingSection(String title, List<News> newsList) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -286,7 +285,6 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
     );
   }
 
-  // ✅ NEW: Trending Card (mirip product card)
   Widget _buildTrendingCard(News news) {
     return GestureDetector(
       onTap: () => _navigateToDetail(news),
@@ -306,7 +304,6 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
             ClipRRect(
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(12.r),
@@ -320,7 +317,6 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
               ),
             ),
             
-            // Content
             Expanded(
               child: Padding(
                 padding: EdgeInsets.all(12.w),
@@ -328,7 +324,6 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Date (acts as price in product card)
                     Text(
                       DateFormat('dd MMM yyyy').format(news.date),
                       style: TextStyle(
@@ -340,8 +335,6 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
                     ),
                     
                     SizedBox(height: 4.h),
-                    
-                    // Title
                     Text(
                       news.title,
                       style: TextStyle(
@@ -364,7 +357,6 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
     );
   }
 
-  // ✅ Latest Section dengan carousel (tetap seperti sebelumnya)
   Widget _buildLatestSection(String title, List<News> newsList) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

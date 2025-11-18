@@ -7,38 +7,81 @@ class CommunityService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  /// Menghitung jumlah BRAND yang belum dibaca (bukan total posts)
+  /// Ini untuk badge di bottom navigation bar
   Stream<int> getUnreadPostsCount() {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return Stream.value(0);
+    final user = _auth.currentUser;
+    if (user == null) {
+      debugPrint('⚠️ No user logged in for unread posts count');
+      return Stream.value(0);
+    }
 
+    final userId = user.uid;
+    debugPrint('📡 Setting up unread posts count stream for userId: $userId');
+
+    // ✅ FIX: Combine both streams - posts and readCommunityBrands
     return _firestore
         .collection('users')
         .doc(userId)
+        .collection('readCommunityBrands')
         .snapshots()
-        .asyncMap((userDoc) async {
-      final lastVisit = userDoc.data()?['lastCommunityVisit'] as Timestamp?;
-      
-      if (lastVisit == null) {
-        final postsSnapshot = await _firestore.collection('posts').get();
-        return postsSnapshot.docs.length;
+        .asyncMap((readBrandsSnapshot) async {
+      try {
+        // Ambil daftar brand yang sudah dibaca
+        final readBrands = readBrandsSnapshot.docs.map((doc) => doc.id).toSet();
+        debugPrint('📚 User has read brands: $readBrands');
+        
+        // Ambil semua posts untuk tahu brand mana yang ada postingan
+        final postsSnapshot = await _firestore
+            .collection('posts')
+            .get();
+        
+        // Group posts by brand
+        final Set<String> brandsWithPosts = {};
+        for (var doc in postsSnapshot.docs) {
+          try {
+            final data = doc.data();
+            final brand = data['brand'] as String?;
+            
+            if (brand != null && brand.isNotEmpty) {
+              brandsWithPosts.add(brand);
+            }
+          } catch (e) {
+            debugPrint('❌ Error processing post ${doc.id}: $e');
+            continue;
+          }
+        }
+        
+        debugPrint('📊 Brands with posts: $brandsWithPosts');
+        
+        // Hitung brand yang belum dibaca DAN punya posts
+        int unreadBrandCount = 0;
+        for (var brand in brandsWithPosts) {
+          if (!readBrands.contains(brand)) {
+            unreadBrandCount++;
+            debugPrint('🔔 Unread brand found: $brand');
+          }
+        }
+        
+        debugPrint('📢 Final Community Unread Brand Count: $unreadBrandCount');
+        return unreadBrandCount;
+        
+      } catch (e) {
+        debugPrint('❌ Error in unread posts count calculation: $e');
+        return 0;
       }
-
-      final newPostsSnapshot = await _firestore
-          .collection('posts')
-          .where('createdAt', isGreaterThan: lastVisit)
-          .get();
-
-      return newPostsSnapshot.docs.length;
     });
   }
 
   Future<void> markCommunityAsVisited() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = _auth.currentUser?.uid;
     if (userId == null) return;
 
     await _firestore.collection('users').doc(userId).set({
       'lastCommunityVisit': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+    
+    debugPrint('✅ Community marked as visited');
   }
 
   Stream<List<CommunityPost>> getAllPosts() {
@@ -81,6 +124,7 @@ class CommunityService {
     debugPrint('✅ Post deleted: $postId');
   }
 
+  /// Mark brand as read - PENTING: gunakan subcollection 'readCommunityBrands'
   Future<void> markBrandPostsAsRead(String brand) async {
     try {
       final user = _auth.currentUser;
@@ -91,10 +135,11 @@ class CommunityService {
 
       debugPrint('📝 Marking $brand as read...');
 
+      // PENTING: Gunakan 'readCommunityBrands' bukan 'read_brands'
       await _firestore
           .collection('users')
           .doc(user.uid)
-          .collection('read_brands')
+          .collection('readCommunityBrands')
           .doc(brand)
           .set({
         'brand': brand,
@@ -107,6 +152,7 @@ class CommunityService {
     }
   }
 
+  /// Check if brand is read - PENTING: gunakan subcollection 'readCommunityBrands'
   Stream<bool> isBrandRead(String brand) {
     final user = _auth.currentUser;
     if (user == null) {
@@ -116,10 +162,11 @@ class CommunityService {
 
     debugPrint('👀 Checking read status for $brand');
 
+    // PENTING: Gunakan 'readCommunityBrands' bukan 'read_brands'
     return _firestore
         .collection('users')
         .doc(user.uid)
-        .collection('read_brands')
+        .collection('readCommunityBrands')
         .doc(brand)
         .snapshots()
         .asyncMap((readDoc) async {
@@ -187,7 +234,7 @@ class CommunityService {
     return _firestore
         .collection('users')
         .doc(user.uid)
-        .collection('read_brands')
+        .collection('readCommunityBrands')
         .doc(brand)
         .snapshots()
         .asyncMap((readDoc) async {
@@ -241,7 +288,7 @@ class CommunityService {
         final readDoc = await _firestore
             .collection('users')
             .doc(user.uid)
-            .collection('read_brands')
+            .collection('readCommunityBrands')
             .doc(brand)
             .get();
 

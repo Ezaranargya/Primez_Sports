@@ -90,6 +90,9 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
+        iconTheme: IconThemeData(
+          color: Colors.white,
+        ),
         title: const Text(
           'Admin News',
           style: TextStyle(

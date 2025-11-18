@@ -39,7 +39,6 @@ class _LoginFormState extends State<LoginForm> {
         final data = userDoc.data() as Map<String, dynamic>;
         return data['role'] ?? 'user';
       } else {
-        // Logika pembuatan role default jika dokumen user tidak ada
         final defaultRole = email.contains('admin') ? 'admin' : 'user';
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'email': email,
@@ -49,7 +48,6 @@ class _LoginFormState extends State<LoginForm> {
         return defaultRole;
       }
     } catch (_) {
-      // Fallback jika ada error Firestore
       return email.contains('admin') ? 'admin' : 'user';
     }
   }
@@ -83,18 +81,15 @@ class _LoginFormState extends State<LoginForm> {
         return;
       }
 
-      // Matikan loading state dulu
       setState(() => _isLoading = false);
 
       print("🚀 Menjadwalkan navigasi untuk role: $role");
 
-      // ✅ GUNAKAN GoRouter untuk navigasi setelah login
       Future.microtask(() {
         if (!mounted) return;
 
         print("📍 Navigasi ke ${role.toLowerCase().trim() == 'admin' ? 'Admin' : 'User'}HomePage...");
 
-        // Gunakan GoRouter, bukan Navigator
         if (role.toLowerCase().trim() == 'admin') {
           context.go('/admin-home');
         } else {
@@ -137,123 +132,207 @@ class _LoginFormState extends State<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Center(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Container(
-          width: 300.w,
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: Colors.black, width: 1.w),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 6.r,
-                offset: Offset(0, 3.h),
-              ),
-            ],
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height - 
+                       MediaQuery.of(context).viewInsets.bottom,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Login",
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 28.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
-              SizedBox(height: 14.h),
-
-              TextField(
-                controller: _emailController,
-                style: const TextStyle(color: Colors.black),
-                decoration: InputDecoration(
-                  hintText: "Email",
-                  hintStyle: TextStyle(fontSize: 14.sp),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.r),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 80.w,
+                  height: 80.h,
+                  margin: EdgeInsets.only(bottom: 30.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8.r,
+                        offset: Offset(0, 4.h),
+                      ),
+                    ],
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.r),
-                    borderSide: BorderSide(color: AppColors.primary),
-                  ), 
-                ),
-              ),
-              SizedBox(height: 10.h),
-
-              TextField(
-                controller: _passwordController,
-                style: const TextStyle(color: Colors.black),
-                obscureText: _obscurePassword,
-                decoration: InputDecoration(
-                  hintText: "Password",
-                  hintStyle: TextStyle(fontSize: 14.sp),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.r),
-                    borderSide: BorderSide(color: AppColors.primary),
-                  ), 
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.grey,
-                      size: 18.sp,
-                    ),
-                    onPressed: () {
-                      setState(() => _obscurePassword = !_obscurePassword);
-                    },
-                  ),
-                ),
-              ),
-              SizedBox(height: 8.h),
-
-              LoginButton(
-                isLoading: _isLoading,
-                onPressed: _login,
-              ),
-
-              SizedBox(height: 10.h),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "Belum punya akun? ",
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      color: Colors.grey,
-                      fontFamily: 'Poppins',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12.r),
+                    child: Image.asset(
+                      'assets/Primez_Sports.jpg', 
+                      fit: BoxFit.cover,
                     ),
                   ),
+                ),
+                
+                Container(
+                  width: 300.w,
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 6.r,
+                        offset: Offset(0, 3.h),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "Login",
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 24.sp,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      SizedBox(height: 14.h),
 
-                  GestureDetector(
-                    onTap: () {
-                      print("👉 DAFTAR DIKLIK");
-                      // ✅ GUNAKAN context.go() atau context.push() BUKAN Navigator.push()
-                      context.push('/register'); // atau context.go('/register')
-                    },
-                    child: Text(
-                      "Daftar",
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 13.sp,
+                  TextField(
+                    controller: _emailController,
+                    style: const TextStyle(color: Colors.black),
+                    decoration: InputDecoration(
+                      hintText: "Email",
+                      hintStyle: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.black,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.email_outlined,
                         color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
+                        size: 20.sp,
+                      ),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: const BorderSide(color: Colors.black, width: 1),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: const BorderSide(color: Colors.black, width: 1),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                      ), 
+                    ),
+                  ),
+                  SizedBox(height: 10.h),
+
+                  TextField(
+                    controller: _passwordController,
+                    style: const TextStyle(color: Colors.black),
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      hintText: "password",
+                      hintStyle: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.black,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.lock_outline,
+                        color: AppColors.primary,
+                        size: 20.sp,
+                      ),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: const BorderSide(color: Colors.black, width: 1),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                      ), 
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.grey[400],
+                          size: 20.sp,
+                        ),
+                        onPressed: () {
+                          setState(() => _obscurePassword = !_obscurePassword);
+                        },
                       ),
                     ),
                   ),
-                ],
-              )
-            ],
+                  SizedBox(height: 8.h),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: () {
+                        print("🔑 Lupa Password diklik");
+                        context.push('/reset-password');
+                      },
+                      child: Text(
+                        "Lupa Password?",
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+
+                  LoginButton(
+                    isLoading: _isLoading,
+                    onPressed: _login,
+                  ),
+
+                  SizedBox(height: 10.h),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Belum punya akun? ",
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: Colors.grey,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+
+                      GestureDetector(
+                        onTap: () {
+                          print("👉 DAFTAR DIKLIK");
+                          context.push('/register'); 
+                        },
+                        child: Text(
+                          "Daftar",
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 13.sp,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

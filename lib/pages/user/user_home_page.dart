@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -36,10 +37,68 @@ class _UserHomePageState extends State<UserHomePage> {
     });
   }
 
-  // ✅ PERBAIKAN: Tanpa StreamZip, gunakan manual combination
+  Stream<int> _getUnreadCommunityCountStream() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (userId == null) {
+      print('⚠️ No user logged in for community count');
+      return Stream.value(0);
+    }
+
+    print('📡 Setting up community count stream for userId: $userId');
+
+    return FirebaseFirestore.instance
+        .collection('community_posts')
+        .snapshots()
+        .asyncMap((postsSnapshot) async {
+      try {
+        final readBrandsSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('readCommunityBrands')
+            .get();
+
+        final readBrands = readBrandsSnapshot.docs.map((doc) => doc.id).toSet();
+
+        print('📚 User has read brands: $readBrands');
+
+        final Map<String, int> brandPostCounts = {};
+        for (var doc in postsSnapshot.docs) {
+          try {
+            final data = doc.data() as Map<String, dynamic>;
+            final brand = data['brand'] as String?;
+
+            if (brand != null && brand.isNotEmpty) {
+              brandPostCounts[brand] = (brandPostCounts[brand] ?? 0) + 1;
+            }
+          } catch (e) {
+            print('❌ Error processing post ${doc.id}: $e');
+            continue;
+          }
+        }
+
+        print('📊 Brand post counts: $brandPostCounts');
+
+        int unreadCount = 0;
+        for (var brand in brandPostCounts.keys) {
+          if (!readBrands.contains(brand)) {
+            unreadCount++;
+            print('🔔 Unread brand: $brand (${brandPostCounts[brand]} posts)');
+          }
+        }
+
+        print('📢 Final Community Unread Count: $unreadCount');
+        return unreadCount;
+      } catch (e) {
+        print('❌ Error in community unread count calculation: $e');
+        return 0;
+      }
+    });
+  }
+
   Stream<int> _getUnreadNewsCountStream() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    
+
     if (userId == null) {
       print('⚠️ No user logged in for news count');
       return Stream.value(0);
@@ -47,32 +106,31 @@ class _UserHomePageState extends State<UserHomePage> {
 
     print('📡 Setting up news count stream for userId: $userId');
 
-    // ✅ Listen to news collection changes
     return FirebaseFirestore.instance
         .collection('news')
         .snapshots()
         .asyncMap((newsSnapshot) async {
       try {
-        // ✅ Get user's read news collection
         final userReadNewsSnapshot = await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
             .collection('readNews')
             .get();
-        
-        final userReadNewsIds = userReadNewsSnapshot.docs.map((doc) => doc.id).toSet();
-        
+
+        final userReadNewsIds =
+            userReadNewsSnapshot.docs.map((doc) => doc.id).toSet();
+
         int unreadCount = 0;
-        
+
         print('📊 Processing ${newsSnapshot.docs.length} news documents');
-        print('📚 User has read ${userReadNewsIds.length} news (from user collection)');
-        
+        print(
+            '📚 User has read ${userReadNewsIds.length} news (from user collection)');
+
         for (var doc in newsSnapshot.docs) {
           try {
             final newsId = doc.id;
             final data = doc.data() as Map<String, dynamic>;
-            
-            // Method 1: Check news.readBy array
+
             List<String> readByList = [];
             if (data.containsKey('readBy') && data['readBy'] != null) {
               final readByField = data['readBy'];
@@ -84,28 +142,26 @@ class _UserHomePageState extends State<UserHomePage> {
                 }
               }
             }
-            
+
             final isReadFromNewsDoc = readByList.contains(userId);
             final isReadFromUserDoc = userReadNewsIds.contains(newsId);
-            
-            // If read by EITHER method, consider as read
+
             final isRead = isReadFromNewsDoc || isReadFromUserDoc;
-            
+
             if (!isRead) {
               unreadCount++;
             }
-            
-            print('📰 $newsId: newsDoc=$isReadFromNewsDoc, userDoc=$isReadFromUserDoc, isRead=$isRead');
-            
+
+            print(
+                '📰 $newsId: newsDoc=$isReadFromNewsDoc, userDoc=$isReadFromUserDoc, isRead=$isRead');
           } catch (e) {
             print('❌ Error processing news ${doc.id}: $e');
             continue;
           }
         }
-        
-        print('🔢 Final Unread Count: $unreadCount');
+
+        print('📢 Final Unread Count: $unreadCount');
         return unreadCount;
-        
       } catch (e) {
         print('❌ Error in unread count calculation: $e');
         return 0;
@@ -125,7 +181,7 @@ class _UserHomePageState extends State<UserHomePage> {
 
   void onItemTapped(int index) {
     setState(() => selectedIndex = index);
-    
+
     if (index == 2) {
       _communityService.markCommunityAsVisited();
     }
@@ -213,22 +269,35 @@ class _UserHomePageState extends State<UserHomePage> {
         },
       ),
       bottomNavigationBar: StreamBuilder<int>(
-        stream: _communityService.getUnreadPostsCount(),
+        stream: _communityService.getUnreadPostsCount(),  
         builder: (context, communitySnapshot) {
-          final communityUnreadCount = communitySnapshot.data ?? 0;
+          int communityUnreadCount = 0;
+
+          if (communitySnapshot.hasData) {
+            communityUnreadCount = communitySnapshot.data!;
+            print('🔔 Community Badge Update - Unread: $communityUnreadCount');
+          } else if (communitySnapshot.hasError) {
+            print('❌ Community Stream Error: ${communitySnapshot.error}');
+            communityUnreadCount = 0;
+          } else if (communitySnapshot.connectionState ==
+              ConnectionState.waiting) {
+            print('⏳ Community stream waiting...');
+            communityUnreadCount = 0;
+          }
 
           return StreamBuilder<int>(
             stream: _getUnreadNewsCountStream(),
             builder: (context, newsSnapshot) {
               int newsUnreadCount = 0;
-              
+
               if (newsSnapshot.hasData) {
                 newsUnreadCount = newsSnapshot.data!;
                 print('🔔 Badge Update - News Unread: $newsUnreadCount');
               } else if (newsSnapshot.hasError) {
                 print('❌ News Stream Error: ${newsSnapshot.error}');
                 newsUnreadCount = 0;
-              } else if (newsSnapshot.connectionState == ConnectionState.waiting) {
+              } else if (newsSnapshot.connectionState ==
+                  ConnectionState.waiting) {
                 print('⏳ News stream waiting...');
                 newsUnreadCount = 0;
               }
@@ -351,13 +420,13 @@ class _UserProductListPageState extends State<UserProductListPage> {
                 .snapshots(),
             builder: (context, snapshot) {
               final unreadCount = snapshot.data?.docs.length ?? 0;
-              
+
               return Stack(
                 children: [
                   IconButton(
                     icon: const Icon(Icons.notifications),
                     onPressed: () {
-                      Navigator.pushNamed(context, '/notifications');
+                      context.go('/notifications');
                     },
                   ),
                   if (unreadCount > 0)
@@ -419,7 +488,8 @@ class _UserProductListPageState extends State<UserProductListPage> {
                       category == 'all' ? 'Semua' : category,
                       style: TextStyle(
                         color: isSelected ? Colors.white : Colors.black87,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
                         fontSize: 13.sp,
                       ),
                     ),
@@ -430,7 +500,8 @@ class _UserProductListPageState extends State<UserProductListPage> {
                     selectedColor: Theme.of(context).primaryColor,
                     backgroundColor: Colors.grey[200],
                     elevation: isSelected ? 2 : 0,
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                   ),
                 );
               },
@@ -560,7 +631,8 @@ class _UserProductListPageState extends State<UserProductListPage> {
                                       child: Center(
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          value: progress.expectedTotalBytes != null
+                                          value: progress.expectedTotalBytes !=
+                                                  null
                                               ? progress.cumulativeBytesLoaded /
                                                   progress.expectedTotalBytes!
                                               : null,
@@ -585,7 +657,6 @@ class _UserProductListPageState extends State<UserProductListPage> {
                                 ),
                         ),
                         SizedBox(width: 12.w),
-
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -621,7 +692,6 @@ class _UserProductListPageState extends State<UserProductListPage> {
                             ],
                           ),
                         ),
-
                         Icon(
                           Icons.chevron_right,
                           color: Colors.grey[400],

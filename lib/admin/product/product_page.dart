@@ -25,6 +25,9 @@ class _AdminProductPageState extends State<AdminProductPage> {
         return Scaffold(
           appBar: AppBar(
             backgroundColor: AppColors.primary,
+            iconTheme: IconThemeData(
+              color: Colors.white,
+            ),
             title: Text(
               'Kelola Produk',
               style: TextStyle(
@@ -169,7 +172,7 @@ class _AdminProductPageState extends State<AdminProductPage> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                                                        IconButton(
+                              IconButton(
                               icon: Icon(Icons.edit, size: 20.sp),
                               onPressed: () async {
                                 final result = await Navigator.push(

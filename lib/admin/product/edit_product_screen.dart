@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/utils/image_helper.dart';
 import 'package:my_app/services/product_service.dart';
 import 'package:my_app/pages/product/widgets/product_image.dart';
+import 'package:my_app/services/notification_service.dart'; 
 
 class EditProductScreen extends StatefulWidget {
   final String? productId;
@@ -213,7 +214,21 @@ class _EditProductScreenState extends State<EditProductScreen> {
         ),
       );
 
-      if (success) Navigator.pop(context, true);
+      if (success) {
+
+        await NotificationService().sendNotificationToAllUsers(
+          title: "Produk Diperbarui",
+          message: "Harga produk ${_namaController.text.trim()} telah diperbarui!",
+          imageUrl: _imageBase64 ?? "",
+          brand: _brandController.text.trim(),
+          categories: [
+            _selectedKategori ?? "",
+            _selectedSubKategori ?? ""
+          ],
+        );
+
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -286,8 +301,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                       _brandController, 'Brand', Icons.branding_watermark),
                   const SizedBox(height: 16),
                   _buildTextField(_deskripsiController, 'Deskripsi Produk',
-                      Icons.description,
-                      ),
+                      Icons.description),
                   const SizedBox(height: 16),
                   _buildTextField(_hargaController, 'Harga *',
                       Icons.attach_money, TextInputType.number),

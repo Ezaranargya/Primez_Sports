@@ -67,7 +67,6 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     try {
       print('📖 Attempting to mark news as read: ${widget.news.id}');
       
-      // ✅ Try Method 1: Update news.readBy array (requires Firestore rules)
       try {
         await FirebaseFirestore.instance
             .collection('news')
@@ -83,7 +82,6 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
         print('⚠️ Method 1 Failed: $e');
         print('🔄 Trying Method 2: User readNews collection...');
         
-        // ✅ Fallback Method 2: Save to user's readNews subcollection
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)

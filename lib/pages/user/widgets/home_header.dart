@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/pages/product/category_products_page.dart';
 import 'package:my_app/models/product_model.dart';
+import 'package:go_router/go_router.dart'; 
 
 class HomeHeader extends StatelessWidget {
   final String userName;
@@ -114,7 +115,7 @@ class HomeHeader extends StatelessWidget {
                               color: Colors.black87,
                               iconSize: 22,
                               onPressed: () {
-                                Navigator.pushNamed(context, '/notifications');
+                                context.push('/notifications');
                               },
                             ),
                           ),

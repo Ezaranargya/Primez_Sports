@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/auth/login/login_page.dart';
+import 'package:go_router/go_router.dart';
+
 
 class AdminProfilePage extends StatefulWidget {
   const AdminProfilePage({super.key});
@@ -62,84 +64,77 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
   }
 
   Future<void> _logout() async {
-    if (_isLoggingOut) return;
-    if (!mounted) return;
+  if (_isLoggingOut || !mounted) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => WillPopScope(
-        onWillPop: () async => false,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.logout, color: Colors.red),
-              SizedBox(width: 10),
-              Text("Logout"),
-            ],
-          ),
-          content: const Text("Apakah Anda yakin ingin keluar?"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (Navigator.of(dialogContext).canPop()) {
-                  Navigator.of(dialogContext).pop(false);
-                }
-              },
-              child: const Text("Batal"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (Navigator.of(dialogContext).canPop()) {
-                  Navigator.of(dialogContext).pop(true);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: const Text("Ya, Keluar", style: TextStyle(color: Colors.white)),
-            ),
+  final confirmed = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => WillPopScope(
+      onWillPop: () async => false,
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.logout, color: Colors.red),
+            const SizedBox(width: 10),
+            const Text("Logout"),
           ],
         ),
+        content: const Text("Apakah Anda yakin ingin keluar?"),
+        actions: [
+          TextButton(
+            style: ElevatedButton.styleFrom(
+              foregroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text("Batal"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text("Ya, Keluar"),
+          ),
+        ],
       ),
-    );
+    ),
+  );
 
-    if (confirmed != true) return;
+  if (confirmed != true || !mounted) return;
+  setState(() => _isLoggingOut = true);
+
+  try {
+    await FirebaseAuth.instance.signOut();
+
     if (!mounted) return;
-    if (_isLoggingOut) return;
 
-    setState(() => _isLoggingOut = true);
+    Future.delayed(Duration(milliseconds: 150), () {
+  if (mounted) context.go('/login');
+});
 
-    try {
-      // Sign out dari Firebase
-      await FirebaseAuth.instance.signOut();
-      
-      if (!mounted) return;
-      
-      // Langsung redirect ke login page
-      Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const LoginPage(),
-        ),
-        (route) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      
-      setState(() => _isLoggingOut = false);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saat logout: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
+
+
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() => _isLoggingOut = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error saat logout: ${e.toString()}")),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {

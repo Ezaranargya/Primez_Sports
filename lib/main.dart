@@ -16,6 +16,7 @@ import 'package:my_app/providers/favorite_provider.dart';
 import 'package:my_app/screen/test_launcher_page.dart';
 import 'package:my_app/auth/register/register_page.dart';
 import 'package:my_app/auth/login/login_page.dart';
+import 'package:my_app/auth/reset_password/reset_password_page.dart';
 import 'package:my_app/screens/splash/splash_screen.dart';
 import 'package:my_app/pages/user/user_home_page.dart';
 import 'package:my_app/pages/favorite/favorite_page.dart';
@@ -307,10 +308,11 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
 
         final isGoingToLogin = currentLocation == '/login';
         final isGoingToRegister = currentLocation == '/register';
+        final isGoingToResetPassword = currentLocation == '/reset-password';
         final isGoingToRoot = currentLocation == '/';
 
-        if (isGoingToRegister) {
-          debugPrint('✅ Allowing navigation to register');
+        if (isGoingToRegister || isGoingToResetPassword) {
+          debugPrint('✅ Allowing navigation to register/reset-password');
           return null;
         }
 
@@ -348,6 +350,11 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
         GoRoute(
           path: '/register',
           builder: (context, state) => const RegisterPage(),
+        ),
+
+        GoRoute(
+          path: '/reset-password',
+          builder: (context, state) => const ResetPasswordPage(),
         ),
 
         GoRoute(
@@ -400,6 +407,7 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
 
         GoRoute(
           path: '/notifications',
+          name: 'notifications',
           builder: (context, state) => const NotificationPage(),
         ),
 

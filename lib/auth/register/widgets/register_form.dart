@@ -78,6 +78,10 @@ class _RegisterFormState extends State<RegisterForm> {
 
       await _saveUserData(user.uid, username, user.email!);
 
+      // ✅ LOGOUT USER SETELAH REGISTRASI
+      await FirebaseAuth.instance.signOut();
+      print("🔓 User berhasil logout setelah registrasi");
+
       if (!mounted) return;
       
       _showSnackBar("Pendaftaran berhasil! Silakan login.", success: true);
@@ -147,181 +151,217 @@ class _RegisterFormState extends State<RegisterForm> {
   Widget build(BuildContext context) {
     final primaryColor = AppColors.primary;
 
-    return Container(
-      width: double.infinity,
-      height: MediaQuery.of(context).size.height,
-      child: Center(
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Container(
-              width: 300.w,
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: Colors.black, width: 1.w),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 10.r,
-                    offset: Offset(0, 5.h),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Daftar",
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 24.sp,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
-                    ),
-                  ),
-                  SizedBox(height: 20.h),
-
-                  TextFormField(
-                    controller: _usernameController,
-                    validator: _usernameValidator,
-                    style: const TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      hintText: "Username",
-                      hintStyle: TextStyle(fontSize: 14.sp),
-                      prefixIcon: Icon(Icons.person_outline, color: primaryColor),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.r),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Container(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height - 
+                       MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 80.w,
+                  height: 80.h,
+                  margin: EdgeInsets.only(bottom: 30.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8.r,
+                        offset: Offset(0, 4.h),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                        borderSide: BorderSide(color: primaryColor),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
-
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: _emailValidator,
-                    style: const TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      hintText: "Email",
-                      hintStyle: TextStyle(fontSize: 14.sp),
-                      prefixIcon: Icon(Icons.email_outlined, color: primaryColor),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                        borderSide: BorderSide(color: primaryColor),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
-
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    validator: _passwordValidator,
-                    style: const TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      hintText: "Password",
-                      hintStyle: TextStyle(fontSize: 14.sp),
-                      prefixIcon: Icon(Icons.lock_outline, color: primaryColor),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                          color: Colors.grey,
-                          size: 18.sp,
-                        ),
-                        onPressed: () {
-                          setState(() => _obscurePassword = !_obscurePassword);
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                        borderSide: BorderSide(color: primaryColor),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20.h),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48.h,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _register,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE53E3E),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? SizedBox(
-                              width: 20.w,
-                              height: 20.w,
-                              child: const CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              'Daftar',
-                              style: TextStyle(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Sudah punya akun? ",
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          color: Colors.grey[700],
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          print("👉 TOMBOL LOGIN DIKLIK");
-                          context.go('/login');
-                        },
-                        child: Text(
-                          "Login",
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w600,
-                            color: primaryColor,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      )
                     ],
                   ),
-                ],
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12.r),
+                    child: Image.asset(
+                      'assets/Primez_Sports.jpg', 
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                
+                Form(
+                  key: _formKey,
+                  child: Container(
+                    width: 300.w,
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 6.r,
+                          offset: Offset(0, 3.h),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Daftar",
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                        SizedBox(height: 20.h),
+
+                    TextFormField(
+                      controller: _usernameController,
+                      validator: _usernameValidator,
+                      style: const TextStyle(color: Colors.black),
+                      decoration: InputDecoration(
+                        hintText: "Username",
+                        hintStyle: TextStyle(fontSize: 14.sp),
+                        prefixIcon: Icon(Icons.person_outline, color: primaryColor),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                          borderSide: BorderSide(color: primaryColor),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      validator: _emailValidator,
+                      style: const TextStyle(color: Colors.black),
+                      decoration: InputDecoration(
+                        hintText: "Email",
+                        hintStyle: TextStyle(fontSize: 14.sp),
+                        prefixIcon: Icon(Icons.email_outlined, color: primaryColor),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                          borderSide: BorderSide(color: primaryColor),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      validator: _passwordValidator,
+                      style: const TextStyle(color: Colors.black),
+                      decoration: InputDecoration(
+                        hintText: "Password",
+                        hintStyle: TextStyle(fontSize: 14.sp),
+                        prefixIcon: Icon(Icons.lock_outline, color: primaryColor),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.grey,
+                            size: 18.sp,
+                          ),
+                          onPressed: () {
+                            setState(() => _obscurePassword = !_obscurePassword);
+                          },
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                          borderSide: BorderSide(color: primaryColor),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20.h),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48.h,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _register,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE53E3E),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? SizedBox(
+                                width: 20.w,
+                                height: 20.w,
+                                child: const CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'Daftar',
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Sudah punya akun? ",
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: Colors.grey[700],
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            print("👉 TOMBOL LOGIN DIKLIK");
+                            context.go('/login');
+                          },
+                          child: Text(
+                            "Login",
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                              color: primaryColor,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
+            ],
           ),
         ),
       ),
+      )
     );
   }
 }

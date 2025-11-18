@@ -164,6 +164,11 @@ class ProductService {
   }) async {
     try {
       print('💾 ===== SAVE OR UPDATE PRODUCT =====');
+      print('📋 Product ID: $productId');
+      print('📋 Name: $name');
+      print('📋 Brand: $brand');
+      print('📋 Price: $price');
+      print('📋 Categories: $categories');
 
       final data = product != null
           ? product.toMap()
@@ -181,62 +186,74 @@ class ProductService {
       print('🧩 Data sebelum validasi: $data');
 
       final productData = {
-        'name': data['name'] ?? '',
-        'brand': data['brand'] ?? '',
-        'description': data['description'] ?? '',
+        'name': data['name']?.toString().trim() ?? '',
+        'brand': data['brand']?.toString().trim() ?? '',
+        'description': data['description']?.toString().trim() ?? '',
         'price': (data['price'] is num)
             ? (data['price'] as num).toDouble()
-            : double.tryParse(data['price']?.toString() ?? '0') ?? 0,
+            : double.tryParse(data['price']?.toString() ?? '0') ?? 0.0,
         'categories': data['categories'] ?? [],
         'purchaseOptions': data['purchaseOptions'] ?? [],
-        'imageBase64': data['imageBase64'] ?? '',
-        'bannerImage': data['bannerImage'] ?? '',
-        'userId': data['userId'] ?? '',
+        'imageBase64': data['imageBase64']?.toString() ?? '',
+        'bannerImage': data['bannerImage']?.toString() ?? '',
+        'userId': data['userId']?.toString() ?? FirebaseAuth.instance.currentUser?.uid ?? '',
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
+      print('📦 Product data after parse: $productData');
+
       final nameValid = (productData['name'] as String).isNotEmpty;
-      final hargaValid = (productData['price'] as num) > 0;
+      final priceValid = (productData['price'] as double) > 0;
       final categoriesValid = productData['categories'] is List &&
           (productData['categories'] as List).isNotEmpty;
 
-      if (!nameValid || !hargaValid || !categoriesValid) {
-        print('❌ Data produk tidak valid');
+      print('✅ Validation results:');
+      print('   - Name valid: $nameValid');
+      print('   - Price valid: $priceValid (${productData['price']})');
+      print('   - Categories valid: $categoriesValid (${productData['categories']})');
+
+      if (!nameValid) {
+        print('❌ Nama produk tidak valid atau kosong');
+        return false;
+      }
+
+      if (!priceValid) {
+        print('❌ Harga produk tidak valid atau <= 0');
+        return false;
+      }
+
+      if (!categoriesValid) {
+        print('❌ Kategori produk tidak valid atau kosong');
         return false;
       }
 
       productData.remove('id');
 
-      final existing = await _productRef
-          .where('name', isEqualTo: productData['name'])
-          .where('brand', isEqualTo: productData['brand'])
-          .get();
+      if (productId == null || productId.isEmpty) {
+        print('🔍 Checking for duplicate products...');
+        
+        final existing = await _productRef
+            .where('name', isEqualTo: productData['name'])
+            .where('brand', isEqualTo: productData['brand'])
+            .get();
 
-      final alreadyExists = existing.docs.isNotEmpty;
-
-      if (alreadyExists && (productId == null || productId.isEmpty)) {
-        print('❌ Produk duplikat ditemukan: ${productData['name']}');
-        return false;
-      }
-
-      if (alreadyExists &&
-          productId != null &&
-          productId.isNotEmpty &&
-          existing.docs.first.id != productId) {
-        print('❌ Produk lain dengan nama & brand sama sudah ada');
-        return false;
+        if (existing.docs.isNotEmpty) {
+          print('❌ Produk duplikat ditemukan: ${productData['name']}');
+          return false;
+        }
       }
 
       if (productId == null || productId.isEmpty) {
         print('➕ Menambahkan produk baru...');
         productData['createdAt'] = FieldValue.serverTimestamp();
-        await _productRef.add(productData);
+        final docRef = await _productRef.add(productData);
+        print('✅ Produk baru berhasil ditambahkan dengan ID: ${docRef.id}');
       } else {
         print('🔄 Update produk dengan ID: $productId');
         await _productRef.doc(productId).set(productData, SetOptions(merge: true));
+        print('✅ Produk berhasil diupdate');
       }
 
-      print('✅ Produk berhasil disimpan ke Firestore');
       return true;
     } catch (e, stack) {
       print('❌ Gagal saveOrUpdateProduct: $e');

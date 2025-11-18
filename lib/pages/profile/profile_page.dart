@@ -109,14 +109,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   void _handleEditProfile() async {
-    // Menggunakan Navigator.push karena EditProfilePage mungkin bukan bagian dari GoRouter root
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const EditProfilePage()),
     );
 
     if (result == true && mounted) {
-      // Memanggil setState agar StreamBuilder di atas me-refresh data user
       setState(() {}); 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -128,7 +126,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   void _handleFaqTap() {
-    // Menggunakan Navigator.push karena FaqPage mungkin bukan bagian dari GoRouter root
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const FaqPage()),
@@ -213,7 +210,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   StreamBuilder<DocumentSnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('users')
-                        .doc(user.uid) // Pastikan user tidak null di sini
+                        .doc(user.uid)
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -267,7 +264,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  // ===== Widget Helper ===== //
 
   Widget _loadingCard() {
     return Container(
@@ -278,7 +274,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
   
-  // Tambahkan error card untuk debugging
   Widget _errorCard(String message) {
      return Container(
       margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
@@ -377,7 +372,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
       onTap: isLoading
           ? null
           : () {
-              // Verifikasi ganda sebelum menjalankan onTap
               if (mounted && !_isLoggingOut) {
                 onTap();
               }
