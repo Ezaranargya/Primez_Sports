@@ -15,6 +15,8 @@ import 'package:my_app/pages/community/community_page.dart';
 import 'package:my_app/pages/news/news_page.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
 import 'package:my_app/providers/favorite_provider.dart';
+import 'package:my_app/pages/user/widgets/logo_card.dart';
+import 'package:my_app/brand_page.dart';
 import 'dart:async';
 
 class UserHomePage extends StatefulWidget {
@@ -87,7 +89,7 @@ class _UserHomePageState extends State<UserHomePage> {
           }
         }
 
-        print('📢 Final Community Unread Count: $unreadCount');
+        print('🔢 Final Community Unread Count: $unreadCount');
         return unreadCount;
       } catch (e) {
         print('❌ Error in community unread count calculation: $e');
@@ -160,7 +162,7 @@ class _UserHomePageState extends State<UserHomePage> {
           }
         }
 
-        print('📢 Final Unread Count: $unreadCount');
+        print('🔢 Final Unread Count: $unreadCount');
         return unreadCount;
       } catch (e) {
         print('❌ Error in unread count calculation: $e');
@@ -341,7 +343,7 @@ class _UserHomePageState extends State<UserHomePage> {
                       Icons.newspaper,
                       newsUnreadCount,
                     ),
-                    label: 'News',
+                    label: 'Berita',
                   ),
                   const BottomNavigationBarItem(
                     icon: Icon(Icons.person_outline),

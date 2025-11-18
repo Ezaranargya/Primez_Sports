@@ -92,11 +92,12 @@ class NewsCard extends StatelessWidget {
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w600,
                             fontFamily: 'Poppins',
+                            height: 1.0, // 👈 Kurangi line height
                           ),
                         ),
                       ),
 
-                    SizedBox(height: 8.h),
+                    SizedBox(height: 4.h), // 👈 UBAH: dari 8.h → 4.h (lebih rapat)
                     Text(
                       news.title,
                       style: TextStyle(
@@ -104,12 +105,13 @@ class NewsCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                         fontFamily: 'Poppins',
+                        height: 1.2, // 👈 TAMBAH: Kurangi line height title
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
 
-                    SizedBox(height: 6.h),
+                    SizedBox(height: 4.h), // 👈 UBAH: dari 6.h → 4.h (lebih rapat)
                     if (news.subtitle.isNotEmpty)
                       Text(
                         news.subtitle,
@@ -117,12 +119,13 @@ class NewsCard extends StatelessWidget {
                           fontSize: 12.sp,
                           color: Colors.grey[600],
                           fontFamily: 'Poppins',
+                          height: 1.2, // 👈 TAMBAH: Kurangi line height subtitle
                         ),
                         maxLines: 1, 
                         overflow: TextOverflow.ellipsis,
                       ),
 
-                    SizedBox(height: 8.h), 
+                    SizedBox(height: 4.h), // 👈 UBAH: dari 8.h → 4.h (lebih rapat)
                     Row(
                       children: [
                         Icon(
@@ -137,6 +140,7 @@ class NewsCard extends StatelessWidget {
                             fontSize: 11.sp,
                             color: Colors.grey[500],
                             fontFamily: 'Poppins',
+                            height: 1.0, // 👈 TAMBAH: Kurangi line height tanggal
                           ),
                         ),
                         if (news.author.isNotEmpty) ...[
@@ -156,6 +160,7 @@ class NewsCard extends StatelessWidget {
                                 fontSize: 11.sp,
                                 color: Colors.grey[500],
                                 fontFamily: 'Poppins',
+                                height: 1.0, // 👈 TAMBAH: Kurangi line height author
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

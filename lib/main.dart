@@ -22,12 +22,10 @@ import 'package:my_app/pages/user/user_home_page.dart';
 import 'package:my_app/pages/favorite/favorite_page.dart';
 import 'package:my_app/pages/notifications/notifications_page.dart';
 import 'package:my_app/theme/app_colors.dart';
-import 'package:my_app/home_page.dart';
 import 'package:my_app/admin/pages/admin_home_page.dart';
 import 'package:my_app/pages/encode.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/models/product_model.dart';
-import 'package:my_app/pages/product/product_detail_page.dart';
 
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -388,11 +386,6 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
             }
             return const AdminHomePage();
           },
-        ),
-
-        GoRoute(
-          path: '/home',
-          builder: (context, state) => const HomePage(title: 'Primez Sports'),
         ),
 
         GoRoute(

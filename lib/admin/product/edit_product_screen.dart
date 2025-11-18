@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/utils/image_helper.dart';
 import 'package:my_app/services/product_service.dart';
 import 'package:my_app/pages/product/widgets/product_image.dart';
-import 'package:my_app/services/notification_service.dart'; 
+import 'package:my_app/services/notification_service.dart';
 
 class EditProductScreen extends StatefulWidget {
   final String? productId;
@@ -14,7 +14,6 @@ class EditProductScreen extends StatefulWidget {
 }
 
 class _EditProductScreenState extends State<EditProductScreen> {
-  
   bool _isLoading = false;
   bool _dataReady = false;
   bool _imageChanged = false;
@@ -45,7 +44,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
     'Featured'
   ];
 
-  
   @override
   void initState() {
     super.initState();
@@ -69,7 +67,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
-  
   Future<void> _loadProduct() async {
     setState(() => _isLoading = true);
 
@@ -145,7 +142,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
-  
   Future<void> _pickImage() async {
     try {
       final base64 = await ImageHelper.pickImageAsBase64();
@@ -169,7 +165,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
-  
   Future<void> _saveProduct() async {
     if (_namaController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -189,10 +184,14 @@ class _EditProductScreenState extends State<EditProductScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final productName = _namaController.text.trim();
+      final brandName = _brandController.text.trim();
+      final isNewProduct = widget.productId == null;
+
       final success = await ProductService().saveOrUpdateProduct(
         productId: widget.productId,
-        name: _namaController.text.trim(),
-        brand: _brandController.text.trim(),
+        name: productName,
+        brand: brandName,
         description: _deskripsiController.text.trim(),
         price: harga,
         categories: [
@@ -205,34 +204,67 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success
-              ? '✅ Produk berhasil disimpan!'
-              : '❌ Gagal menyimpan produk'),
-          backgroundColor: success ? Colors.green : Colors.red,
-        ),
-      );
-
       if (success) {
+        try {
+          final notificationService = NotificationService();
+          
+          if (isNewProduct) {
+            await notificationService.sendNotificationToAllUsers(
+              title: "🎉 Produk Baru!",
+              message: "$productName dari $brandName baru saja hadir!",
+              imageUrl: "",
+              brand: brandName,
+              type: "product",
+              productId: widget.productId ?? "",
+              categories: [
+                _selectedKategori ?? "",
+                _selectedSubKategori ?? ""
+              ],
+            );
+            print('✅ Notifikasi produk baru berhasil dikirim ke semua user');
+          } else {
+            await notificationService.sendGlobalNotification(
+              title: "📢 Update Produk",
+              message: "$productName telah diperbarui!",
+              imageUrl: "",
+              brand: brandName,
+              type: "product",
+              productId: widget.productId ?? "",
+            );
+            print('✅ Notifikasi update produk berhasil dibuat');
+          }
+        } catch (notifError) {
+          print('⚠️ Produk berhasil disimpan, tapi notifikasi gagal: $notifError');
+        }
 
-        await NotificationService().sendNotificationToAllUsers(
-          title: "Produk Diperbarui",
-          message: "Harga produk ${_namaController.text.trim()} telah diperbarui!",
-          imageUrl: _imageBase64 ?? "",
-          brand: _brandController.text.trim(),
-          categories: [
-            _selectedKategori ?? "",
-            _selectedSubKategori ?? ""
-          ],
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isNewProduct
+                  ? '✅ Produk berhasil ditambahkan & notifikasi terkirim!'
+                  : '✅ Produk berhasil diperbarui!',
+            ),
+            backgroundColor: Colors.green,
+          ),
         );
 
         Navigator.pop(context, true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Gagal menyimpan produk'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
+      print('❌ Error saat menyimpan produk: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saat menyimpan: $e')),
+          SnackBar(
+            content: Text('Error saat menyimpan: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -240,7 +272,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
     }
   }
 
-  
   @override
   Widget build(BuildContext context) {
     if (!_dataReady) {
@@ -267,7 +298,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  
                   GestureDetector(
                     onTap: _pickImage,
                     child: Container(
@@ -278,7 +308,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: ProductImage(
-                          image: _imageBase64 ?? '', 
+                          image: _imageBase64 ?? '',
                           height: 200,
                           width: double.infinity,
                         ),
@@ -293,7 +323,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  
                   _buildTextField(
                       _namaController, 'Nama Produk *', Icons.shopping_bag),
                   const SizedBox(height: 16),
@@ -301,13 +330,12 @@ class _EditProductScreenState extends State<EditProductScreen> {
                       _brandController, 'Brand', Icons.branding_watermark),
                   const SizedBox(height: 16),
                   _buildTextField(_deskripsiController, 'Deskripsi Produk',
-                      Icons.description),
+                      Icons.description, TextInputType.text, 3),
                   const SizedBox(height: 16),
                   _buildTextField(_hargaController, 'Harga *',
                       Icons.attach_money, TextInputType.number),
                   const SizedBox(height: 16),
 
-                  
                   _buildDropdownField(
                     label: 'Kategori',
                     selectedValue: _selectedKategori,
@@ -331,7 +359,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   ElevatedButton(
                     onPressed: _saveProduct,
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue, padding: const EdgeInsets.all(16)),
+                        backgroundColor: Colors.blue,
+                        padding: const EdgeInsets.all(16)),
                     child: const Text(
                       'SIMPAN PRODUK',
                       style: TextStyle(
@@ -344,9 +373,13 @@ class _EditProductScreenState extends State<EditProductScreen> {
     );
   }
 
-  
-  Widget _buildTextField(TextEditingController controller, String label,
-      IconData icon, [TextInputType? type, int maxLines = 1]) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, [
+    TextInputType? type,
+    int maxLines = 1,
+  ]) {
     return TextField(
       controller: controller,
       decoration: InputDecoration(
@@ -380,7 +413,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
           isExpanded: true,
           hint: Text('Pilih $label'),
           items: items
-              .map((item) => DropdownMenuItem(value: item, child: Text(item, maxLines: 2)))
+              .map((item) =>
+                  DropdownMenuItem(value: item, child: Text(item, maxLines: 2)))
               .toList(),
           onChanged: (v) {
             if (v != null) onChanged(v);

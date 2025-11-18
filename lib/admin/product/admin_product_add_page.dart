@@ -7,6 +7,7 @@ import 'package:image/image.dart' as img;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/services/product_service.dart';
+import 'package:my_app/services/notification_service.dart';
 import 'package:my_app/theme/app_colors.dart';
 
 class AdminAddProductPage extends StatefulWidget {
@@ -20,6 +21,7 @@ class AdminAddProductPage extends StatefulWidget {
 class _AdminAddProductPageState extends State<AdminAddProductPage> {
   final _formKey = GlobalKey<FormState>();
   final ProductService _service = ProductService();
+  final NotificationService _notificationService = NotificationService();
 
   final TextEditingController _title = TextEditingController();
   final TextEditingController _desc = TextEditingController();
@@ -32,16 +34,21 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   String? _base64Image;
 
   static const List<String> _brands = [
-    'Nike', 'Adidas', 'Puma', 'Under Armour', 'Jordan', 'Mizuno'
+    'Nike',
+    'Adidas',
+    'Puma',
+    'Under Armour',
+    'Jordan',
+    'Mizuno'
   ];
 
   static const List<String> _categoriesMain = [
-    'Basketball', 'Soccer', 'Volleyball'
+    'Basketball',
+    'Soccer',
+    'Volleyball'
   ];
 
-  static const List<String> _categoriesSub = [
-    'Trending', 'Terbaru'
-  ];
+  static const List<String> _categoriesSub = ['Trending', 'Terbaru'];
 
   String? _selectedBrand;
   String? _selectedCategory1;
@@ -62,10 +69,10 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       _selectedCategory2 = _categoriesSub.contains(p.subCategory) ? p.subCategory : null;
 
       _purchaseOptions.addAll(p.purchaseOptions.map((e) => {
-        'link': TextEditingController(text: e.link),
-        'price': TextEditingController(text: e.price.toString()),
-        'logo': e.logoUrl,
-      }));
+            'link': TextEditingController(text: e.link),
+            'price': TextEditingController(text: e.price.toString()),
+            'logo': e.logoUrl,
+          }));
     }
 
     if (_purchaseOptions.isEmpty) {
@@ -101,12 +108,18 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
 
     if (brand != null) {
       switch (brand.toLowerCase()) {
-        case 'nike': return 'assets/logo_nike.png';
-        case 'adidas': return 'assets/logo_adidas.png';
-        case 'puma': return 'assets/logo_puma.png';
-        case 'under armour': return 'assets/logo_under_armour.png';
-        case 'jordan': return 'assets/logo_jordan.png';
-        case 'mizuno': return 'assets/logo_mizuno.png';
+        case 'nike':
+          return 'assets/logo_nike.png';
+        case 'adidas':
+          return 'assets/logo_adidas.png';
+        case 'puma':
+          return 'assets/logo_puma.png';
+        case 'under armour':
+          return 'assets/logo_under_armour.png';
+        case 'jordan':
+          return 'assets/logo_jordan.png';
+        case 'mizuno':
+          return 'assets/logo_mizuno.png';
       }
     }
     return '';
@@ -160,7 +173,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
           _base64Image = base64Image;
         });
 
-        print('✅ Gambar utama berhasil dikonversi ke Base64 (${base64Image.length} chars)');
+        print(
+            '✅ Gambar utama berhasil dikonversi ke Base64 (${base64Image.length} chars)');
       }
     } catch (e) {
       print('❌ Error picking main image: $e');
@@ -184,10 +198,12 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     }
 
     final purchaseOptions = _purchaseOptions
-        .where((item) => (item['link'] as TextEditingController).text.trim().isNotEmpty)
+        .where((item) =>
+            (item['link'] as TextEditingController).text.trim().isNotEmpty)
         .map((item) {
       final link = (item['link'] as TextEditingController).text.trim();
-      final price = double.tryParse((item['price'] as TextEditingController).text) ?? 0;
+      final price =
+          double.tryParse((item['price'] as TextEditingController).text) ?? 0;
       return PurchaseOption(
         name: 'Link',
         storeName: 'Toko',
@@ -205,10 +221,14 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       categoriesList.add(_selectedCategory2!);
     }
 
+    final productName = _title.text.trim();
+    final brandName = _selectedBrand ?? '';
+    final isNewProduct = widget.product == null;
+
     final product = Product(
       id: widget.product?.id ?? '',
-      name: _title.text.trim(),
-      brand: _selectedBrand ?? '',
+      name: productName,
+      brand: brandName,
       description: _desc.text.trim(),
       price: double.tryParse(_mainPrice.text) ?? 0,
       categories: categoriesList,
@@ -224,22 +244,65 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     print('Harga: ${product.price}');
     print('Categories: ${product.categories}');
     print('Jumlah opsi pembelian: ${product.purchaseOptions.length}');
-    print('Image Base64: ${_base64Image != null ? "✅ Ada (${_base64Image!.length} chars)" : "❌ Kosong"}');
-    print('Banner Base64: ${_bannerBase64 != null ? "✅ Ada (${_bannerBase64!.length} chars)" : "❌ Kosong"}');
-    print('Product.bannerImage: ${product.bannerImage.isNotEmpty ? "✅ Ada (${product.bannerImage.length} chars)" : "❌ Kosong"}');
-    print('toMap result: ${product.toMap()}');
+    print(
+        'Image Base64: ${_base64Image != null ? "✅ Ada (${_base64Image!.length} chars)" : "❌ Kosong"}');
+    print(
+        'Banner Base64: ${_bannerBase64 != null ? "✅ Ada (${_bannerBase64!.length} chars)" : "❌ Kosong"}');
 
     bool success = false;
+    String? savedProductId;
 
     try {
-      if (widget.product == null) {
-        await _service.addProductAndNotify(product);
-        success = true;
+      if (isNewProduct) {
+        savedProductId = await _service.addProductWithNotifications(product);
+        success = savedProductId != null;
+        
+        if (success) {
+          print('✅ Produk baru berhasil ditambahkan dengan ID: $savedProductId');
+          
+          try {
+            await _notificationService.sendNotificationToAllUsers(
+              title: "🎉 Produk Baru!",
+              message: "$productName dari $brandName baru saja hadir!",
+              imageUrl: "",
+              brand: brandName,
+              type: "product",
+              productId: savedProductId,
+              categories: categoriesList,
+            );
+            print('✅ Notifikasi produk baru berhasil dikirim ke semua user');
+          } catch (notifError) {
+            print('⚠️ Produk berhasil disimpan, tapi notifikasi gagal: $notifError');
+          }
+        }
       } else {
         success = await _service.saveOrUpdateProduct(
           productId: widget.product?.id,
           product: product,
         );
+        
+        if (success) {
+          print('✅ Produk berhasil diperbarui');
+          
+          final finalImageUrl = _base64Image ?? widget.product?.imageBase64 ?? "";
+          print('🖼️ [DEBUG] _base64Image length: ${_base64Image?.length ?? 0}');
+          print('🖼️ [DEBUG] widget.product?.imageBase64 length: ${widget.product?.imageBase64?.length ?? 0}');
+          print('🖼️ [DEBUG] finalImageUrl length: ${finalImageUrl.length}');
+          
+          try {
+            await _notificationService.sendGlobalNotification(
+              title: "Update Produk",
+              message: "$productName telah diperbarui!",
+              imageUrl: finalImageUrl,
+              brand: brandName,
+              type: "product",
+              productId: widget.product?.id ?? "",
+            );
+            print('✅ Notifikasi update produk berhasil dibuat');
+          } catch (notifError) {
+            print('⚠️ Produk berhasil diperbarui, tapi notifikasi gagal: $notifError');
+          }
+        }
       }
     } catch (e, stack) {
       print('❌ Error saat saveOrUpdateProduct: $e');
@@ -252,10 +315,10 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(success
-            ? (widget.product == null
-                ? 'Produk berhasil ditambahkan & notifikasi terkirim!'
-                : 'Perubahan berhasil disimpan!')
-            : 'Gagal menyimpan produk!'),
+            ? (isNewProduct
+                ? '✅ Produk berhasil ditambahkan & notifikasi terkirim!'
+                : '✅ Perubahan berhasil disimpan!')
+            : '❌ Gagal menyimpan produk!'),
         backgroundColor: success ? Colors.green : Colors.red,
       ),
     );
@@ -338,7 +401,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                                         size: 40, color: Colors.grey),
                                     SizedBox(height: 8.h),
                                     Text('Pilih Foto Produk',
-                                        style: TextStyle(color: Colors.grey[600])),
+                                        style:
+                                            TextStyle(color: Colors.grey[600])),
                                   ],
                                 ),
                     ),
@@ -358,7 +422,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                       child: _bannerFile != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(12.r),
-                              child: Image.file(_bannerFile!, fit: BoxFit.cover),
+                              child:
+                                  Image.file(_bannerFile!, fit: BoxFit.cover),
                             )
                           : (_bannerBase64 != null && _bannerBase64!.isNotEmpty)
                               ? ClipRRect(
@@ -394,7 +459,9 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                   DropdownButtonFormField<String>(
                     decoration: _inputDecoration('Brand'),
                     value: _selectedBrand,
-                    items: _brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                    items: _brands
+                        .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                        .toList(),
                     onChanged: (v) => setState(() => _selectedBrand = v),
                     validator: (v) => v == null ? 'Pilih brand' : null,
                     style: const TextStyle(color: Colors.black),
@@ -411,7 +478,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                     controller: _mainPrice,
                     decoration: _inputDecoration('Harga Produk Utama'),
                     keyboardType: TextInputType.number,
-                    validator: (v) => v == null || v.isEmpty ? 'Harga wajib diisi' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Harga wajib diisi' : null,
                     style: const TextStyle(color: Colors.black),
                   ),
                   SizedBox(height: 20.h),
@@ -422,10 +490,13 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                           decoration: _inputDecoration('Kategori Utama'),
                           value: _selectedCategory1,
                           items: _categoriesMain
-                              .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                              .map((c) =>
+                                  DropdownMenuItem(value: c, child: Text(c)))
                               .toList(),
-                          onChanged: (v) => setState(() => _selectedCategory1 = v),
-                          validator: (v) => v == null ? 'Pilih kategori utama' : null,
+                          onChanged: (v) =>
+                              setState(() => _selectedCategory1 = v),
+                          validator: (v) =>
+                              v == null ? 'Pilih kategori utama' : null,
                           style: const TextStyle(color: Colors.black),
                         ),
                       ),
@@ -435,10 +506,13 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                           decoration: _inputDecoration('Sub Kategori'),
                           value: _selectedCategory2,
                           items: _categoriesSub
-                              .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                              .map((c) =>
+                                  DropdownMenuItem(value: c, child: Text(c)))
                               .toList(),
-                          onChanged: (v) => setState(() => _selectedCategory2 = v),
-                          validator: (v) => v == null ? 'Pilih sub kategori' : null,
+                          onChanged: (v) =>
+                              setState(() => _selectedCategory2 = v),
+                          validator: (v) =>
+                              v == null ? 'Pilih sub kategori' : null,
                           style: const TextStyle(color: Colors.black),
                         ),
                       ),
@@ -450,7 +524,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                     children: [
                       const Text(
                         'Opsi Pembelian:',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.black),
                       ),
                       TextButton.icon(
                         onPressed: () {
@@ -470,8 +545,10 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                   ..._purchaseOptions.asMap().entries.map((entry) {
                     final index = entry.key;
                     final item = entry.value;
-                    final linkController = item['link'] as TextEditingController;
-                    final priceController = item['price'] as TextEditingController;
+                    final linkController =
+                        item['link'] as TextEditingController;
+                    final priceController =
+                        item['price'] as TextEditingController;
                     final logo = item['logo'] as String?;
 
                     return Padding(
@@ -482,7 +559,9 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                             Padding(
                               padding: EdgeInsets.only(right: 8.w),
                               child: Image.asset(logo,
-                                  width: 32.w, height: 32.w, fit: BoxFit.contain),
+                                  width: 32.w,
+                                  height: 32.w,
+                                  fit: BoxFit.contain),
                             ),
                           Expanded(
                             child: TextFormField(
@@ -491,7 +570,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                               style: const TextStyle(color: Colors.black),
                               onChanged: (v) {
                                 setState(() {
-                                  item['logo'] = _getLogoFromUrl(v, brand: _selectedBrand);
+                                  item['logo'] = _getLogoFromUrl(v,
+                                      brand: _selectedBrand);
                                 });
                               },
                             ),
@@ -506,7 +586,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.remove_circle, color: Colors.red),
+                            icon: const Icon(Icons.remove_circle,
+                                color: Colors.red),
                             onPressed: () {
                               setState(() {
                                 linkController.dispose();
@@ -527,11 +608,13 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                     );
                   }),
                   SizedBox(height: 32.h),
+
                   ElevatedButton(
                     onPressed: _saveProduct,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 40.w),
+                      padding: EdgeInsets.symmetric(
+                          vertical: 16.h, horizontal: 40.w),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12.r),
                       ),

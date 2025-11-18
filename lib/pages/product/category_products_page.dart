@@ -76,7 +76,7 @@ class CategoryProductsPage extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12.w,
         mainAxisSpacing: 12.h,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.70,
       ),
       itemCount: products.length,
       itemBuilder: (context, index) {
@@ -159,6 +159,7 @@ class _CategoryProductCardGrid extends StatelessWidget {
                     Formatter.formatPrice(product.price),
                     style: TextStyle(
                       fontSize: 14.sp,
+                      fontFamily: "Poppins",
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
                     ),
@@ -180,16 +181,16 @@ class _CategoryProductCardGrid extends StatelessWidget {
       if (image.startsWith('data:image')) {
         final base64Data = image.split(',').last;
         final bytes = base64Decode(base64Data);
-        imageWidget = Image.memory(bytes, fit: BoxFit.cover);
+        imageWidget = Image.memory(bytes, fit: BoxFit.contain);
       } else if (image.startsWith('/9j/') || image.startsWith('iVBOR')) {
         final bytes = base64Decode(image);
-        imageWidget = Image.memory(bytes, fit: BoxFit.cover);
+        imageWidget = Image.memory(bytes, fit: BoxFit.contain);
       } else if (image.startsWith('http')) {
         imageWidget = Image.network(image,
-            fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder());
+            fit: BoxFit.contain, errorBuilder: (_, __, ___) => _placeholder());
       } else {
         imageWidget = Image.asset(image,
-            fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder());
+            fit: BoxFit.contain, errorBuilder: (_, __, ___) => _placeholder());
       }
     } catch (_) {
       imageWidget = _placeholder();
@@ -198,7 +199,7 @@ class _CategoryProductCardGrid extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
       child: SizedBox(
-        height: 120.h,
+        height: 128.h,
         width: double.infinity,
         child: imageWidget,
       ),
@@ -206,7 +207,7 @@ class _CategoryProductCardGrid extends StatelessWidget {
   }
 
   Widget _placeholder() => Container(
-        height: 120.h,
+        height: 150.h,
         decoration: BoxDecoration(
           color: Colors.grey[200],
           borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
@@ -273,6 +274,7 @@ class _CategoryProductCardList extends StatelessWidget {
                     Text(Formatter.formatPrice(product.price),
                         style: TextStyle(
                             fontSize: 16.sp,
+                            fontFamily: "Poppins",
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary)),
                   ],
@@ -292,16 +294,16 @@ class _CategoryProductCardList extends StatelessWidget {
       if (image.startsWith('data:image')) {
         final base64Data = image.split(',').last;
         final bytes = base64Decode(base64Data);
-        return Image.memory(bytes, fit: BoxFit.cover);
+        return Image.memory(bytes, fit: BoxFit.contain);
       } else if (image.startsWith('/9j/') || image.startsWith('iVBOR')) {
         final bytes = base64Decode(image);
-        return Image.memory(bytes, fit: BoxFit.cover);
+        return Image.memory(bytes, fit: BoxFit.contain);
       } else if (image.startsWith('http')) {
         return Image.network(image,
-            fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder());
+            fit: BoxFit.contain, errorBuilder: (_, __, ___) => _placeholder());
       } else {
         return Image.asset(image,
-            fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder());
+            fit: BoxFit.contain, errorBuilder: (_, __, ___) => _placeholder());
       }
     } catch (_) {
       return _placeholder();

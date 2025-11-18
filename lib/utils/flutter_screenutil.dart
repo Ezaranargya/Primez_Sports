@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:my_app/home_page.dart';
 
 void main() => runApp(PrimezSportsApp());
 
@@ -25,7 +24,6 @@ class PrimezSportsApp extends StatelessWidget {
           home: child,
         );
       },
-      child: const HomePage(title: 'Primez Sports'),
     );
   }
 }

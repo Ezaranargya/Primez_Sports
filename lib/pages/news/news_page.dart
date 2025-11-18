@@ -313,7 +313,7 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
                 image: news.imageUrl1,
                 width: 160.w,
                 height: 120.h,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
               ),
             ),
             
@@ -322,7 +322,7 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
                 padding: EdgeInsets.all(12.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Text(
                       DateFormat('dd MMM yyyy').format(news.date),
@@ -331,10 +331,11 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
                         fontFamily: 'Poppins',
+                        height: 1.8,
                       ),
                     ),
                     
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 6.h),
                     Text(
                       news.title,
                       style: TextStyle(
@@ -342,7 +343,7 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
                         fontFamily: 'Poppins',
-                        height: 1.3,
+                        height: 1.5,
                       ),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
@@ -417,7 +418,7 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
                           image: news.imageUrl1,
                           width: double.infinity,
                           height: 200.h,
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
                           borderRadius: BorderRadius.circular(12.r),
                         ),
                         Container(

@@ -22,13 +22,6 @@ class NewsBannerCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16.r),
           color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16.r),
@@ -121,7 +114,7 @@ class NewsBannerCard extends StatelessWidget {
       news.safeImageAsset,
       height: 180.h,
       width: double.infinity,
-      fit: BoxFit.cover,
+      fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) => _placeholder(),
     );
   }

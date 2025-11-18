@@ -19,6 +19,98 @@ class ProductService {
   CollectionReference<Map<String, dynamic>> get _productRef =>
       _firestore.collection(_collection);
 
+  Future<String?> addProduct(Product product) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception("User tidak login");
+
+      if (product.name.isEmpty) {
+        print('❌ Nama produk tidak boleh kosong');
+        return null;
+      }
+
+      if (product.price <= 0) {
+        print('❌ Harga produk harus lebih dari 0');
+        return null;
+      }
+
+      if (product.categories.isEmpty) {
+        print('❌ Kategori produk tidak boleh kosong');
+        return null;
+      }
+
+      final existing = await _productRef
+          .where('name', isEqualTo: product.name)
+          .where('brand', isEqualTo: product.brand)
+          .get();
+
+      if (existing.docs.isNotEmpty) {
+        print('❌ Produk dengan nama dan brand yang sama sudah ada');
+        return null;
+      }
+
+      final productRef = await _firestore.collection('products').add(product.toMap());
+      print('✅ Produk berhasil disimpan dengan ID: ${productRef.id}');
+      
+      return productRef.id;
+    } catch (e) {
+      print('❌ Error addProduct: $e');
+      return null;
+    }
+  }
+
+  Future<String?> addProductWithNotifications(Product product) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception("User tidak login");
+
+      final productRef = await _firestore.collection('products').add(product.toMap());
+      final productId = productRef.id;
+      print('✅ Produk berhasil disimpan dengan ID: $productId');
+
+      final usersSnapshot = await _firestore.collection('users').get();
+      for (var userDoc in usersSnapshot.docs) {
+        await _firestore
+            .collection('users')
+            .doc(userDoc.id)
+            .collection('notifications')
+            .add({
+          'title': 'Produk Baru Tersedia!',
+          'message': 'Produk "${product.name}" baru saja ditambahkan oleh admin.',
+          'productId': productId,
+          'timestamp': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+      }
+
+      await _sendFCMNotificationToAllUsers(product);
+
+      final contentId = DateTime.now().millisecondsSinceEpoch.toString().substring(6);
+      final links = product.purchaseOptions.map((option) => PostLink(
+        logoUrl1: option.logoUrl,
+        price: option.price,
+        store: option.storeName.isNotEmpty ? option.storeName : 'Toko',
+        url: option.link,
+      )).toList();
+
+      await _communityService.createAdminPost(
+        brand: product.brand,
+        content: contentId,
+        description: product.description,
+        imageUrl1: product.imageBase64.isNotEmpty 
+            ? product.imageBase64 
+            : (product.bannerImage.isNotEmpty ? product.bannerImage : null),
+        links: links,
+      );
+
+      print('✅ Produk berhasil ditambahkan dengan notifikasi dan post community!');
+      return productId;
+    } catch (e) {
+      print('❌ Error addProductWithNotifications: $e');
+      return null;
+    }
+  }
+
   Future<void> addProductAndNotify(Product product) async {
     try {
       final user = FirebaseAuth.instance.currentUser;

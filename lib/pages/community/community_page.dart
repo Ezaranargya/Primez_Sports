@@ -185,110 +185,112 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
   }
 
   Widget _buildBrandCard(String brand, List<CommunityPost> posts) {
-    final logo = _brandLogos[brand] ?? '';
-    
-    final isRead = _staticReadStatusCache[brand] ?? false;
-    
-    final shouldShowBadge = posts.isNotEmpty && !isRead;
-    final unreadCount = shouldShowBadge ? posts.length : 0;
+  final logo = _brandLogos[brand] ?? '';
+  
+  final isRead = _staticReadStatusCache[brand] ?? false;
+  
+  final shouldShowBadge = posts.isNotEmpty && !isRead;
+  final unreadCount = shouldShowBadge ? posts.length : 0;
 
-    return Card(
-      color: posts.isEmpty ? Colors.grey[100] : Colors.white,
-      margin: EdgeInsets.only(bottom: 12.h),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      elevation: 1,
-      child: InkWell(
-        onTap: posts.isNotEmpty
-            ? () async {
-                debugPrint('🖱️ Tapped on $brand card');
-                
-                setState(() {
-                  _staticReadStatusCache[brand] = true;
-                });
-                
-                await _communityService.markBrandPostsAsRead(brand);
-                
-                debugPrint('✅ Marked $brand as read, navigating...');
-                
-                if (!mounted) return;
-                
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => BrandPostsPage(
-                      brand: brand,
-                      posts: posts,
-                    ),
+  return Card(
+    color: posts.isEmpty ? Colors.grey[100] : Colors.white,
+    margin: EdgeInsets.only(bottom: 12.h),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+    elevation: 1,
+    child: InkWell(
+      onTap: posts.isNotEmpty
+          ? () {
+              debugPrint('🖱️ Tapped on $brand card');
+              
+              // Update UI langsung tanpa await
+              setState(() {
+                _staticReadStatusCache[brand] = true;
+              });
+              
+              // Navigasi LANGSUNG tanpa menunggu operasi lain
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BrandPostsPage(
+                    brand: brand,
+                    posts: posts,
                   ),
-                );
-                
-                debugPrint('⬅️ Returned from $brand posts page');
-              }
-            : null,
-        borderRadius: BorderRadius.circular(12.r),
-        child: Stack(
-          children: [
-            Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48.w,
-                    height: 48.w,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: logo.isNotEmpty
-                        ? Padding(
-                            padding: EdgeInsets.all(8.w),
-                            child: Image.asset(
-                              logo,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => Icon(
-                                Icons.store,
-                                size: 24.sp,
-                                color: Colors.grey,
-                              ),
+                ),
+              );
+              
+              // Mark as read di background (tanpa await)
+              _communityService.markBrandPostsAsRead(brand).then((_) {
+                debugPrint('✅ Marked $brand as read in background');
+              }).catchError((error) {
+                debugPrint('❌ Error marking as read: $error');
+              });
+            }
+          : null,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Stack(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16.w),
+            child: Row(
+              children: [
+                Container(
+                  width: 48.w,
+                  height: 48.w,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: logo.isNotEmpty
+                      ? Padding(
+                          padding: EdgeInsets.all(8.w),
+                          child: Image.asset(
+                            logo,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Icon(
+                              Icons.store,
+                              size: 24.sp,
+                              color: Colors.grey,
                             ),
-                          )
-                        : Icon(Icons.store, size: 24.sp, color: Colors.grey),
-                  ),
-                  SizedBox(width: 12.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Kumpulan Sepatu Brand $brand Official Mengikuti',
-                          style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w600,
-                            color: posts.isEmpty ? Colors.grey : Colors.black,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        )
+                      : Icon(Icons.store, size: 24.sp, color: Colors.grey),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Kumpulan Sepatu Brand $brand Official Mengikuti',
+                        style: TextStyle(
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                          color: posts.isEmpty ? Colors.grey : Colors.black,
                         ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          posts.isEmpty
-                              ? 'Belum ada postingan'
-                              : '${posts.length} postingan',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Colors.grey[600],
-                          ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        posts.isEmpty
+                            ? 'Belum ada postingan'
+                            : '${posts.length} postingan',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: Colors.grey[600],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            if (unreadCount > 0)
-              Positioned(
-                right: 12.w,
-                top: 12.h,
+          ),
+          if (unreadCount > 0)
+            Positioned(
+              right: 12.w,
+              top: 12.h,
+              child: IgnorePointer(
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                   decoration: BoxDecoration(
@@ -311,11 +313,12 @@ class _UserCommunityPageState extends State<UserCommunityPage> {
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class BrandPostsPage extends StatelessWidget {
@@ -340,6 +343,7 @@ class BrandPostsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
         title: Text(
           'Kumpulan Sepatu Brand $brand',
@@ -380,7 +384,7 @@ class BrandPostsPage extends StatelessWidget {
     final brandLogo = _brandLogos[post.brand] ?? '';
 
     return Card(
-      color: AppColors.backgroundColor,
+      color: AppColors.secondary,
       margin: EdgeInsets.only(bottom: 16.h),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       elevation: 2,
@@ -446,14 +450,14 @@ class BrandPostsPage extends StatelessWidget {
                     ? Image.network(
                         post.imageUrl1!,
                         width: double.infinity,
-                        height: 200.h,
-                        fit: BoxFit.cover,
+                        height: 260.h,
+                        fit: BoxFit.contain,
                       )
                     : Image.memory(
                         base64Decode(post.imageUrl1!),
                         width: double.infinity,
-                        height: 180.h,
-                        fit: BoxFit.cover,
+                        height: 260.h,
+                        fit: BoxFit.contain,
                       ),
               ),
             SizedBox(height: 12.h),
