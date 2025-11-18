@@ -44,7 +44,7 @@ class NotificationPage extends StatelessWidget {
             .collection('users')
             .doc(userId)
             .collection('notifications')
-            .orderBy('createdAt', descending: true)
+            .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -91,7 +91,7 @@ class NotificationPage extends StatelessWidget {
               final message = data['message'] ?? '';
               final productId = data['productId'] ?? '';
               final isRead = data['isRead'] ?? false;
-              final timestamp = data['createdAt'] as Timestamp?;
+              final timestamp = data['timestamp'] as Timestamp?;
 
               return Dismissible(
                 key: Key(doc.id),
