@@ -43,114 +43,30 @@ class FaqPage extends StatelessWidget {
                     'Aplikasi Primez Sports hanya menyediakan katalog dan informasi produk. Untuk pembelian, Anda dapat menghubungi toko resmi atau marketplace yang tertera.',
               ),
               _buildFaqItem(
-                question: 'Apakah ada biaya berlangganan?',
+                question: 'Bagaimana cara menemukan sepatu yang sesuai?',
                 answer:
-                    'Tidak, Primez Sports sepenuhnya gratis untuk digunakan. Anda dapat mengakses semua fitur tanpa biaya apapun.',
+                    'Anda bisa memilih kategori seperti Sepak Bola, Basket, atau Voli. Setiap kategori menyediakan rekomendasi berdasarkan model, brand, dan popularitas.',
               ),
               _buildFaqItem(
-                question: 'Bagaimana cara bergabung dengan komunitas?',
+                question: 'Untuk apa fitur komunitas?',
                 answer:
-                    'Anda dapat bergabung dengan komunitas dengan mengunjungi halaman Komunitas dan memilih topik yang Anda minati.',
+                    'Fitur Komunitas adalah tempat untuk melihat postingan atau pembahasan sepatu dari berbagai brand seperti Nike, Adidas, Jordan, Puma, Under Armour, dan lainnya.',
               ),
               _buildFaqItem(
-                question: 'Apakah data saya aman?',
+                question: 'Apa isi fitur News?',
                 answer:
-                    'Ya, kami sangat menjaga keamanan data pengguna. Semua informasi disimpan dengan aman menggunakan Firebase Authentication dan Firestore.',
+                    'News berisi berita terbaru mengenai rilis sepatu, update model, teknologi baru, dan informasi menarik dari berbagai brand olahraga.',
               ),
               _buildFaqItem(
-                question: 'Bagaimana cara menambahkan produk ke favorit?',
+                question: 'Apakah saya bisa mengganti username atau bio?',
                 answer:
-                    'Anda dapat menambahkan produk ke favorit dengan menekan ikon hati (♥) pada halaman detail produk atau di halaman katalog.',
+                    'Ya, Anda bisa mengubah username dan menambahkan bio di halaman Edit Profile.',
               ),
               _buildFaqItem(
-                question: 'Bagaimana cara mengubah password?',
+                question: 'Cara melihat postingan di komunitas brand?',
                 answer:
-                    'Anda dapat mengubah password melalui menu Profile > Email, kemudian pilih opsi "Ganti Password".',
+                    'Cukup klik salah satu brand, dan Anda akan diarahkan ke halaman postingan terkait brand tersebut.',
               ),
-              _buildFaqItem(
-                question: 'Apakah tersedia di platform lain?',
-                answer:
-                    'Saat ini Primez Sports tersedia untuk Android dan iOS. Kami sedang mengembangkan versi web yang akan segera hadir.',
-              ),
-              _buildFaqItem(
-                question: 'Bagaimana cara menghubungi customer support?',
-                answer:
-                    'Anda dapat menghubungi kami melalui email di support@primezsports.com atau melalui media sosial kami.',
-              ),
-              _buildFaqItem(
-                question: 'Apakah produk yang ditampilkan original?',
-                answer:
-                    'Semua produk yang ditampilkan dalam aplikasi adalah produk original dari brand resmi. Kami tidak mempromosikan produk tiruan atau palsu.',
-              ),
-
-              SizedBox(height: 32.h),
-              Container(
-                padding: EdgeInsets.all(20.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey[300]!,
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.help_center_outlined,
-                      size: 48.sp,
-                      color: const Color(0xFFE53E3E),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'Masih ada pertanyaan?',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Hubungi kami untuk bantuan lebih lanjut',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Colors.grey[600],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 16.h),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Fitur hubungi support segera hadir'),
-                            backgroundColor: Color(0xFFE53E3E),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.email_outlined),
-                      label: const Text('Hubungi Support'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE53E3E),
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 24.w,
-                          vertical: 12.h,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: 24.h),
             ],
           ),
         ),
