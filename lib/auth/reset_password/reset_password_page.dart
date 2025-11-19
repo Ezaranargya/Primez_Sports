@@ -100,16 +100,16 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: AppColors.secondary),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Reset Password',
           style: TextStyle(
-            color: Colors.black,
+            color: AppColors.secondary,
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
             fontFamily: 'Poppins',

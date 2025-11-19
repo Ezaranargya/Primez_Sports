@@ -88,7 +88,7 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
         iconTheme: IconThemeData(
           color: Colors.white,
@@ -115,10 +115,10 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _navigateToForm(),
         backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.add,color: AppColors.secondary),
         label: const Text(
           'Tambah Berita',
-          style: TextStyle(fontFamily: 'Poppins'),
+          style: TextStyle(fontFamily: 'Poppins',color: AppColors.secondary),
         ),
       ),
     );
@@ -288,6 +288,7 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
     final formatDate = DateFormat('dd MMM yyyy', 'id_ID');
 
     return Card(
+      color: AppColors.secondary,
       margin: EdgeInsets.only(bottom: 16.h),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.r),
@@ -439,7 +440,7 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
     image: imagePath,
     width: double.infinity,
     height: 180.h,
-    fit: BoxFit.cover,
+    fit: BoxFit.contain,
     borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
   );
 }

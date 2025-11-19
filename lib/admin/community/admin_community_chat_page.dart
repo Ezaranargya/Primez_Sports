@@ -30,24 +30,60 @@ class AdminCommunityChatPage extends StatelessWidget {
       backgroundColor: AppColors.backgroundColor,
       body: Column(
         children: [
-          
-          CommunityHeader(
-            brandName: brand,
-            logoPath: logoPath,
-            onBack: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const AdminCommunityPage()),
-              );
-            },
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            color: AppColors.primary, 
+            child: SafeArea(
+              bottom: false,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminCommunityPage()),
+                      );
+                    },
+                  ),
+                  
+                  Container(
+                    width: 40.w,
+                    height: 40.w,
+                    padding: EdgeInsets.all(6.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white, 
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Image.asset(
+                      logoPath,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Text(
+                      'Kumpulan Brand Sepatu $brand...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-
           
           Expanded(child: _buildPostList(context, brand)),
         ],
       ),
 
-      
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
@@ -63,9 +99,7 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  
   Widget _buildPostList(BuildContext context, String brand) {
-    
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
       .collection('posts')
@@ -109,7 +143,6 @@ class AdminCommunityChatPage extends StatelessWidget {
 
         final docs = snapshot.data?.docs ?? [];
         
-        
         print('📊 Found ${docs.length} posts for brand: $brand');
         
         if (docs.isEmpty) return _buildEmptyState(brand);
@@ -123,7 +156,6 @@ class AdminCommunityChatPage extends StatelessWidget {
             final data = doc.data() as Map<String, dynamic>? ?? {};
             final postId = doc.id;
             
-            
             print('📄 Post $index: ${data['title']}');
             
             return _buildPostCard(context, brand, postId, data);
@@ -133,7 +165,6 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  
   Widget _buildEmptyState(String brand) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -161,75 +192,57 @@ class AdminCommunityChatPage extends StatelessWidget {
         ),
       );
 
-  
-  bool _isBase64(String str) {
-    if (str.isEmpty) return false;
-    
-    try {
-      if (str.startsWith('http') || 
-          str.startsWith('https') || 
-          str.startsWith('assets/') ||
-          str.contains('.png') || 
-          str.contains('.jpg') || 
-          str.contains('.jpeg') ||
-          str.contains('.webp') ||
-          str.contains('/') && str.length < 100) {
-        return false;
+  // ✅ FIXED: Improved image rendering logic
+  Widget _buildPostImage(String? imageUrl, String? imageBase64) {
+    // Priority: base64 > URL
+    if (imageBase64 != null && imageBase64.isNotEmpty) {
+      try {
+        final bytes = base64Decode(imageBase64);
+        return Padding(
+          padding: EdgeInsets.only(top: 10.h),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10.r),
+            child: Image.memory(
+              bytes,
+              fit: BoxFit.cover,
+              height: 180.h,
+              width: double.infinity,
+              errorBuilder: (context, error, stackTrace) {
+                print('❌ Error loading base64 image: $error');
+                return _buildImageError();
+              },
+            ),
+          ),
+        );
+      } catch (e) {
+        print('❌ Error decoding base64: $e');
       }
-      
-      if (str.length < 100) {
-        return false;
-      }
-      
-      base64Decode(str);
-      return true;
-    } catch (e) {
-      return false;
     }
+    
+    // Fallback to URL
+    if (imageUrl != null && imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
+      return Padding(
+        padding: EdgeInsets.only(top: 10.h),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10.r),
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            height: 180.h,
+            width: double.infinity,
+            errorBuilder: (context, error, stackTrace) {
+              print('❌ Error loading network image: $error');
+              return _buildImageError();
+            },
+          ),
+        ),
+      );
+    }
+    
+    // No image available
+    return const SizedBox.shrink();
   }
 
-  
-  Widget _buildPostImage(String imagePath) {
-    if (imagePath.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: EdgeInsets.only(top: 10.h),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10.r),
-        child: _isBase64(imagePath)
-            ? Image.memory(
-                base64Decode(imagePath),
-                fit: BoxFit.cover,
-                height: 180.h,
-                width: double.infinity,
-                errorBuilder: (context, error, stackTrace) {
-                  return _buildImageError();
-                },
-              )
-            : imagePath.startsWith('http')
-                ? Image.network(
-                    imagePath,
-                    fit: BoxFit.cover,
-                    height: 180.h,
-                    width: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildImageError();
-                    },
-                  )
-                : Image.asset(
-                    imagePath,
-                    fit: BoxFit.cover,
-                    height: 180.h,
-                    width: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildImageError();
-                    },
-                  ),
-      ),
-    );
-  }
-
-  
   Widget _buildImageError() {
     return Container(
       height: 180.h,
@@ -249,7 +262,6 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  
   Widget _buildPostCard(
     BuildContext context,
     String brand,
@@ -259,15 +271,16 @@ class AdminCommunityChatPage extends StatelessWidget {
     final title = data['title']?.toString() ?? '';
     final content = data['content']?.toString() ?? '';
     final description = data['description']?.toString() ?? '';
-    final imagePath = data['imageUrl']?.toString() ?? '';
+    final imageUrl = data['imageUrl']?.toString();
+    final imageBase64 = data['imageBase64']?.toString();
     final linksList = data['links'] as List<dynamic>? ?? [];
     final mainCategory = data['mainCategory']?.toString() ?? '';
     final subCategory = data['subCategory']?.toString() ?? '';
     final communityId = data['communityId']?.toString();
 
     print('🎯 POST DEBUG: $title');
-    print('🎯 Links count: ${linksList.length}');
-    print('🎯 Links data: $linksList');
+    print('🖼️ Has imageUrl: ${imageUrl?.isNotEmpty ?? false}');
+    print('🖼️ Has imageBase64: ${imageBase64?.isNotEmpty ?? false}');
 
     final createdAt = data['createdAt'] is Timestamp
         ? (data['createdAt'] as Timestamp).toDate()
@@ -289,7 +302,6 @@ class AdminCommunityChatPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          
           Row(
             children: [
               Container(
@@ -330,7 +342,6 @@ class AdminCommunityChatPage extends StatelessWidget {
             ],
           ),
 
-          
           if (title.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 8.h),
@@ -344,7 +355,6 @@ class AdminCommunityChatPage extends StatelessWidget {
               ),
             ),
 
-          
           if (mainCategory.isNotEmpty || subCategory.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 6.h),
@@ -377,10 +387,9 @@ class AdminCommunityChatPage extends StatelessWidget {
               ),
             ),
 
-          
-          _buildPostImage(imagePath),
+          // ✅ FIXED: Pass both imageUrl and imageBase64
+          _buildPostImage(imageUrl, imageBase64),
 
-          
           if (content.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 8.h),
@@ -413,7 +422,6 @@ class AdminCommunityChatPage extends StatelessWidget {
               ),
             ),
 
-          
           if (description.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 8.h),
@@ -428,10 +436,8 @@ class AdminCommunityChatPage extends StatelessWidget {
               ),
             ),
 
-          
           if (linksList.isNotEmpty) _buildLinks(context, linksList),
 
-          
           if (createdAt != null)
             Padding(
               padding: EdgeInsets.only(top: 8.h),
@@ -446,10 +452,7 @@ class AdminCommunityChatPage extends StatelessWidget {
     );
   }
 
-  
   Widget _buildLinks(BuildContext context, List<dynamic> linksList) {
-    print('🔗 _buildLinks dipanggil dengan ${linksList.length} links');
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -468,23 +471,10 @@ class AdminCommunityChatPage extends StatelessWidget {
           final store = linkMap['store']?.toString() ?? '';
           final price = linkMap['price'];
           String logoUrl = linkMap['logoUrl']?.toString() ?? '';
-
-          print('🔍 ========== DEBUG LINK ==========');
-          print('🔍 URL: $url');
-          print('🔍 Store from Firestore: $store');
-          print('🔍 LogoUrl from Firestore: $logoUrl');
-          print('🔍 LogoUrl isEmpty: ${logoUrl.isEmpty}');
           
           if (logoUrl.isEmpty && url.isNotEmpty) {
-            print('⚠️ LogoUrl kosong, mencoba detect dari URL...');
             logoUrl = _detectLogoFromUrl(url);
-            print('✅ Hasil detect: $logoUrl');
-          } else if (logoUrl.isNotEmpty) {
-            print('✅ LogoUrl sudah ada: $logoUrl');
           }
-          
-          print('🔍 Final LogoUrl yang digunakan: $logoUrl');
-          print('🔍 ==================================');
 
           if (url.isEmpty) return const SizedBox.shrink();
 
@@ -538,7 +528,6 @@ class AdminCommunityChatPage extends StatelessWidget {
                             logoUrl,
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) {
-                              print('❌ Error loading logo: $logoUrl - $error');
                               return Icon(
                                 Icons.store,
                                 size: 24.sp,
@@ -590,8 +579,6 @@ class AdminCommunityChatPage extends StatelessWidget {
   String _detectLogoFromUrl(String url) {
     final lowerUrl = url.toLowerCase();
     
-    print('🔎 Detecting logo from URL: $lowerUrl');
-    
     final Map<String, String> storeLogos = {
       'tokopedia': 'assets/logo_tokopedia.png',
       'shopee': 'assets/logo_shopee.png',
@@ -610,16 +597,12 @@ class AdminCommunityChatPage extends StatelessWidget {
       final cleanKey = entry.key.replaceAll(' ', '').replaceAll('-', '');
       final cleanUrl = lowerUrl.replaceAll(' ', '').replaceAll('-', '').replaceAll('.', '');
       
-      print('🔎 Checking: $cleanKey vs $cleanUrl');
-      
       if (cleanUrl.contains(cleanKey)) {
-        print('✅ MATCH! Detected logo for ${entry.key}: ${entry.value}');
         return entry.value;
       }
     }
     
-    print('⚠️ No logo detected for URL: $url');
-    return ''; 
+    return '';
   }
 
   void _showDeleteDialog(BuildContext context, String postId, String? communityId) {
@@ -636,13 +619,11 @@ class AdminCommunityChatPage extends StatelessWidget {
           TextButton(
             onPressed: () async {
               try {
-                
                 await FirebaseFirestore.instance
                     .collection('posts')
                     .doc(postId)
                     .delete();
 
-                
                 if (communityId != null && communityId.isNotEmpty) {
                   await FirebaseFirestore.instance
                       .collection('communities')

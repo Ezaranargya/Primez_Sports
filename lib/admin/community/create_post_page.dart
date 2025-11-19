@@ -1,5 +1,6 @@
 import 'dart:io';
-import 'dart:convert';
+import 'dart:typed_data'; 
+import 'dart:convert'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -28,12 +29,18 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final _contentController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  String? _imagePath;
-  String? _imageBase64;
-  File? _imageFile;
+  String? _imageUrl;
+  String? _imagePathForDisplay; 
+  Uint8List? _imageBytesForUpload;
   bool _isLoading = false;
+  bool _isUploadingImage = false;
+  double _uploadProgress = 0.0;
+
+  String? _imageBase64;
 
   final List<Map<String, dynamic>> _purchaseOptions = [];
+  final List<TextEditingController> _urlControllers = [];
+  final List<TextEditingController> _priceControllers = [];
 
   String? _mainCategory;
   String? _subCategory;
@@ -100,46 +107,29 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _descriptionController.text = data['description']?.toString() ?? '';
     
     final imageUrl = data['imageUrl']?.toString() ?? '';
-    if (imageUrl.isNotEmpty) {
-      if (_isBase64(imageUrl)) {
-        _imageBase64 = imageUrl;
-      } else {
-        _imagePath = imageUrl;
-      }
+    if (imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
+      _imageUrl = imageUrl;
+    }
+    
+    final imageBase64 = data['imageBase64']?.toString() ?? '';
+    if (imageBase64.isNotEmpty) {
+      _imageBase64 = imageBase64;
+      print('✅ Loaded existing imageBase64 (${imageBase64.length} chars)');
     }
     
     _mainCategory = data['mainCategory']?.toString();
     _subCategory = data['subCategory']?.toString();
 
     final links = data['links'] as List<dynamic>? ?? [];
-    _purchaseOptions.addAll(
-      links.map((e) => Map<String, dynamic>.from(e as Map)),
-    );
-  }
-  
-  bool _isBase64(String str) {
-    if (str.isEmpty) return false;
-    
-    try {
-      if (str.startsWith('http') || 
-          str.startsWith('https') || 
-          str.startsWith('assets/') ||
-          str.contains('.png') || 
-          str.contains('.jpg') || 
-          str.contains('.jpeg') ||
-          str.contains('.webp') ||
-          str.contains('/') && str.length < 100) {
-        return false;
-      }
+    for (var link in links) {
+      final linkMap = Map<String, dynamic>.from(link as Map);
+      _purchaseOptions.add(linkMap);
       
-      if (str.length < 100) {
-        return false;
-      }
+      final urlController = TextEditingController(text: linkMap['url']?.toString() ?? '');
+      final priceController = TextEditingController(text: linkMap['price']?.toString() ?? '');
       
-      base64Decode(str);
-      return true;
-    } catch (e) {
-      return false;
+      _urlControllers.add(urlController);
+      _priceControllers.add(priceController);
     }
   }
 
@@ -148,22 +138,25 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _titleController.dispose();
     _contentController.dispose();
     _descriptionController.dispose();
+    
+    for (var controller in _urlControllers) {
+      controller.dispose();
+    }
+    for (var controller in _priceControllers) {
+      controller.dispose();
+    }
+    
     super.dispose();
   }
 
   Map<String, String> _detectStoreFromUrl(String url) {
     final lowerUrl = url.toLowerCase();
     
-    print('🔎 Detecting store from URL: $lowerUrl');
-    
     for (var entry in _storeLogos.entries) {
       final cleanKey = entry.key.replaceAll(' ', '').replaceAll('-', '');
       final cleanUrl = lowerUrl.replaceAll(' ', '').replaceAll('-', '').replaceAll('.', '');
       
-      print('🔎 Checking: $cleanKey in $cleanUrl');
-      
       if (cleanUrl.contains(cleanKey)) {
-        print('✅ MATCH! Store detected: ${entry.value['name']} - Logo: ${entry.value['logo']}');
         return {
           'store': entry.value['name']!,
           'logoUrl': entry.value['logo']!,
@@ -171,26 +164,63 @@ class _CreatePostPageState extends State<CreatePostPage> {
       }
     }
     
-    print('⚠️ No store detected for URL: $url');
     return {
       'store': 'Other',
-      'logoUrl': '', 
+      'logoUrl': '',
     };
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  Widget _buildImageFromBase64(String base64String) {
+    try {
+      final bytes = base64Decode(base64String);
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('❌ Error decoding base64 image: $error');
+          return _buildImagePlaceholder();
+        },
+      );
+    } catch (e) {
+      debugPrint('❌ Error decoding base64 image: $e');
+      return _buildImagePlaceholder();
+    }
+  }
 
-    if (pickedFile != null) {
-      final bytes = await File(pickedFile.path).readAsBytes();
-      final base64String = base64Encode(bytes);
-      
-      setState(() {
-        _imageFile = File(pickedFile.path);
-        _imagePath = pickedFile.path;
-        _imageBase64 = base64String;
-      });
+  Future<void> _pickImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        
+        final base64String = base64Encode(bytes);
+        
+        setState(() {
+          _imagePathForDisplay = pickedFile.path;
+          _imageBytesForUpload = bytes;
+          _imageUrl = null;
+          _imageBase64 = base64String;
+        });
+        
+        debugPrint('✅ Image converted to base64 (${base64String.length} chars)');
+      }
+    } catch (e) {
+      debugPrint('❌ Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memilih gambar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -202,25 +232,35 @@ class _CreatePostPageState extends State<CreatePostPage> {
         'store': '',
         'logoUrl': '',
       });
+      _urlControllers.add(TextEditingController());
+      _priceControllers.add(TextEditingController());
     });
   }
 
   void _removePurchaseOption(int index) {
     setState(() {
       _purchaseOptions.removeAt(index);
+      _urlControllers[index].dispose();
+      _priceControllers[index].dispose();
+      _urlControllers.removeAt(index);
+      _priceControllers.removeAt(index);
     });
   }
 
-  void _updatePurchaseOption(int index, String field, dynamic value) {
-    setState(() {
-      _purchaseOptions[index][field] = value;
-      
-      if (field == 'url' && value.toString().isNotEmpty) {
-        final storeInfo = _detectStoreFromUrl(value.toString());
+  void _updatePurchaseOptionUrl(int index, String value) {
+    _purchaseOptions[index]['url'] = value;
+    
+    if (value.isNotEmpty) {
+      final storeInfo = _detectStoreFromUrl(value);
+      setState(() {
         _purchaseOptions[index]['store'] = storeInfo['store']!;
         _purchaseOptions[index]['logoUrl'] = storeInfo['logoUrl']!;
-      }
-    });
+      });
+    }
+  }
+
+  void _updatePurchaseOptionPrice(int index, String value) {
+    _purchaseOptions[index]['price'] = int.tryParse(value) ?? 0;
   }
 
   Future<void> _savePost() async {
@@ -231,6 +271,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
     setState(() => _isLoading = true);
 
     try {
+      String finalImageUrl = '';
+      
       final communityQuery = await FirebaseFirestore.instance
           .collection('communities')
           .where('brand', isEqualTo: widget.brand)
@@ -238,55 +280,63 @@ class _CreatePostPageState extends State<CreatePostPage> {
           .get();
 
       String? communityId;
+      
       if (communityQuery.docs.isNotEmpty) {
         communityId = communityQuery.docs.first.id;
+        debugPrint('✅ Found existing community: $communityId for ${widget.brand}');
+      } else {
+        debugPrint('⚠️ Community not found for ${widget.brand}, creating new one...');
+        final newCommunity = await FirebaseFirestore.instance
+            .collection('communities')
+            .add({
+          'brand': widget.brand,
+          'name': 'Kumpulan Brand ${widget.brand} Official',
+          'description': 'Komunitas resmi untuk produk ${widget.brand}',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        communityId = newCommunity.id;
+        debugPrint('✅ Created new community: $communityId');
       }
+
+      final finalImageBase64 = _imageBase64 ?? widget.initialData?['imageBase64']?.toString() ?? '';
+      
+      debugPrint('📸 [DEBUG] Saving post with:');
+      debugPrint('   - imageUrl: $finalImageUrl (empty is correct)');
+      debugPrint('   - imageBase64 length: ${finalImageBase64.length}');
 
       final postData = {
         'brand': widget.brand,
         'title': _titleController.text.trim(),
         'content': _contentController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'imageUrl': _imageBase64 ?? '',
+        'imageUrl': finalImageUrl,
+        'imageBase64': finalImageBase64, 
         'links': _purchaseOptions,
         'mainCategory': _mainCategory,
         'subCategory': _subCategory,
+        'communityId': communityId,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      if (communityId != null) {
-        postData['communityId'] = communityId;
-      }
-
       if (widget.postId == null) {
         postData['createdAt'] = FieldValue.serverTimestamp();
+        
+        debugPrint('📝 Creating new post for ${widget.brand}...');
         
         final postRef = await FirebaseFirestore.instance
             .collection('posts')
             .add(postData);
 
-        if (communityId != null) {
-          await FirebaseFirestore.instance
-              .collection('communities')
-              .doc(communityId)
-              .collection('posts')
-              .doc(postRef.id)
-              .set(postData);
-        }
+        debugPrint('✅ Post created: ${postRef.id}');
       } else {
+        debugPrint('📝 Updating post ${widget.postId}...');
+        
         await FirebaseFirestore.instance
             .collection('posts')
             .doc(widget.postId)
             .update(postData);
 
-        if (communityId != null) {
-          await FirebaseFirestore.instance
-              .collection('communities')
-              .doc(communityId)
-              .collection('posts')
-              .doc(widget.postId)
-              .update(postData);
-        }
+        debugPrint('✅ Post updated: ${widget.postId}');
       }
 
       if (mounted) {
@@ -294,20 +344,23 @@ class _CreatePostPageState extends State<CreatePostPage> {
           SnackBar(
             content: Text(
               widget.postId == null
-                  ? 'Produk berhasil ditambahkan ke komunitas ${widget.brand}'
-                  : 'Produk berhasil diupdate',
+                  ? '✅ Produk berhasil ditambahkan ke komunitas ${widget.brand}'
+                  : '✅ Produk berhasil diupdate',
             ),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
           ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
+      debugPrint('❌ Error saving post: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal menyimpan: $e'),
+            content: Text('❌ Gagal menyimpan: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -331,7 +384,26 @@ class _CreatePostPageState extends State<CreatePostPage> {
         centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  if (_isUploadingImage) ...[
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Uploading image: ${(_uploadProgress * 100).toInt()}%',
+                      style: TextStyle(fontSize: 14.sp),
+                    ),
+                    SizedBox(height: 8.h),
+                    SizedBox(
+                      width: 200.w,
+                      child: LinearProgressIndicator(value: _uploadProgress),
+                    ),
+                  ],
+                ],
+              ),
+            )
           : SingleChildScrollView(
               padding: EdgeInsets.all(16.w),
               child: Form(
@@ -348,34 +420,29 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           borderRadius: BorderRadius.circular(12.r),
                           border: Border.all(color: Colors.grey[400]!),
                         ),
-                        child: _imageFile != null
+                        child: _imagePathForDisplay != null 
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12.r),
                                 child: Image.file(
-                                  _imageFile!,
+                                  File(_imagePathForDisplay!), 
                                   fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return _buildImagePlaceholder();
+                                  },
                                 ),
                               )
                             : _imageBase64 != null && _imageBase64!.isNotEmpty
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(12.r),
-                                    child: Image.memory(
-                                      base64Decode(_imageBase64!),
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                        return _buildImagePlaceholder();
-                                      },
-                                    ),
+                                    child: _buildImageFromBase64(_imageBase64!),
                                   )
-                                : _imagePath != null && _imagePath!.isNotEmpty
+                                : _imageUrl != null && _imageUrl!.isNotEmpty
                                     ? ClipRRect(
                                         borderRadius: BorderRadius.circular(12.r),
                                         child: Image.network(
-                                          _imagePath!,
+                                          _imageUrl!,
                                           fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
+                                          errorBuilder: (context, error, stackTrace) {
                                             return _buildImagePlaceholder();
                                           },
                                         ),
@@ -609,6 +676,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                   Expanded(
                                     flex: 2,
                                     child: TextField(
+                                      controller: _urlControllers[index],
                                       decoration: InputDecoration(
                                         labelText: 'Link ${index + 1}',
                                         hintText: 'https://...',
@@ -626,18 +694,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                         ),
                                       ),
                                       onChanged: (value) {
-                                        _updatePurchaseOption(index, 'url', value);
+                                        _updatePurchaseOptionUrl(index, value);
                                       },
-                                      controller: TextEditingController(
-                                        text: option['url']?.toString() ?? '',
-                                      )..selection = TextSelection.collapsed(
-                                          offset: option['url']?.toString().length ?? 0,
-                                        ),
                                     ),
                                   ),
                                   SizedBox(width: 8.w),
                                   Expanded(
                                     child: TextField(
+                                      controller: _priceControllers[index],
                                       decoration: InputDecoration(
                                         labelText: 'Harga',
                                         hintText: '1500000',
@@ -652,22 +716,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                       ),
                                       keyboardType: TextInputType.number,
                                       onChanged: (value) {
-                                        _updatePurchaseOption(
-                                          index,
-                                          'price',
-                                          int.tryParse(value) ?? 0,
-                                        );
+                                        _updatePurchaseOptionPrice(index, value);
                                       },
-                                      controller: TextEditingController(
-                                        text: option['price']?.toString() ?? '',
-                                      )..selection = TextSelection.collapsed(
-                                          offset: option['price']?.toString().length ?? 0,
-                                        ),
                                     ),
                                   ),
                                   SizedBox(width: 8.w),
                                   Container(
-                                    decoration: BoxDecoration(
+                                    decoration: const BoxDecoration(
                                       color: Colors.red,
                                       shape: BoxShape.circle,
                                     ),
@@ -694,7 +749,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     SizedBox(height: 24.h),
 
                     ElevatedButton(
-                      onPressed: _savePost,
+                      onPressed: _isUploadingImage ? null : _savePost,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         padding: EdgeInsets.symmetric(vertical: 16.h),
@@ -737,19 +792,5 @@ class _CreatePostPageState extends State<CreatePostPage> {
         ),
       ],
     );
-  }
-
-  String _formatPrice(dynamic price) {
-    if (price == null) return '0';
-
-    try {
-      final numPrice = price is int ? price : int.parse(price.toString());
-      return numPrice.toString().replaceAllMapped(
-            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-            (Match m) => '${m[1]}.',
-          );
-    } catch (e) {
-      return price.toString();
-    }
   }
 }

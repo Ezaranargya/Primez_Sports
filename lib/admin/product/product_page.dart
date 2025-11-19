@@ -31,7 +31,7 @@ class _AdminProductPageState extends State<AdminProductPage> {
             title: Text(
               'Kelola Produk',
               style: TextStyle(
-                color: AppColors.backgroundColor,
+                color: AppColors.secondary,
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
               ),
@@ -119,11 +119,11 @@ class _AdminProductPageState extends State<AdminProductPage> {
                   itemBuilder: (context, index) {
                     final p = products[index];
                     return Card(
-                      color: AppColors.backgroundColor,
+                      color: AppColors.secondary,
                       elevation: 3,
                       margin: EdgeInsets.symmetric(vertical: 6.h),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
+                        borderRadius: BorderRadius.circular(10.r),
                       ),
                       child: ListTile(
                         leading: ClipRRect(

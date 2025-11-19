@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
@@ -102,8 +103,15 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       final host = uri.host.toLowerCase();
       if (host.contains('shopee')) return 'assets/logo_shopee.png';
       if (host.contains('tokopedia')) return 'assets/logo_tokopedia.png';
-      if (host.contains('blibli')) return 'assets/logo_blibli.png';
+      if (host.contains('blibli')) return 'assets/logo_blibli.jpg';
       if (host.contains('nike')) return 'assets/logo_nike.png';
+      if (host.contains('adidas')) return 'assets/logo_adidas.png';
+      if (host.contains('puma')) return 'assets/logo_puma.png';
+      if (host.contains('underarmour') || host.contains('under-armour')) {
+        return 'assets/logo_under_armour.png';
+      }
+      if (host.contains('jordan')) return 'assets/logo_jordan.png';
+      if (host.contains('mizuno')) return 'assets/logo_mizuno.png';
     }
 
     if (brand != null) {
@@ -123,6 +131,25 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       }
     }
     return '';
+  }
+
+  String _detectStoreNameFromUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri != null) {
+      final host = uri.host.toLowerCase();
+      if (host.contains('shopee')) return 'Shopee';
+      if (host.contains('tokopedia')) return 'Tokopedia';
+      if (host.contains('blibli')) return 'Blibli';
+      if (host.contains('nike')) return 'Nike Official';
+      if (host.contains('adidas')) return 'Adidas Official';
+      if (host.contains('puma')) return 'Puma Official';
+      if (host.contains('underarmour') || host.contains('under-armour')) {
+        return 'Under Armour Official';
+      }
+      if (host.contains('jordan')) return 'Jordan Official';
+      if (host.contains('mizuno')) return 'Mizuno Official';
+    }
+    return 'Other';
   }
 
   Future<void> _pickBannerImage() async {
@@ -173,8 +200,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
           _base64Image = base64Image;
         });
 
-        print(
-            '✅ Gambar utama berhasil dikonversi ke Base64 (${base64Image.length} chars)');
+        print('✅ Gambar utama berhasil dikonversi ke Base64 (${base64Image.length} chars)');
       }
     } catch (e) {
       print('❌ Error picking main image: $e');
@@ -183,6 +209,92 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
           SnackBar(content: Text('Gagal memilih gambar: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _syncProductToCommunityPosts({
+    required String productId,
+    required Product product,
+    required String? communityId,
+  }) async {
+    try {
+      print('🔄 Syncing product to community posts...');
+      
+      final links = product.purchaseOptions.map((option) {
+        return {
+          'url': option.link,
+          'price': option.price.toInt(),
+          'store': _detectStoreNameFromUrl(option.link),
+          'logoUrl': option.logoUrl,
+        };
+      }).toList();
+
+      final postData = {
+        'brand': product.brand,
+        'title': product.name,
+        'content': product.price.toString(),
+        'description': product.description,
+        'imageUrl': '',
+        'imageBase64': product.imageBase64,
+        'links': links,
+        'mainCategory': _selectedCategory1,
+        'subCategory': _selectedCategory2,
+        'communityId': communityId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      final existingPosts = await FirebaseFirestore.instance
+          .collection('posts')
+          .where('brand', isEqualTo: product.brand)
+          .where('title', isEqualTo: product.name)
+          .limit(1)
+          .get();
+
+      if (existingPosts.docs.isNotEmpty) {
+        final postId = existingPosts.docs.first.id;
+        await FirebaseFirestore.instance
+            .collection('posts')
+            .doc(postId)
+            .update(postData);
+        print('✅ Updated existing post: $postId');
+      } else {
+        await FirebaseFirestore.instance
+            .collection('posts')
+            .add(postData);
+        print('✅ Created new post for product: ${product.name}');
+      }
+    } catch (e) {
+      print('❌ Error syncing to community posts: $e');
+    }
+  }
+
+  Future<String?> _getOrCreateCommunity(String brand) async {
+    try {
+      final communityQuery = await FirebaseFirestore.instance
+          .collection('communities')
+          .where('brand', isEqualTo: brand)
+          .limit(1)
+          .get();
+
+      if (communityQuery.docs.isNotEmpty) {
+        return communityQuery.docs.first.id;
+      }
+
+      final newCommunity = await FirebaseFirestore.instance
+          .collection('communities')
+          .add({
+        'brand': brand,
+        'name': 'Kumpulan Brand $brand Official',
+        'description': 'Komunitas resmi untuk produk $brand',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      print('✅ Created new community for $brand: ${newCommunity.id}');
+      return newCommunity.id;
+    } catch (e) {
+      print('❌ Error getting/creating community: $e');
+      return null;
     }
   }
 
@@ -206,7 +318,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
           double.tryParse((item['price'] as TextEditingController).text) ?? 0;
       return PurchaseOption(
         name: 'Link',
-        storeName: 'Toko',
+        storeName: _detectStoreNameFromUrl(link),
         price: price,
         logoUrl: _getLogoFromUrl(link, brand: _selectedBrand),
         link: link,
@@ -244,21 +356,27 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     print('Harga: ${product.price}');
     print('Categories: ${product.categories}');
     print('Jumlah opsi pembelian: ${product.purchaseOptions.length}');
-    print(
-        'Image Base64: ${_base64Image != null ? "✅ Ada (${_base64Image!.length} chars)" : "❌ Kosong"}');
-    print(
-        'Banner Base64: ${_bannerBase64 != null ? "✅ Ada (${_bannerBase64!.length} chars)" : "❌ Kosong"}');
+    print('Image Base64: ${_base64Image != null ? "✅ Ada (${_base64Image!.length} chars)" : "❌ Kosong"}');
+    print('Banner Base64: ${_bannerBase64 != null ? "✅ Ada (${_bannerBase64!.length} chars)" : "❌ Kosong"}');
 
     bool success = false;
     String? savedProductId;
 
     try {
+      final communityId = await _getOrCreateCommunity(brandName);
+      
       if (isNewProduct) {
         savedProductId = await _service.addProductWithNotifications(product);
         success = savedProductId != null;
         
         if (success) {
           print('✅ Produk baru berhasil ditambahkan dengan ID: $savedProductId');
+          
+          await _syncProductToCommunityPosts(
+            productId: savedProductId,
+            product: product,
+            communityId: communityId,
+          );
           
           try {
             await _notificationService.sendNotificationToAllUsers(
@@ -283,6 +401,12 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
         
         if (success) {
           print('✅ Produk berhasil diperbarui');
+          
+          await _syncProductToCommunityPosts(
+            productId: widget.product?.id ?? '',
+            product: product,
+            communityId: communityId,
+          );
           
           final finalImageUrl = _base64Image ?? widget.product?.imageBase64 ?? "";
           print('🖼️ [DEBUG] _base64Image length: ${_base64Image?.length ?? 0}');
@@ -316,8 +440,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       SnackBar(
         content: Text(success
             ? (isNewProduct
-                ? '✅ Produk berhasil ditambahkan & notifikasi terkirim!'
-                : '✅ Perubahan berhasil disimpan!')
+                ? '✅ Produk berhasil ditambahkan & tersinkronisasi dengan komunitas!'
+                : '✅ Perubahan berhasil disimpan & tersinkronisasi!')
             : '❌ Gagal menyimpan produk!'),
         backgroundColor: success ? Colors.green : Colors.red,
       ),
@@ -392,6 +516,18 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                                   child: Image.memory(
                                     base64Decode(_base64Image!),
                                     fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.broken_image,
+                                              size: 40, color: Colors.red),
+                                          SizedBox(height: 8.h),
+                                          Text('Error loading image',
+                                              style: TextStyle(color: Colors.red)),
+                                        ],
+                                      );
+                                    },
                                   ),
                                 )
                               : Column(
@@ -401,8 +537,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                                         size: 40, color: Colors.grey),
                                     SizedBox(height: 8.h),
                                     Text('Pilih Foto Produk',
-                                        style:
-                                            TextStyle(color: Colors.grey[600])),
+                                        style: TextStyle(color: Colors.grey[600])),
                                   ],
                                 ),
                     ),
@@ -422,8 +557,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                       child: _bannerFile != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(12.r),
-                              child:
-                                  Image.file(_bannerFile!, fit: BoxFit.cover),
+                              child: Image.file(_bannerFile!, fit: BoxFit.cover),
                             )
                           : (_bannerBase64 != null && _bannerBase64!.isNotEmpty)
                               ? ClipRRect(
@@ -431,6 +565,18 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                                   child: Image.memory(
                                     base64Decode(_bannerBase64!),
                                     fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.broken_image,
+                                              size: 36, color: Colors.red),
+                                          SizedBox(height: 8.h),
+                                          Text('Error loading banner',
+                                              style: TextStyle(color: Colors.red)),
+                                        ],
+                                      );
+                                    },
                                   ),
                                 )
                               : Column(
@@ -545,10 +691,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                   ..._purchaseOptions.asMap().entries.map((entry) {
                     final index = entry.key;
                     final item = entry.value;
-                    final linkController =
-                        item['link'] as TextEditingController;
-                    final priceController =
-                        item['price'] as TextEditingController;
+                    final linkController = item['link'] as TextEditingController;
+                    final priceController = item['price'] as TextEditingController;
                     final logo = item['logo'] as String?;
 
                     return Padding(
@@ -561,7 +705,12 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                               child: Image.asset(logo,
                                   width: 32.w,
                                   height: 32.w,
-                                  fit: BoxFit.contain),
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(Icons.store, 
+                                        size: 32.sp, 
+                                        color: Colors.grey);
+                                  }),
                             ),
                           Expanded(
                             child: TextFormField(

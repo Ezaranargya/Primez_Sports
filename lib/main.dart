@@ -37,6 +37,53 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('📩 Background message: ${message.notification?.title}');
 }
 
+class AppInitializer {
+  static Future<void> initializeApp() async {
+    await _autoInitializeCommunities();
+  }
+
+  static Future<void> _autoInitializeCommunities() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('communities')
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        debugPrint('🔄 Auto-initializing communities...');
+        
+        final communities = [
+          {"name": "Kumpulan Brand Nike Official", "brand": "Nike"},
+          {"name": "Kumpulan Brand Jordan Official", "brand": "Jordan"},
+          {"name": "Kumpulan Brand Adidas Official", "brand": "Adidas"},
+          {"name": "Kumpulan Brand Under Armour Official", "brand": "Under Armour"},
+          {"name": "Kumpulan Brand Puma Official", "brand": "Puma"},
+          {"name": "Kumpulan Brand Mizuno Official", "brand": "Mizuno"},
+        ];
+
+        for (var community in communities) {
+          await FirebaseFirestore.instance.collection('communities').add({
+            'brand': community['brand'],
+            'name': community['name'],
+            'description': 'Komunitas resmi untuk produk ${community['brand']}',
+            'createdAt': FieldValue.serverTimestamp(),
+            'memberCount': 0,
+            'postCount': 0,
+          });
+          
+          debugPrint('✅ Created community for ${community['brand']}');
+        }
+
+        debugPrint('🎉 Communities initialized successfully!');
+      } else {
+        debugPrint('✅ Communities already exist');
+      }
+    } catch (e) {
+      debugPrint('❌ Error auto-initializing communities: $e');
+    }
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -50,6 +97,8 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await AppInitializer.initializeApp();
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 

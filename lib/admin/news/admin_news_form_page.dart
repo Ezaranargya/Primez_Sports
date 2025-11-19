@@ -94,7 +94,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         if (isMainImage) {
           _mainImageBase64 = base64String;
         } else if (contentIndex != null) {
-                    _contentItems[contentIndex] = ContentBlock(
+          _contentItems[contentIndex] = ContentBlock(
             type: 'image',
             value: base64String,
             caption: _contentItems[contentIndex].caption,
@@ -160,94 +160,101 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
   }
 
   Future<void> _saveNews() async {
-  if (!_formKey.currentState!.validate()) return;
-  if (_mainImageBase64 == null || _mainImageBase64!.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Silakan pilih gambar utama'),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
-  }
-
-  if (_selectedCategories.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Silakan pilih minimal satu kategori'),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
-  }
-
-  setState(() => _isLoading = true);
-
-  try {
-    final news = News(
-      id: widget.news?.id ?? '',
-      title: _titleController.text.trim(),
-      subtitle: _subtitleController.text.trim(),
-      author: _authorController.text.trim(),
-      brand: _brandController.text.trim(),
-      date: _selectedDate,
-      createdAt: widget.news?.createdAt ?? DateTime.now(),
-      categories: _selectedCategories,
-      imageUrl1: _mainImageBase64!,
-      content: _contentItems,
-      readBy: widget.news?.readBy ?? [],
-      isNew: widget.news == null ? true : widget.news!.isNew,
-    );
-
-    if (widget.news == null) {
-      await FirebaseFirestore.instance.collection('news').add(news.toMap());
-    } else {
-      await FirebaseFirestore.instance
-          .collection('news')
-          .doc(widget.news!.id)
-          .update(news.toMap());
-    }
-
-    if (mounted) {
+    if (!_formKey.currentState!.validate()) return;
+    if (_mainImageBase64 == null || _mainImageBase64!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.news == null 
-                ? 'Berita berhasil ditambahkan' 
-                : 'Berita berhasil diperbarui'
-          ),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pop(context);
-    }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
+        const SnackBar(
+          content: Text('Silakan pilih gambar utama'),
           backgroundColor: Colors.red,
         ),
       );
+      return;
     }
-  } finally {
-    setState(() => _isLoading = false);
+
+    if (_selectedCategories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan pilih minimal satu kategori'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final news = News(
+        id: widget.news?.id ?? '',
+        title: _titleController.text.trim(),
+        subtitle: _subtitleController.text.trim(),
+        author: _authorController.text.trim(),
+        brand: _brandController.text.trim(),
+        date: _selectedDate,
+        createdAt: widget.news?.createdAt ?? DateTime.now(),
+        categories: _selectedCategories,
+        imageUrl1: _mainImageBase64!,
+        content: _contentItems,
+        readBy: widget.news?.readBy ?? [],
+        isNew: widget.news == null ? true : widget.news!.isNew,
+      );
+
+      if (widget.news == null) {
+        await FirebaseFirestore.instance.collection('news').add(news.toMap());
+      } else {
+        await FirebaseFirestore.instance
+            .collection('news')
+            .doc(widget.news!.id)
+            .update(news.toMap());
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.news == null 
+                  ? 'Berita berhasil ditambahkan' 
+                  : 'Berita berhasil diperbarui'
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           widget.news == null ? 'Tambah Berita' : 'Edit Berita',
           style: const TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
         backgroundColor: AppColors.primary,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Form(
         key: _formKey,
@@ -304,6 +311,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
 
   Widget _buildMainImageSection() {
     return Card(
+      color: AppColors.secondary,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.r),
       ),
@@ -385,6 +393,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
     String? Function(String?)? validator,
   }) {
     return Card(
+      color: AppColors.secondary,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.r),
       ),
@@ -410,6 +419,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
 
   Widget _buildDatePicker() {
     return Card(
+      color: AppColors.secondary,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.r),
       ),
@@ -423,7 +433,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
           '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
           style: const TextStyle(fontFamily: 'Poppins'),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.secondary),
         onTap: _selectDate,
       ),
     );
@@ -431,6 +441,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
 
   Widget _buildCategorySection() {
     return Card(
+      color: AppColors.secondary,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.r),
       ),
@@ -500,13 +511,17 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
             ),
             ElevatedButton.icon(
               onPressed: _addContentItem,
-              icon: const Icon(Icons.add, size: 20),
+              icon: const Icon(Icons.add, size: 20, color: Colors.white),
               label: const Text(
                 'Tambah',
-                style: TextStyle(fontFamily: 'Poppins'),
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  color: Colors.white,
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.r),
                 ),
@@ -517,6 +532,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         SizedBox(height: 12.h),
         if (_contentItems.isEmpty)
           Card(
+            color: AppColors.secondary,
             child: Padding(
               padding: EdgeInsets.all(32.w),
               child: Center(
@@ -572,9 +588,9 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
               fontSize: 16,
             ),
           )
-          ),
+        ),
       ),
-      );
+    );
   }
 
   Widget _buildContentItemCard(int index) {
@@ -582,6 +598,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
     final isImageType = item.type == 'image';
     
     return Card(
+      color: AppColors.secondary,
       margin: EdgeInsets.only(bottom: 12.h),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.r),
@@ -620,7 +637,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
             ),
             SizedBox(height: 12.h),
             
-                        if (!isImageType) ...[
+            if (!isImageType) ...[
               TextFormField(
                 initialValue: item.value,
                 maxLines: 4,
@@ -642,7 +659,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
                 },
               ),
             ]
-                        else ...[
+            else ...[
               if (item.value.isNotEmpty)
                 Stack(
                   children: [

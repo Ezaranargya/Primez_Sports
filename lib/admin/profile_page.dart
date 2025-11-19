@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/auth/login/login_page.dart';
 import 'package:go_router/go_router.dart';
+import 'package:my_app/theme/app_colors.dart';
 
 
 class AdminProfilePage extends StatefulWidget {
@@ -139,7 +140,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.red,
         centerTitle: true,
@@ -157,6 +158,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
         child: Column(
           children: [
             Card(
+              color: AppColors.secondary,
               elevation: 3,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
