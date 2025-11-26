@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:my_app/utils/image_helper.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:my_app/services/product_service.dart';
-import 'package:my_app/pages/product/widgets/product_image.dart';
 import 'package:my_app/services/notification_service.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 class EditProductScreen extends StatefulWidget {
   final String? productId;
@@ -18,7 +19,9 @@ class _EditProductScreenState extends State<EditProductScreen> {
   bool _dataReady = false;
   bool _imageChanged = false;
 
-  String? _imageBase64;
+  File? _imageFile;
+  Uint8List? _imageBytes;
+  String? _existingImageUrl;
   String? _selectedKategori;
   String? _selectedSubKategori;
 
@@ -125,7 +128,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
           return <String, dynamic>{};
         }).toList();
 
-        _imageBase64 = data['imageBase64']?.toString();
+        _existingImageUrl = data['imageUrl']?.toString();
         _isLoading = false;
         _dataReady = true;
       });
@@ -144,20 +147,30 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
   Future<void> _pickImage() async {
     try {
-      final base64 = await ImageHelper.pickImageAsBase64();
-      if (base64 == null) return;
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 85,
+      );
 
-      if (base64.length > 900000) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gambar terlalu besar! Maksimal 900KB')),
-        );
-        return;
+      if (pickedFile == null) return;
+
+      if (kIsWeb) {
+        final bytes = await pickedFile.readAsBytes();
+        setState(() {
+          _imageBytes = bytes;
+          _imageFile = null;
+          _imageChanged = true;
+        });
+      } else {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+          _imageBytes = null;
+          _imageChanged = true;
+        });
       }
-
-      setState(() {
-        _imageBase64 = base64;
-        _imageChanged = true;
-      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal pilih gambar: $e')),
@@ -199,7 +212,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
           _selectedSubKategori ?? _subKategoriList.first
         ],
         purchaseOptions: _opsiPembelian,
-        imageBase64: _imageBase64 ?? '',
+        imageFile: _imageFile,
+        imageBytes: _imageBytes,
+        imageFileName: '$productName.jpg',
+        existingImageUrl: _imageChanged ? null : _existingImageUrl,
       );
 
       if (!mounted) return;
@@ -301,17 +317,15 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   GestureDetector(
                     onTap: _pickImage,
                     child: Container(
+                      height: 200,
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade400),
                         borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey[100],
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: ProductImage(
-                          image: _imageBase64 ?? '',
-                          height: 200,
-                          width: double.infinity,
-                        ),
+                        child: _buildImagePreview(),
                       ),
                     ),
                   ),
@@ -319,7 +333,9 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   ElevatedButton.icon(
                     onPressed: _pickImage,
                     icon: const Icon(Icons.image),
-                    label: const Text('Pilih Gambar'),
+                    label: Text(_imageFile != null || _imageBytes != null
+                        ? 'Ganti Gambar'
+                        : 'Pilih Gambar'),
                   ),
                   const SizedBox(height: 24),
 
@@ -370,6 +386,60 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildImagePreview() {
+    if (_imageBytes != null) {
+      return Image.memory(
+        _imageBytes!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+      );
+    }
+
+    if (_imageFile != null) {
+      return Image.file(
+        _imageFile!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+      );
+    }
+
+    if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
+      return Image.network(
+        _existingImageUrl!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => _buildPlaceholder(),
+      );
+    }
+
+    return _buildPlaceholder();
+  }
+
+  Widget _buildPlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.add_photo_alternate, size: 64, color: Colors.grey[400]),
+        const SizedBox(height: 8),
+        Text(
+          'Tap untuk pilih gambar',
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+      ],
     );
   }
 

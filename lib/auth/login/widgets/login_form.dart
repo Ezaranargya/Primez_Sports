@@ -31,26 +31,28 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   Future<String> _getUserRole(String uid, String email) async {
-    try {
-      DocumentSnapshot userDoc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+  try {
+    DocumentSnapshot userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
-      if (userDoc.exists) {
-        final data = userDoc.data() as Map<String, dynamic>;
-        return data['role'] ?? 'user';
-      } else {
-        final defaultRole = email.contains('admin') ? 'admin' : 'user';
-        await FirebaseFirestore.instance.collection('users').doc(uid).set({
-          'email': email,
-          'role': defaultRole,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        return defaultRole;
-      }
-    } catch (_) {
-      return email.contains('admin') ? 'admin' : 'user';
+    if (userDoc.exists) {
+      final data = userDoc.data() as Map<String, dynamic>;
+      return data['role'] ?? 'user'; 
+    } else {
+      const defaultRole = 'user'; 
+      
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'email': email,
+        'role': defaultRole,
+        'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      
+      return defaultRole;
     }
+  } catch (_) {
+    return 'user'; 
   }
+}
 
   Future<void> _login() async {
     final email = _emailController.text.trim();
@@ -64,43 +66,45 @@ class _LoginFormState extends State<LoginForm> {
     setState(() => _isLoading = true);
 
     try {
-      print("🔐 Memulai login...");
+      debugPrint("🔐 Memulai login...");
       
       final credential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
 
-      print("✅ Login Firebase berhasil: ${credential.user?.email}");
+      debugPrint("✅ Login Firebase berhasil: ${credential.user?.email}");
       
       final User user = credential.user!;
       final role = await _getUserRole(user.uid, user.email!);
       
-      print("👤 Role yang didapat: '$role'");
+      debugPrint("👤 Role yang didapat: '$role'");
       
       if (!mounted) {
-        print("⚠️ Widget tidak mounted setelah getUserRole");
+        debugPrint("⚠️ Widget tidak mounted setelah getUserRole");
         return;
       }
 
       setState(() => _isLoading = false);
 
-      print("🚀 Menjadwalkan navigasi untuk role: $role");
-
-      Future.microtask(() {
-        if (!mounted) return;
-
-        print("📍 Navigasi ke ${role.toLowerCase().trim() == 'admin' ? 'Admin' : 'User'}HomePage...");
-
-        if (role.toLowerCase().trim() == 'admin') {
-          context.go('/admin-home');
-        } else {
-          context.go('/user-home');
-        }
-      });
-
+      // ✅ PERBAIKAN CRITICAL: HAPUS SEMUA NAVIGASI MANUAL
+      // Biarkan GoRouter redirect di main.dart yang handle navigasi otomatis
+      
+      debugPrint("✅ Login selesai, menunggu GoRouter redirect otomatis...");
+      
       _showSnackBar("Login berhasil sebagai $role");
       
+      // ❌ HAPUS INI - INI YANG MENYEBABKAN ERROR!
+      // Future.microtask(() {
+      //   if (!mounted) return;
+      //   debugPrint("📍 Navigasi ke ${role.toLowerCase().trim() == 'admin' ? 'Admin' : 'User'}HomePage...");
+      //   if (role.toLowerCase().trim() == 'admin') {
+      //     context.go('/admin-home');
+      //   } else {
+      //     context.go('/user-home');
+      //   }
+      // });
+
     } on FirebaseAuthException catch (e) {
-      print("❌ FirebaseAuthException: ${e.code} - ${e.message}");
+      debugPrint("❌ FirebaseAuthException: ${e.code} - ${e.message}");
       if (mounted) {
         setState(() => _isLoading = false);
         String errorMessage = "Login gagal. Cek kembali email dan password Anda.";
@@ -110,8 +114,8 @@ class _LoginFormState extends State<LoginForm> {
         _showSnackBar(errorMessage);
       }
     } catch (e, stackTrace) {
-      print("❌ Error tidak terduga: $e");
-      print("📋 Stack trace: $stackTrace");
+      debugPrint("❌ Error tidak terduga: $e");
+      debugPrint("📋 Stack trace: $stackTrace");
       if (mounted) {
         setState(() => _isLoading = false);
         _showSnackBar("Terjadi kesalahan: $e");
@@ -275,7 +279,7 @@ class _LoginFormState extends State<LoginForm> {
                     alignment: Alignment.centerRight,
                     child: GestureDetector(
                       onTap: () {
-                        print("🔑 Lupa Password diklik");
+                        debugPrint("🔑 Lupa Password diklik");
                         context.push('/reset-password');
                       },
                       child: Text(
@@ -312,7 +316,7 @@ class _LoginFormState extends State<LoginForm> {
 
                       GestureDetector(
                         onTap: () {
-                          print("👉 DAFTAR DIKLIK");
+                          debugPrint("👉 DAFTAR DIKLIK");
                           context.push('/register'); 
                         },
                         child: Text(

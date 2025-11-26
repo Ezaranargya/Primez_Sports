@@ -1,11 +1,11 @@
 import 'dart:io';
-import 'dart:typed_data'; 
-import 'dart:convert'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:my_app/theme/app_colors.dart';
+import 'package:my_app/services/supabase_storage_service.dart';
 
 class CreatePostPage extends StatefulWidget {
   final String brand;
@@ -28,15 +28,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _storageService = SupabaseStorageService();
 
-  String? _imageUrl;
-  String? _imagePathForDisplay; 
-  Uint8List? _imageBytesForUpload;
+  File? _imageFile;
+  String? _existingImageUrl;
   bool _isLoading = false;
-  bool _isUploadingImage = false;
-  double _uploadProgress = 0.0;
-
-  String? _imageBase64;
+  bool _imageChanged = false;
 
   final List<Map<String, dynamic>> _purchaseOptions = [];
   final List<TextEditingController> _urlControllers = [];
@@ -46,50 +43,15 @@ class _CreatePostPageState extends State<CreatePostPage> {
   String? _subCategory;
 
   final Map<String, Map<String, String>> _storeLogos = {
-    'tokopedia': {
-      'name': 'Tokopedia',
-      'logo': 'assets/logo_tokopedia.png',
-    },
-    'shopee': {
-      'name': 'Shopee',
-      'logo': 'assets/logo_shopee.png',
-    },
-    'blibli': {
-      'name': 'Blibli',
-      'logo': 'assets/logo_blibli.jpg',
-    },
-    'underarmour': {
-      'name': 'Under Armour Official',
-      'logo': 'assets/logo_under_armour.png',
-    },
-    'under-armour': {
-      'name': 'Under Armour Official',
-      'logo': 'assets/logo_under_armour.png',
-    },
-    'under armour': {
-      'name': 'Under Armour Official',
-      'logo': 'assets/logo_under_armour.png',
-    },
-    'jordan': {
-      'name': 'Jordan Official',
-      'logo': 'assets/logo_jordan.png',
-    },
-    'puma': {
-      'name': 'Puma Official',
-      'logo': 'assets/logo_puma.png',
-    },
-    'mizuno': {
-      'name': 'Mizuno Official',
-      'logo': 'assets/logo_mizuno.png',
-    },
-    'nike': {
-      'name': 'Nike Official',
-      'logo': 'assets/logo_nike.png',
-    },
-    'adidas': {
-      'name': 'Adidas Official',
-      'logo': 'assets/logo_adidas.png',
-    },
+    'tokopedia': {'name': 'Tokopedia', 'logo': 'assets/logo_tokopedia.png'},
+    'shopee': {'name': 'Shopee', 'logo': 'assets/logo_shopee.png'},
+    'blibli': {'name': 'Blibli', 'logo': 'assets/logo_blibli.jpg'},
+    'underarmour': {'name': 'Under Armour Official', 'logo': 'assets/logo_under_armour.png'},
+    'jordan': {'name': 'Jordan Official', 'logo': 'assets/logo_jordan.png'},
+    'puma': {'name': 'Puma Official', 'logo': 'assets/logo_puma.png'},
+    'mizuno': {'name': 'Mizuno Official', 'logo': 'assets/logo_mizuno.png'},
+    'nike': {'name': 'Nike Official', 'logo': 'assets/logo_nike.png'},
+    'adidas': {'name': 'Adidas Official', 'logo': 'assets/logo_adidas.png'},
   };
 
   @override
@@ -106,17 +68,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _contentController.text = data['content']?.toString() ?? '';
     _descriptionController.text = data['description']?.toString() ?? '';
     
-    final imageUrl = data['imageUrl']?.toString() ?? '';
-    if (imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
-      _imageUrl = imageUrl;
-    }
-    
-    final imageBase64 = data['imageBase64']?.toString() ?? '';
-    if (imageBase64.isNotEmpty) {
-      _imageBase64 = imageBase64;
-      print('✅ Loaded existing imageBase64 (${imageBase64.length} chars)');
-    }
-    
+    _existingImageUrl = data['imageUrl1']?.toString();
     _mainCategory = data['mainCategory']?.toString();
     _subCategory = data['subCategory']?.toString();
 
@@ -125,12 +77,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
       final linkMap = Map<String, dynamic>.from(link as Map);
       _purchaseOptions.add(linkMap);
       
-      final urlController = TextEditingController(text: linkMap['url']?.toString() ?? '');
-      final priceController = TextEditingController(text: linkMap['price']?.toString() ?? '');
-      
-      _urlControllers.add(urlController);
-      _priceControllers.add(priceController);
+      _urlControllers.add(TextEditingController(text: linkMap['url']?.toString() ?? ''));
+      _priceControllers.add(TextEditingController(text: linkMap['price']?.toString() ?? ''));
     }
+    
+    debugPrint('✅ Loaded existing post data');
+    debugPrint('   Image URL: ${_existingImageUrl ?? "No image"}');
   }
 
   @override
@@ -164,27 +116,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
       }
     }
     
-    return {
-      'store': 'Other',
-      'logoUrl': '',
-    };
-  }
-
-  Widget _buildImageFromBase64(String base64String) {
-    try {
-      final bytes = base64Decode(base64String);
-      return Image.memory(
-        bytes,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          debugPrint('❌ Error decoding base64 image: $error');
-          return _buildImagePlaceholder();
-        },
-      );
-    } catch (e) {
-      debugPrint('❌ Error decoding base64 image: $e');
-      return _buildImagePlaceholder();
-    }
+    return {'store': 'Other', 'logoUrl': ''};
   }
 
   Future<void> _pickImage() async {
@@ -198,18 +130,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
       );
 
       if (pickedFile != null) {
-        final bytes = await pickedFile.readAsBytes();
-        
-        final base64String = base64Encode(bytes);
-        
         setState(() {
-          _imagePathForDisplay = pickedFile.path;
-          _imageBytesForUpload = bytes;
-          _imageUrl = null;
-          _imageBase64 = base64String;
+          _imageFile = File(pickedFile.path);
+          _imageChanged = true;
         });
         
-        debugPrint('✅ Image converted to base64 (${base64String.length} chars)');
+        debugPrint('📸 Image selected: ${pickedFile.path}');
       }
     } catch (e) {
       debugPrint('❌ Error picking image: $e');
@@ -268,11 +194,38 @@ class _CreatePostPageState extends State<CreatePostPage> {
       return;
     }
 
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ User tidak terautentikasi'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      String finalImageUrl = '';
-      
+      String? finalImageUrl = _existingImageUrl;
+
+      if (_imageFile != null && _imageChanged) {
+        debugPrint('📤 Uploading new image to Supabase...');
+        
+        finalImageUrl = await _storageService.uploadPostImage(
+          file: _imageFile!,
+          userId: currentUser.uid,
+        );
+        
+        if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
+          await _storageService.deletePostImage(_existingImageUrl!);
+          debugPrint('🗑️ Old image deleted');
+        }
+        
+        debugPrint('✅ Image uploaded: $finalImageUrl');
+      }
+
       final communityQuery = await FirebaseFirestore.instance
           .collection('communities')
           .where('brand', isEqualTo: widget.brand)
@@ -283,9 +236,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
       
       if (communityQuery.docs.isNotEmpty) {
         communityId = communityQuery.docs.first.id;
-        debugPrint('✅ Found existing community: $communityId for ${widget.brand}');
       } else {
-        debugPrint('⚠️ Community not found for ${widget.brand}, creating new one...');
         final newCommunity = await FirebaseFirestore.instance
             .collection('communities')
             .add({
@@ -295,22 +246,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
           'createdAt': FieldValue.serverTimestamp(),
         });
         communityId = newCommunity.id;
-        debugPrint('✅ Created new community: $communityId');
       }
-
-      final finalImageBase64 = _imageBase64 ?? widget.initialData?['imageBase64']?.toString() ?? '';
-      
-      debugPrint('📸 [DEBUG] Saving post with:');
-      debugPrint('   - imageUrl: $finalImageUrl (empty is correct)');
-      debugPrint('   - imageBase64 length: ${finalImageBase64.length}');
 
       final postData = {
         'brand': widget.brand,
         'title': _titleController.text.trim(),
         'content': _contentController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'imageUrl': finalImageUrl,
-        'imageBase64': finalImageBase64, 
+        'imageUrl1': finalImageUrl,
         'links': _purchaseOptions,
         'mainCategory': _mainCategory,
         'subCategory': _subCategory,
@@ -320,22 +263,15 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
       if (widget.postId == null) {
         postData['createdAt'] = FieldValue.serverTimestamp();
-        
-        debugPrint('📝 Creating new post for ${widget.brand}...');
-        
         final postRef = await FirebaseFirestore.instance
             .collection('posts')
             .add(postData);
-
         debugPrint('✅ Post created: ${postRef.id}');
       } else {
-        debugPrint('📝 Updating post ${widget.postId}...');
-        
         await FirebaseFirestore.instance
             .collection('posts')
             .doc(widget.postId)
             .update(postData);
-
         debugPrint('✅ Post updated: ${widget.postId}');
       }
 
@@ -344,11 +280,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
           SnackBar(
             content: Text(
               widget.postId == null
-                  ? '✅ Produk berhasil ditambahkan ke komunitas ${widget.brand}'
+                  ? '✅ Produk berhasil ditambahkan'
                   : '✅ Produk berhasil diupdate',
             ),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
           ),
         );
         Navigator.pop(context);
@@ -360,7 +295,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
           SnackBar(
             content: Text('❌ Gagal menyimpan: $e'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -384,26 +318,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         centerTitle: true,
       ),
       body: _isLoading
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircularProgressIndicator(),
-                  if (_isUploadingImage) ...[
-                    SizedBox(height: 16.h),
-                    Text(
-                      'Uploading image: ${(_uploadProgress * 100).toInt()}%',
-                      style: TextStyle(fontSize: 14.sp),
-                    ),
-                    SizedBox(height: 8.h),
-                    SizedBox(
-                      width: 200.w,
-                      child: LinearProgressIndicator(value: _uploadProgress),
-                    ),
-                  ],
-                ],
-              ),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: EdgeInsets.all(16.w),
               child: Form(
@@ -420,34 +335,10 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           borderRadius: BorderRadius.circular(12.r),
                           border: Border.all(color: Colors.grey[400]!),
                         ),
-                        child: _imagePathForDisplay != null 
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12.r),
-                                child: Image.file(
-                                  File(_imagePathForDisplay!), 
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return _buildImagePlaceholder();
-                                  },
-                                ),
-                              )
-                            : _imageBase64 != null && _imageBase64!.isNotEmpty
-                                ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(12.r),
-                                    child: _buildImageFromBase64(_imageBase64!),
-                                  )
-                                : _imageUrl != null && _imageUrl!.isNotEmpty
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(12.r),
-                                        child: Image.network(
-                                          _imageUrl!,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return _buildImagePlaceholder();
-                                          },
-                                        ),
-                                      )
-                                    : _buildImagePlaceholder(),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12.r),
+                          child: _buildImagePreview(),
+                        ),
                       ),
                     ),
                     SizedBox(height: 16.h),
@@ -518,11 +409,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         DropdownMenuItem(value: 'Soccer', child: Text('Soccer')),
                         DropdownMenuItem(value: 'Volleyball', child: Text('Volleyball')),
                       ],
-                      onChanged: (value) {
-                        setState(() {
-                          _mainCategory = value;
-                        });
-                      },
+                      onChanged: (value) => setState(() => _mainCategory = value),
                     ),
                     SizedBox(height: 16.h),
 
@@ -540,11 +427,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         DropdownMenuItem(value: 'Trending', child: Text('Trending')),
                         DropdownMenuItem(value: 'Terbaru', child: Text('Terbaru')),
                       ],
-                      onChanged: (value) {
-                        setState(() {
-                          _subCategory = value;
-                        });
-                      },
+                      onChanged: (value) => setState(() => _subCategory = value),
                     ),
                     SizedBox(height: 20.h),
 
@@ -556,16 +439,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           style: TextStyle(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
                           ),
                         ),
                         TextButton.icon(
                           onPressed: _addPurchaseOption,
                           icon: const Icon(Icons.add),
                           label: const Text('Tambah'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                          ),
                         ),
                       ],
                     ),
@@ -577,179 +456,18 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(color: Colors.grey[300]!),
                         ),
-                        child: Center(
-                          child: Text(
-                            'Belum ada opsi pembelian',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: Colors.grey[600],
-                            ),
-                          ),
+                        child: const Center(
+                          child: Text('Belum ada opsi pembelian'),
                         ),
                       )
                     else
-                      ...List.generate(_purchaseOptions.length, (index) {
-                        final option = _purchaseOptions[index];
-                        final hasLogo = option['logoUrl']?.toString().isNotEmpty ?? false;
-                        
-                        return Container(
-                          margin: EdgeInsets.only(bottom: 12.h),
-                          padding: EdgeInsets.all(12.w),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8.r),
-                            border: Border.all(color: Colors.grey[300]!),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (hasLogo && option['store'] != 'Other')
-                                Container(
-                                  margin: EdgeInsets.only(bottom: 8.h),
-                                  padding: EdgeInsets.all(8.w),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[50],
-                                    borderRadius: BorderRadius.circular(8.r),
-                                    border: Border.all(color: Colors.grey[200]!),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 40.w,
-                                        height: 40.w,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(6.r),
-                                          border: Border.all(color: Colors.grey[300]!),
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(6.r),
-                                          child: Image.asset(
-                                            option['logoUrl']!,
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return Icon(
-                                                Icons.store,
-                                                size: 24.sp,
-                                                color: Colors.grey[400],
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 12.w),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              option['store'] ?? 'Unknown Store',
-                                              style: TextStyle(
-                                                fontSize: 14.sp,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.black87,
-                                              ),
-                                            ),
-                                            Text(
-                                              'Terdeteksi otomatis',
-                                              style: TextStyle(
-                                                fontSize: 11.sp,
-                                                color: Colors.green[600],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Icon(
-                                        Icons.check_circle,
-                                        color: Colors.green,
-                                        size: 20.sp,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              
-                              Row(
-                                children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: TextField(
-                                      controller: _urlControllers[index],
-                                      decoration: InputDecoration(
-                                        labelText: 'Link ${index + 1}',
-                                        hintText: 'https://...',
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8.r),
-                                        ),
-                                        contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 12.w,
-                                          vertical: 10.h,
-                                        ),
-                                        prefixIcon: Icon(
-                                          Icons.link,
-                                          size: 20.sp,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      onChanged: (value) {
-                                        _updatePurchaseOptionUrl(index, value);
-                                      },
-                                    ),
-                                  ),
-                                  SizedBox(width: 8.w),
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _priceControllers[index],
-                                      decoration: InputDecoration(
-                                        labelText: 'Harga',
-                                        hintText: '1500000',
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8.r),
-                                        ),
-                                        contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 12.w,
-                                          vertical: 10.h,
-                                        ),
-                                        prefixText: 'Rp ',
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      onChanged: (value) {
-                                        _updatePurchaseOptionPrice(index, value);
-                                      },
-                                    ),
-                                  ),
-                                  SizedBox(width: 8.w),
-                                  Container(
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: IconButton(
-                                      icon: Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.white,
-                                        size: 20.sp,
-                                      ),
-                                      onPressed: () => _removePurchaseOption(index),
-                                      padding: EdgeInsets.zero,
-                                      constraints: BoxConstraints(
-                                        minWidth: 36.w,
-                                        minHeight: 36.h,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
+                      ..._buildPurchaseOptions(),
+
                     SizedBox(height: 24.h),
 
                     ElevatedButton(
-                      onPressed: _isUploadingImage ? null : _savePost,
+                      onPressed: _savePost,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         padding: EdgeInsets.symmetric(vertical: 16.h),
@@ -773,24 +491,122 @@ class _CreatePostPageState extends State<CreatePostPage> {
     );
   }
 
+  Widget _buildImagePreview() {
+    if (_imageFile != null) {
+      return Image.file(_imageFile!, fit: BoxFit.cover);
+    }
+    
+    if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
+      return Image.network(
+        _existingImageUrl!,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(child: CircularProgressIndicator());
+        },
+        errorBuilder: (_, __, ___) => _buildImagePlaceholder(),
+      );
+    }
+    
+    return _buildImagePlaceholder();
+  }
+
   Widget _buildImagePlaceholder() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.add_photo_alternate,
-          size: 60.sp,
-          color: Colors.grey[600],
-        ),
+        Icon(Icons.add_photo_alternate, size: 60.sp, color: Colors.grey[600]),
         SizedBox(height: 8.h),
-        Text(
-          'Pilih Foto Produk',
-          style: TextStyle(
-            fontSize: 14.sp,
-            color: Colors.grey[600],
-          ),
-        ),
+        Text('Pilih Foto Produk', style: TextStyle(fontSize: 14.sp)),
       ],
     );
+  }
+
+  List<Widget> _buildPurchaseOptions() {
+    return List.generate(_purchaseOptions.length, (index) {
+      final option = _purchaseOptions[index];
+      final hasLogo = option['logoUrl']?.toString().isNotEmpty ?? false;
+      
+      return Container(
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8.r),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Column(
+          children: [
+            if (hasLogo && option['store'] != 'Other')
+              Container(
+                margin: EdgeInsets.only(bottom: 8.h),
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 40.w,
+                      height: 40.w,
+                      child: Image.asset(
+                        option['logoUrl']!,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.store),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Text(
+                        option['store'] ?? 'Unknown Store',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: TextField(
+                    controller: _urlControllers[index],
+                    decoration: InputDecoration(
+                      labelText: 'Link ${index + 1}',
+                      hintText: 'https://...',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.link),
+                    ),
+                    onChanged: (value) => _updatePurchaseOptionUrl(index, value),
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: TextField(
+                    controller: _priceControllers[index],
+                    decoration: const InputDecoration(
+                      labelText: 'Harga',
+                      border: OutlineInputBorder(),
+                      prefixText: 'Rp ',
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) => _updatePurchaseOptionPrice(index, value),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _removePurchaseOption(index),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,7 +5,6 @@ import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/admin/community/create_post_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:my_app/admin/community/community_page.dart';
-import 'package:my_app/pages/community/widgets/community_header.dart';
 
 class AdminCommunityChatPage extends StatelessWidget {
   final String brand;
@@ -32,7 +30,7 @@ class AdminCommunityChatPage extends StatelessWidget {
         children: [
           Container(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            color: AppColors.primary, 
+            color: AppColors.primary,
             child: SafeArea(
               bottom: false,
               child: Row(
@@ -46,22 +44,17 @@ class AdminCommunityChatPage extends StatelessWidget {
                       );
                     },
                   ),
-                  
                   Container(
                     width: 40.w,
                     height: 40.w,
                     padding: EdgeInsets.all(6.w),
                     decoration: BoxDecoration(
-                      color: Colors.white, 
+                      color: Colors.white,
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
-                    child: Image.asset(
-                      logoPath,
-                      fit: BoxFit.contain,
-                    ),
+                    child: Image.asset(logoPath, fit: BoxFit.contain),
                   ),
-                  
                   SizedBox(width: 12.w),
                   Expanded(
                     child: Text(
@@ -79,11 +72,9 @@ class AdminCommunityChatPage extends StatelessWidget {
               ),
             ),
           ),
-          
           Expanded(child: _buildPostList(context, brand)),
         ],
       ),
-
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
@@ -102,16 +93,15 @@ class AdminCommunityChatPage extends StatelessWidget {
   Widget _buildPostList(BuildContext context, String brand) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-      .collection('posts')
-      .where('brand', isEqualTo: brand)
-      .orderBy('createdAt', descending: true)
-      .snapshots(),
-
+          .collection('posts')
+          .where('brand', isEqualTo: brand)
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         if (snapshot.hasError) {
           return Center(
             child: Column(
@@ -128,13 +118,10 @@ class AdminCommunityChatPage extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 8.h),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 32.w),
-                  child: Text(
-                    '${snapshot.error}',
-                    style: TextStyle(color: Colors.red, fontSize: 13.sp),
-                    textAlign: TextAlign.center,
-                  ),
+                Text(
+                  '${snapshot.error}',
+                  style: TextStyle(color: Colors.red, fontSize: 13.sp),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -142,9 +129,7 @@ class AdminCommunityChatPage extends StatelessWidget {
         }
 
         final docs = snapshot.data?.docs ?? [];
-        
-        print('📊 Found ${docs.length} posts for brand: $brand');
-        
+
         if (docs.isEmpty) return _buildEmptyState(brand);
 
         return ListView.separated(
@@ -154,11 +139,7 @@ class AdminCommunityChatPage extends StatelessWidget {
           itemBuilder: (context, index) {
             final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>? ?? {};
-            final postId = doc.id;
-            
-            print('📄 Post $index: ${data['title']}');
-            
-            return _buildPostCard(context, brand, postId, data);
+            return _buildPostCard(context, brand, doc.id, data);
           },
         );
       },
@@ -182,82 +163,51 @@ class AdminCommunityChatPage extends StatelessWidget {
             SizedBox(height: 8.h),
             Text(
               'Tekan tombol + untuk membuat posting pertama',
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: Colors.grey.shade500,
-              ),
+              style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade500),
               textAlign: TextAlign.center,
             ),
           ],
         ),
       );
 
-  // ✅ FIXED: Improved image rendering logic
-  Widget _buildPostImage(String? imageUrl, String? imageBase64) {
-    // Priority: base64 > URL
-    if (imageBase64 != null && imageBase64.isNotEmpty) {
-      try {
-        final bytes = base64Decode(imageBase64);
-        return Padding(
-          padding: EdgeInsets.only(top: 10.h),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10.r),
-            child: Image.memory(
-              bytes,
-              fit: BoxFit.cover,
+  Widget _buildPostImage(String? imageUrl1) {
+    if (imageUrl1 == null || imageUrl1.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(top: 10.h),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10.r),
+        child: Image.network(
+          imageUrl1,
+          fit: BoxFit.cover,
+          height: 180.h,
+          width: double.infinity,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
               height: 180.h,
-              width: double.infinity,
-              errorBuilder: (context, error, stackTrace) {
-                print('❌ Error loading base64 image: $error');
-                return _buildImageError();
-              },
+              color: Colors.grey[200],
+              child: const Center(child: CircularProgressIndicator()),
+            );
+          },
+          errorBuilder: (_, __, ___) => Container(
+            height: 180.h,
+            color: Colors.grey[200],
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.broken_image, size: 48.sp, color: Colors.grey[400]),
+                SizedBox(height: 8.h),
+                Text(
+                  'Gambar tidak dapat dimuat',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
+                ),
+              ],
             ),
           ),
-        );
-      } catch (e) {
-        print('❌ Error decoding base64: $e');
-      }
-    }
-    
-    // Fallback to URL
-    if (imageUrl != null && imageUrl.isNotEmpty && imageUrl.startsWith('http')) {
-      return Padding(
-        padding: EdgeInsets.only(top: 10.h),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(10.r),
-          child: Image.network(
-            imageUrl,
-            fit: BoxFit.cover,
-            height: 180.h,
-            width: double.infinity,
-            errorBuilder: (context, error, stackTrace) {
-              print('❌ Error loading network image: $error');
-              return _buildImageError();
-            },
-          ),
         ),
-      );
-    }
-    
-    // No image available
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildImageError() {
-    return Container(
-      height: 180.h,
-      width: double.infinity,
-      color: Colors.grey[200],
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.broken_image, size: 48.sp, color: Colors.grey[400]),
-          SizedBox(height: 8.h),
-          Text(
-            'Gambar tidak dapat dimuat',
-            style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
-          ),
-        ],
       ),
     );
   }
@@ -271,16 +221,11 @@ class AdminCommunityChatPage extends StatelessWidget {
     final title = data['title']?.toString() ?? '';
     final content = data['content']?.toString() ?? '';
     final description = data['description']?.toString() ?? '';
-    final imageUrl = data['imageUrl']?.toString();
-    final imageBase64 = data['imageBase64']?.toString();
+    final imageUrl1 = data['imageUrl1']?.toString();
     final linksList = data['links'] as List<dynamic>? ?? [];
     final mainCategory = data['mainCategory']?.toString() ?? '';
     final subCategory = data['subCategory']?.toString() ?? '';
     final communityId = data['communityId']?.toString();
-
-    print('🎯 POST DEBUG: $title');
-    print('🖼️ Has imageUrl: ${imageUrl?.isNotEmpty ?? false}');
-    print('🖼️ Has imageBase64: ${imageBase64?.isNotEmpty ?? false}');
 
     final createdAt = data['createdAt'] is Timestamp
         ? (data['createdAt'] as Timestamp).toDate()
@@ -365,30 +310,19 @@ class AdminCommunityChatPage extends StatelessWidget {
                     Chip(
                       label: Text(mainCategory),
                       backgroundColor: Colors.blue[50],
-                      labelStyle: TextStyle(
-                        fontSize: 11.sp,
-                        color: Colors.blue[700],
-                      ),
-                      padding: EdgeInsets.zero,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      labelStyle: TextStyle(fontSize: 11.sp, color: Colors.blue[700]),
                     ),
                   if (subCategory.isNotEmpty)
                     Chip(
                       label: Text(subCategory),
                       backgroundColor: Colors.green[50],
-                      labelStyle: TextStyle(
-                        fontSize: 11.sp,
-                        color: Colors.green[700],
-                      ),
-                      padding: EdgeInsets.zero,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      labelStyle: TextStyle(fontSize: 11.sp, color: Colors.green[700]),
                     ),
                 ],
               ),
             ),
 
-          // ✅ FIXED: Pass both imageUrl and imageBase64
-          _buildPostImage(imageUrl, imageBase64),
+          _buildPostImage(imageUrl1),
 
           if (content.isNotEmpty)
             Padding(
@@ -402,13 +336,7 @@ class AdminCommunityChatPage extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'Harga Utama: ',
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        color: Colors.black87,
-                      ),
-                    ),
+                    Text('Harga Utama: ', style: TextStyle(fontSize: 13.sp)),
                     Text(
                       'Rp ${_formatPrice(content)}',
                       style: TextStyle(
@@ -428,11 +356,7 @@ class AdminCommunityChatPage extends StatelessWidget {
               child: Text(
                 description,
                 textAlign: TextAlign.justify,
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  color: Colors.black87,
-                  height: 1.6,
-                ),
+                style: TextStyle(fontSize: 13.sp, color: Colors.black87, height: 1.6),
               ),
             ),
 
@@ -442,8 +366,7 @@ class AdminCommunityChatPage extends StatelessWidget {
             Padding(
               padding: EdgeInsets.only(top: 8.h),
               child: Text(
-                "Diposting: ${createdAt.day}/${createdAt.month}/${createdAt.year} "
-                "- ${createdAt.hour}:${createdAt.minute.toString().padLeft(2, '0')}",
+                "Diposting: ${createdAt.day}/${createdAt.month}/${createdAt.year} - ${createdAt.hour}:${createdAt.minute.toString().padLeft(2, '0')}",
                 style: TextStyle(fontSize: 11.sp, color: Colors.grey),
               ),
             ),
@@ -459,11 +382,7 @@ class AdminCommunityChatPage extends StatelessWidget {
         SizedBox(height: 12.h),
         Text(
           "Opsi pembelian:",
-          style: TextStyle(
-            fontSize: 13.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
+          style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
         ),
         ...linksList.map((linkData) {
           final linkMap = linkData as Map<String, dynamic>? ?? {};
@@ -471,10 +390,6 @@ class AdminCommunityChatPage extends StatelessWidget {
           final store = linkMap['store']?.toString() ?? '';
           final price = linkMap['price'];
           String logoUrl = linkMap['logoUrl']?.toString() ?? '';
-          
-          if (logoUrl.isEmpty && url.isNotEmpty) {
-            logoUrl = _detectLogoFromUrl(url);
-          }
 
           if (url.isEmpty) return const SizedBox.shrink();
 
@@ -485,15 +400,6 @@ class AdminCommunityChatPage extends StatelessWidget {
                 final uri = Uri.tryParse(url);
                 if (uri != null && await canLaunchUrl(uri)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
-                } else {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Gagal membuka tautan'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
                 }
               },
               child: Container(
@@ -502,13 +408,6 @@ class AdminCommunityChatPage extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8.r),
                   border: Border.all(color: Colors.grey.shade300),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Row(
                   children: [
@@ -517,24 +416,10 @@ class AdminCommunityChatPage extends StatelessWidget {
                         width: 40.w,
                         height: 40.w,
                         margin: EdgeInsets.only(right: 10.w),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(6.r),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6.r),
-                          child: Image.asset(
-                            logoUrl,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Icons.store,
-                                size: 24.sp,
-                                color: Colors.grey[400],
-                              );
-                            },
-                          ),
+                        child: Image.asset(
+                          logoUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Icon(Icons.store, size: 24.sp),
                         ),
                       ),
                     Expanded(
@@ -544,10 +429,7 @@ class AdminCommunityChatPage extends StatelessWidget {
                           if (store.isNotEmpty && store != 'Other')
                             Text(
                               store,
-                              style: TextStyle(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
                             ),
                           if (price != null && price > 0)
                             Text(
@@ -561,11 +443,7 @@ class AdminCommunityChatPage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16.sp,
-                      color: Colors.grey,
-                    ),
+                    Icon(Icons.arrow_forward_ios, size: 16.sp, color: Colors.grey),
                   ],
                 ),
               ),
@@ -574,35 +452,6 @@ class AdminCommunityChatPage extends StatelessWidget {
         }).toList(),
       ],
     );
-  }
-
-  String _detectLogoFromUrl(String url) {
-    final lowerUrl = url.toLowerCase();
-    
-    final Map<String, String> storeLogos = {
-      'tokopedia': 'assets/logo_tokopedia.png',
-      'shopee': 'assets/logo_shopee.png',
-      'blibli': 'assets/logo_blibli.jpg',
-      'underarmour': 'assets/logo_under_armour.png',
-      'under-armour': 'assets/logo_under_armour.png',
-      'under armour': 'assets/logo_under_armour.png',
-      'jordan': 'assets/logo_jordan.png',
-      'puma': 'assets/logo_puma.png',
-      'mizuno': 'assets/logo_mizuno.png',
-      'nike': 'assets/logo_nike.png',
-      'adidas': 'assets/logo_adidas.png',
-    };
-    
-    for (var entry in storeLogos.entries) {
-      final cleanKey = entry.key.replaceAll(' ', '').replaceAll('-', '');
-      final cleanUrl = lowerUrl.replaceAll(' ', '').replaceAll('-', '').replaceAll('.', '');
-      
-      if (cleanUrl.contains(cleanKey)) {
-        return entry.value;
-      }
-    }
-    
-    return '';
   }
 
   void _showDeleteDialog(BuildContext context, String postId, String? communityId) {
@@ -623,15 +472,6 @@ class AdminCommunityChatPage extends StatelessWidget {
                     .collection('posts')
                     .doc(postId)
                     .delete();
-
-                if (communityId != null && communityId.isNotEmpty) {
-                  await FirebaseFirestore.instance
-                      .collection('communities')
-                      .doc(communityId)
-                      .collection('posts')
-                      .doc(postId)
-                      .delete();
-                }
 
                 if (context.mounted) {
                   Navigator.pop(context);

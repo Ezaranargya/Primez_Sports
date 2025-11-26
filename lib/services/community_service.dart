@@ -1,87 +1,288 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:my_app/models/community_post_model.dart';
+import 'package:my_app/models/comment_model.dart';
+import 'package:my_app/services/supabase_storage_service.dart';
 
 class CommunityService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  /// Menghitung jumlah BRAND yang belum dibaca (bukan total posts)
-  /// Ini untuk badge di bottom navigation bar
-  Stream<int> getUnreadPostsCount() {
+  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
+  final SupabaseStorageService _storage = SupabaseStorageService();
+  
+  Future<Map<String, String>> getCurrentUserInfo() async {
     final user = _auth.currentUser;
+    
     if (user == null) {
-      debugPrint('⚠️ No user logged in for unread posts count');
-      return Stream.value(0);
+      throw Exception('User not logged in');
     }
 
-    final userId = user.uid;
-    debugPrint('📡 Setting up unread posts count stream for userId: $userId');
-
-    // ✅ FIX: Combine both streams - posts and readCommunityBrands
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('readCommunityBrands')
-        .snapshots()
-        .asyncMap((readBrandsSnapshot) async {
-      try {
-        // Ambil daftar brand yang sudah dibaca
-        final readBrands = readBrandsSnapshot.docs.map((doc) => doc.id).toSet();
-        debugPrint('📚 User has read brands: $readBrands');
-        
-        // Ambil semua posts untuk tahu brand mana yang ada postingan
-        final postsSnapshot = await _firestore
-            .collection('posts')
-            .get();
-        
-        // Group posts by brand
-        final Set<String> brandsWithPosts = {};
-        for (var doc in postsSnapshot.docs) {
-          try {
-            final data = doc.data();
-            final brand = data['brand'] as String?;
-            
-            if (brand != null && brand.isNotEmpty) {
-              brandsWithPosts.add(brand);
-            }
-          } catch (e) {
-            debugPrint('❌ Error processing post ${doc.id}: $e');
-            continue;
-          }
-        }
-        
-        debugPrint('📊 Brands with posts: $brandsWithPosts');
-        
-        // Hitung brand yang belum dibaca DAN punya posts
-        int unreadBrandCount = 0;
-        for (var brand in brandsWithPosts) {
-          if (!readBrands.contains(brand)) {
-            unreadBrandCount++;
-            debugPrint('🔔 Unread brand found: $brand');
-          }
-        }
-        
-        debugPrint('📢 Final Community Unread Brand Count: $unreadBrandCount');
-        return unreadBrandCount;
-        
-      } catch (e) {
-        debugPrint('❌ Error in unread posts count calculation: $e');
-        return 0;
+    try {
+      String username = 'User';
+      String email = user.email ?? '';
+      String photoUrl = '';
+      
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      
+      if (userDoc.exists && userDoc.data() != null) {
+        final data = userDoc.data()!;
+        username = data['name'] ?? data['username'] ?? user.displayName ?? '';
+        photoUrl = data['photoUrl'] ?? user.photoURL ?? '';
+      } else {
+        username = user.displayName ?? '';
+        photoUrl = user.photoURL ?? '';
       }
-    });
+      
+      if (username.isEmpty || username == 'null') {
+        if (email.isNotEmpty) {
+          username = email.split('@')[0];
+        } else {
+          username = 'User${user.uid.substring(0, 6)}';
+        }
+      }
+      
+      debugPrint('✅ User Info Retrieved:');
+      debugPrint('   Username: "$username"');
+      debugPrint('   Email: "$email"');
+      debugPrint('   UserID: "${user.uid}"');
+      debugPrint('   PhotoUrl: "${photoUrl.isEmpty ? "EMPTY" : photoUrl}"');
+      
+      return {
+        'userId': user.uid,
+        'username': username,
+        'userEmail': email,
+        'userPhotoUrl': photoUrl,
+      };
+    } catch (e) {
+      debugPrint('❌ Error getting user info: $e');
+      
+      String fallbackUsername = user.displayName ?? user.email?.split('@')[0] ?? 'User${user.uid.substring(0, 6)}';
+      
+      return {
+        'userId': user.uid,
+        'username': fallbackUsername,
+        'userEmail': user.email ?? '',
+        'userPhotoUrl': user.photoURL ?? '',
+      };
+    }
   }
 
-  Future<void> markCommunityAsVisited() async {
-    final userId = _auth.currentUser?.uid;
-    if (userId == null) return;
+  Future<bool> isAdmin() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
 
-    await _firestore.collection('users').doc(userId).set({
-      'lastCommunityVisit': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      return userDoc.data()?['role'] == 'admin';
+    } catch (e) {
+      debugPrint('❌ Error checking admin status: $e');
+      return false;
+    }
+  }
+
+  Future<bool> isPostOwner(String postId) async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      final postDoc = await _firestore.collection('posts').doc(postId).get();
+      if (!postDoc.exists) return false;
+
+      final postData = postDoc.data()!;
+      final postOwnerId = postData['userId'] as String?;
+
+      return postOwnerId == user.uid;
+    } catch (e) {
+      debugPrint('❌ Error checking post ownership: $e');
+      return false;
+    }
+  }
+
+  Future<void> createPost({
+    required String brand,
+    required String content,
+    required String description,
+    File? imageFile,
+    List<PostLink> links = const [],
+  }) async {
+    final userInfo = await getCurrentUserInfo();
+
+    String? imageUrl;
     
-    debugPrint('✅ Community marked as visited');
+    if (imageFile != null) {
+      try {
+        debugPrint('📤 Uploading image to Supabase...');
+        imageUrl = await _storage.uploadCommunityPostImage(
+          imageFile,
+          userInfo['userId']!,
+        );
+        debugPrint('✅ Image uploaded: $imageUrl');
+      } catch (e) {
+        debugPrint('❌ Image upload failed: $e');
+        throw Exception('Failed to upload image: $e');
+      }
+    }
+
+    final photoUrl = userInfo['userPhotoUrl'] ?? '';
+    
+    if (photoUrl.isEmpty) {
+      debugPrint('⚠️ WARNING: Creating post without user photo!');
+    }
+
+    final postData = {
+      'brand': brand,
+      'content': content,
+      'description': description,
+      'createdAt': FieldValue.serverTimestamp(),
+      'imageUrl1': imageUrl,
+      'links': links.map((link) => link.toMap()).toList(),
+      'userId': userInfo['userId'],
+      'username': userInfo['username'],
+      'userEmail': userInfo['userEmail'],
+      'userPhotoUrl': photoUrl,
+    };
+    
+    debugPrint('📝 POST DATA BEFORE SAVE:');
+    debugPrint('   Brand: ${postData['brand']}');
+    debugPrint('   Username: ${postData['username']}');
+    debugPrint('   ImageUrl1: ${imageUrl ?? "No image"}');
+
+    await _firestore.collection('posts').add(postData);
+
+    debugPrint('✅ Post created successfully');
+  }
+
+  Future<void> createAdminPost({
+    required String brand,
+    required String content,
+    required String description,
+    File? imageFile,
+    List<PostLink> links = const [],
+  }) async {
+    try {
+      final userInfo = await getCurrentUserInfo();
+
+      String? imageUrl;
+      if (imageFile != null) {
+        imageUrl = await _storage.uploadCommunityPostImage(
+          imageFile,
+          userInfo['userId']!,
+        );
+      }
+
+      await _firestore.collection('posts').add({
+        'brand': brand,
+        'content': content,
+        'description': description,
+        'createdAt': FieldValue.serverTimestamp(),
+        'imageUrl1': imageUrl,
+        'links': links.map((link) => link.toMap()).toList(),
+        'userId': userInfo['userId'],
+        'username': userInfo['username'],
+        'userEmail': userInfo['userEmail'],
+        'userPhotoUrl': userInfo['userPhotoUrl'],
+      });
+
+      debugPrint('✅ Admin post created for brand: $brand');
+    } catch (e) {
+      debugPrint('❌ Error creating admin post: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updatePost({
+    required String postId,
+    String? content,
+    String? description,
+    File? newImageFile,
+    String? existingImageUrl,
+    List<PostLink>? links,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('User not logged in');
+
+    final postDoc = await _firestore.collection('posts').doc(postId).get();
+    
+    if (!postDoc.exists) {
+      throw Exception('Post not found'); 
+    }
+
+    final postData = postDoc.data()!;
+    final postOwnerId = postData['userId'] as String?;
+
+    final userIsAdmin = await isAdmin();
+
+    if (postOwnerId != user.uid && !userIsAdmin) {
+      throw Exception('You can only edit your own posts');
+    }
+
+    final updateData = <String, dynamic>{};
+    if (content != null) updateData['content'] = content;
+    if (description != null) updateData['description'] = description;
+    if (links != null) updateData['links'] = links.map((link) => link.toMap()).toList();
+    
+    String? finalImageUrl = existingImageUrl;
+    
+    if (newImageFile != null) {
+      try {
+        debugPrint('📤 Uploading new image to Supabase...');
+        
+        if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
+          debugPrint('🗑️ Deleting old image...');
+          await _storage.deleteImage(existingImageUrl);
+        }
+        
+        finalImageUrl = await _storage.uploadCommunityPostImage(
+          newImageFile,
+          user.uid,
+        );
+        debugPrint('✅ New image uploaded: $finalImageUrl');
+      } catch (e) {
+        debugPrint('❌ Error uploading new image: $e');
+        throw Exception('Failed to upload new image: $e');
+      }
+    }
+    
+    updateData['imageUrl1'] = finalImageUrl;
+    updateData['updatedAt'] = FieldValue.serverTimestamp();
+
+    await _firestore.collection('posts').doc(postId).update(updateData);
+    debugPrint('✅ Post updated: $postId');
+  }
+
+  Future<void> deletePost(String postId) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('User not logged in');
+
+    final postDoc = await _firestore.collection('posts').doc(postId).get();
+    
+    if (!postDoc.exists) {
+      throw Exception('Post not found');
+    }
+
+    final postData = postDoc.data()!;
+    final postOwnerId = postData['userId'] as String?;
+
+    final userIsAdmin = await isAdmin();
+
+    if (postOwnerId != user.uid && !userIsAdmin) {
+      throw Exception('You can only delete your own posts');
+    }
+
+    final imageUrl = postData['imageUrl1'] as String?;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      try {
+        debugPrint('🗑️ Deleting image from Supabase...');
+        await _storage.deleteImage(imageUrl);
+        debugPrint('✅ Image deleted from Supabase');
+      } catch (e) {
+        debugPrint('⚠️ Error deleting image: $e');
+      }
+    }
+
+    await _firestore.collection('posts').doc(postId).delete();
+    debugPrint('✅ Post deleted: $postId');
   }
 
   Stream<List<CommunityPost>> getAllPosts() {
@@ -89,231 +290,290 @@ class CommunityService {
         .collection('posts')
         .orderBy('createdAt', descending: true)
         .snapshots()
+        .map((snapshot) {
+      
+      debugPrint('📦 Total documents: ${snapshot.docs.length}');
+      
+      List<CommunityPost> posts = [];
+      
+      for (var doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          final post = CommunityPost.fromMap(data, doc.id);
+          posts.add(post);
+        } catch (e, stackTrace) {
+          debugPrint('❌ ERROR parsing post ${doc.id}: $e');
+        }
+      }
+      
+      return posts;
+    });
+  }
+
+  Stream<List<CommunityPost>> getPostsByBrand(String brand) {
+    return _firestore
+        .collection('posts')
+        .where('brand', isEqualTo: brand)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      
+      List<CommunityPost> posts = [];
+      
+      for (var doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          final post = CommunityPost.fromMap(data, doc.id);
+          posts.add(post);
+        } catch (e) {
+          debugPrint('❌ ERROR parsing post ${doc.id}: $e');
+        }
+      }
+      
+      return posts;
+    });
+  }
+
+  Future<void> addComment({
+    required String postId,
+    required String comment,
+  }) async {
+    final userInfo = await getCurrentUserInfo();
+
+    await _firestore
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .add({
+      'userId': userInfo['userId'],
+      'username': userInfo['username'],
+      'userPhotoUrl': userInfo['userPhotoUrl'],
+      'comment': comment,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    
+    debugPrint('✅ Comment added to post: $postId');
+  }
+
+  Stream<List<Comment>> getComments(String postId) {
+    return _firestore
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => CommunityPost.fromMap(doc.data(), doc.id))
+            .map((doc) => Comment.fromMap(doc.data(), doc.id))
             .toList());
   }
 
-  Future<CommunityPost?> getPostById(String postId) async {
-    final doc = await _firestore.collection('posts').doc(postId).get();
-    if (!doc.exists) return null;
-    return CommunityPost.fromMap(doc.data()!, doc.id);
+  Future<void> deleteComment(String postId, String commentId) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('User not logged in');
+
+    final commentDoc = await _firestore
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .get();
+    
+    if (!commentDoc.exists) {
+      throw Exception('Comment not found');
+    }
+
+    final commentData = commentDoc.data()!;
+    final commentOwnerId = commentData['userId'] as String?;
+
+    final userIsAdmin = await isAdmin();
+
+    if (commentOwnerId != user.uid && !userIsAdmin) {
+      throw Exception('You can only delete your own comments');
+    }
+
+    await _firestore
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .delete();
+    
+    debugPrint('✅ Comment deleted: $commentId from post: $postId');
   }
 
-  Future<void> createAdminPost({
-    required String brand,
-    required String content,
-    required String description,
-    required String? imageUrl1,
-    required List<PostLink> links,
-  }) async {
-    await _firestore.collection('posts').add({
-      'brand': brand,
-      'content': content,
-      'description': description,
-      'createdAt': FieldValue.serverTimestamp(),
-      'imageUrl1': imageUrl1,
-      'links': links.map((link) => link.toMap()).toList(),
-    });
+  Future<bool> isCommentOwner(String postId, String commentId) async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
 
-    debugPrint('✅ Admin post created for brand: $brand');
-  }
-
-  Future<void> deletePost(String postId) async {
-    await _firestore.collection('posts').doc(postId).delete();
-    debugPrint('✅ Post deleted: $postId');
-  }
-
-  /// Mark brand as read - PENTING: gunakan subcollection 'readCommunityBrands'
-  Future<void> markBrandPostsAsRead(String brand) async {
     try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        debugPrint('❌ No user logged in');
-        return;
-      }
+      final commentDoc = await _firestore
+          .collection('posts')
+          .doc(postId)
+          .collection('comments')
+          .doc(commentId)
+          .get();
+      
+      if (!commentDoc.exists) return false;
 
-      debugPrint('📝 Marking $brand as read...');
+      final commentData = commentDoc.data()!;
+      final commentOwnerId = commentData['userId'] as String?;
 
-      // PENTING: Gunakan 'readCommunityBrands' bukan 'read_brands'
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('readCommunityBrands')
-          .doc(brand)
-          .set({
-        'brand': brand,
-        'lastReadAt': FieldValue.serverTimestamp(),
+      return commentOwnerId == user.uid;
+    } catch (e) {
+      debugPrint('❌ Error checking comment ownership: $e');
+      return false;
+    }
+  }
+
+  Future<void> markCommunityAsVisited() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      await _firestore.collection('users').doc(user.uid).set({
+        'lastCommunityVisit': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      
+      debugPrint('✅ Community marked as visited');
+    } catch (e) {
+      debugPrint('❌ Error marking community as visited: $e');
+    }
+  }
 
-      debugPrint('✅ Successfully marked $brand as read');
+  Future<void> markBrandPostsAsRead(String brand) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      await _firestore.collection('users').doc(user.uid).set({
+        'lastBrandVisits': {
+          brand: FieldValue.serverTimestamp(),
+        }
+      }, SetOptions(merge: true));
+      
+      debugPrint('✅ Brand "$brand" posts marked as read');
     } catch (e) {
       debugPrint('❌ Error marking brand posts as read: $e');
     }
   }
 
-  /// Check if brand is read - PENTING: gunakan subcollection 'readCommunityBrands'
-  Stream<bool> isBrandRead(String brand) {
+  Future<int> getUnreadPostsCount() async {
     final user = _auth.currentUser;
-    if (user == null) {
-      debugPrint('⚠️ No user logged in for isBrandRead');
-      return Stream.value(false);
-    }
+    if (user == null) return 0;
 
-    debugPrint('👀 Checking read status for $brand');
-
-    // PENTING: Gunakan 'readCommunityBrands' bukan 'read_brands'
-    return _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('readCommunityBrands')
-        .doc(brand)
-        .snapshots()
-        .asyncMap((readDoc) async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
       
-      debugPrint('📊 Read doc exists for $brand: ${readDoc.exists}');
+      if (!userDoc.exists || userDoc.data() == null) {
+        return 0;
+      }
 
-      final postsSnapshot = await _firestore
+      final lastVisit = userDoc.data()!['lastCommunityVisit'] as Timestamp?;
+      
+      if (lastVisit == null) {
+        final postsSnapshot = await _firestore.collection('posts').get();
+        return postsSnapshot.docs.length;
+      }
+
+      final unreadPosts = await _firestore
           .collection('posts')
-          .where('brand', isEqualTo: brand)
+          .where('createdAt', isGreaterThan: lastVisit)
           .get();
 
-      final totalPosts = postsSnapshot.docs.length;
-      debugPrint('📦 Total posts for $brand: $totalPosts');
-
-      if (totalPosts == 0) {
-        debugPrint('✅ No posts for $brand, returning true (no badge)');
-        return true;
-      }
-
-      if (!readDoc.exists) {
-        debugPrint('🔴 $brand never read, returning false (show badge)');
-        return false;
-      }
-
-      final readData = readDoc.data();
-      if (readData == null) {
-        debugPrint('🔴 No data in read doc for $brand, returning false (show badge)');
-        return false;
-      }
-
-      final lastReadAt = readData['lastReadAt'];
-      
-      if (lastReadAt == null) {
-        debugPrint('⚠️ lastReadAt is null (pending write), assuming read = true');
-        return true;
-      }
-
-      final lastReadTimestamp = lastReadAt as Timestamp;
-      debugPrint('⏰ Last read at for $brand: $lastReadTimestamp');
-
-      final unreadPosts = postsSnapshot.docs.where((doc) {
-        final data = doc.data();
-        final createdAt = data['createdAt'] as Timestamp?;
-        
-        if (createdAt == null) return false;
-        
-        final isUnread = createdAt.millisecondsSinceEpoch > lastReadTimestamp.millisecondsSinceEpoch;
-        if (isUnread) {
-          debugPrint('🆕 Found unread post in $brand: ${doc.id} (${createdAt.toDate()} > ${lastReadTimestamp.toDate()})');
-        }
-        return isUnread;
-      }).toList();
-
-      final hasUnread = unreadPosts.isNotEmpty;
-      debugPrint('📊 $brand - unread: ${unreadPosts.length}, returning isRead=${!hasUnread}');
-      
-      return !hasUnread;
-    });
+      return unreadPosts.docs.length;
+    } catch (e) {
+      debugPrint('❌ Error getting unread posts count: $e');
+      return 0;
+    }
   }
 
-  Stream<int> getUnreadCountForBrand(String brand) {
+  Future<int> getUnreadBrandPostsCount(String brand) async {
+    final user = _auth.currentUser;
+    if (user == null) return 0;
+
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      
+      if (!userDoc.exists || userDoc.data() == null) {
+        return 0;
+      }
+
+      final lastBrandVisits = userDoc.data()!['lastBrandVisits'] as Map<String, dynamic>?;
+      final lastVisit = lastBrandVisits?[brand] as Timestamp?;
+      
+      if (lastVisit == null) {
+        final postsSnapshot = await _firestore
+            .collection('posts')
+            .where('brand', isEqualTo: brand)
+            .get();
+        return postsSnapshot.docs.length;
+      }
+
+      final unreadPosts = await _firestore
+          .collection('posts')
+          .where('brand', isEqualTo: brand)
+          .where('createdAt', isGreaterThan: lastVisit)
+          .get();
+
+      return unreadPosts.docs.length;
+    } catch (e) {
+      debugPrint('❌ Error getting unread brand posts count: $e');
+      return 0;
+    }
+  }
+
+  Stream<int> getUnreadPostsCountStream() {
     final user = _auth.currentUser;
     if (user == null) return Stream.value(0);
 
-    return _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('readCommunityBrands')
-        .doc(brand)
-        .snapshots()
-        .asyncMap((readDoc) async {
+    return _firestore.collection('users').doc(user.uid).snapshots().asyncMap((userDoc) async {
+      if (!userDoc.exists || userDoc.data() == null) {
+        return 0;
+      }
+
+      final lastVisit = userDoc.data()!['lastCommunityVisit'] as Timestamp?;
       
-      final postsSnapshot = await _firestore
+      if (lastVisit == null) {
+        final postsSnapshot = await _firestore.collection('posts').get();
+        return postsSnapshot.docs.length;
+      }
+
+      final unreadPosts = await _firestore
           .collection('posts')
-          .where('brand', isEqualTo: brand)
+          .where('createdAt', isGreaterThan: lastVisit)
           .get();
 
-      final totalPosts = postsSnapshot.docs.length;
-
-      if (totalPosts == 0) return 0;
-
-      if (!readDoc.exists) return totalPosts;
-
-      final lastReadAt = readDoc.data()?['lastReadAt'] as Timestamp?;
-      if (lastReadAt == null) return totalPosts;
-
-      final unreadCount = postsSnapshot.docs.where((doc) {
-        final data = doc.data();
-        final createdAt = data['createdAt'] as Timestamp?;
-        
-        if (createdAt == null) return false;
-        return createdAt.millisecondsSinceEpoch > lastReadAt.millisecondsSinceEpoch;
-      }).length;
-
-      return unreadCount;
+      return unreadPosts.docs.length;
     });
   }
 
-  Stream<Map<String, int>> getUnreadCountsByBrand() {
+  Stream<int> getUnreadBrandPostsCountStream(String brand) {
     final user = _auth.currentUser;
-    if (user == null) return Stream.value({});
+    if (user == null) return Stream.value(0);
 
-    return _firestore
-        .collection('posts')
-        .snapshots()
-        .asyncMap((postsSnapshot) async {
-      final Map<String, int> counts = {};
+    return _firestore.collection('users').doc(user.uid).snapshots().asyncMap((userDoc) async {
+      if (!userDoc.exists || userDoc.data() == null) {
+        return 0;
+      }
+
+      final lastBrandVisits = userDoc.data()!['lastBrandVisits'] as Map<String, dynamic>?;
+      final lastVisit = lastBrandVisits?[brand] as Timestamp?;
       
-      final Map<String, List<QueryDocumentSnapshot>> postsByBrand = {};
-      for (var doc in postsSnapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>?;
-        final brand = data?['brand'] as String?;
-        if (brand != null) {
-          postsByBrand.putIfAbsent(brand, () => []).add(doc);
-        }
-      }
-
-      for (var brand in postsByBrand.keys) {
-        final readDoc = await _firestore
-            .collection('users')
-            .doc(user.uid)
-            .collection('readCommunityBrands')
-            .doc(brand)
+      if (lastVisit == null) {
+        final postsSnapshot = await _firestore
+            .collection('posts')
+            .where('brand', isEqualTo: brand)
             .get();
-
-        if (!readDoc.exists) {
-          counts[brand] = postsByBrand[brand]!.length;
-        } else {
-          final lastReadAt = readDoc.data()?['lastReadAt'] as Timestamp?;
-
-          if (lastReadAt == null) {
-            counts[brand] = postsByBrand[brand]!.length;
-          } else {
-            final unreadCount = postsByBrand[brand]!.where((doc) {
-              final data = doc.data() as Map<String, dynamic>?;
-              final createdAt = data?['createdAt'] as Timestamp?;
-              
-              if (createdAt == null) return false;
-              return createdAt.millisecondsSinceEpoch > lastReadAt.millisecondsSinceEpoch;
-            }).length;
-            
-            counts[brand] = unreadCount;
-          }
-        }
+        return postsSnapshot.docs.length;
       }
 
-      return counts;
+      final unreadPosts = await _firestore
+          .collection('posts')
+          .where('brand', isEqualTo: brand)
+          .where('createdAt', isGreaterThan: lastVisit)
+          .get();
+
+      return unreadPosts.docs.length;
     });
   }
 }

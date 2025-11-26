@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
@@ -6,6 +5,7 @@ import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/utils/formatter.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class CategoryProductsPage extends StatelessWidget {
   final String category;
@@ -176,38 +176,39 @@ class _CategoryProductCardGrid extends StatelessWidget {
   Widget _buildProductImage(String image) {
     if (image.isEmpty) return _placeholder();
 
-    Widget imageWidget;
-    try {
-      if (image.startsWith('data:image')) {
-        final base64Data = image.split(',').last;
-        final bytes = base64Decode(base64Data);
-        imageWidget = Image.memory(bytes, fit: BoxFit.contain);
-      } else if (image.startsWith('/9j/') || image.startsWith('iVBOR')) {
-        final bytes = base64Decode(image);
-        imageWidget = Image.memory(bytes, fit: BoxFit.contain);
-      } else if (image.startsWith('http')) {
-        imageWidget = Image.network(image,
-            fit: BoxFit.contain, errorBuilder: (_, __, ___) => _placeholder());
-      } else {
-        imageWidget = Image.asset(image,
-            fit: BoxFit.contain, errorBuilder: (_, __, ___) => _placeholder());
-      }
-    } catch (_) {
-      imageWidget = _placeholder();
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
+        child: SizedBox(
+          height: 128.h,
+          width: double.infinity,
+          child: CachedNetworkImage(
+            imageUrl: image,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => Container(
+              color: Colors.grey[200],
+              child: Center(
+                child: SizedBox(
+                  width: 24.w,
+                  height: 24.w,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.grey[400],
+                  ),
+                ),
+              ),
+            ),
+            errorWidget: (context, url, error) => _placeholder(),
+          ),
+        ),
+      );
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
-      child: SizedBox(
-        height: 128.h,
-        width: double.infinity,
-        child: imageWidget,
-      ),
-    );
+    return _placeholder();
   }
 
   Widget _placeholder() => Container(
-        height: 150.h,
+        height: 128.h,
         decoration: BoxDecoration(
           color: Colors.grey[200],
           borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
@@ -290,24 +291,28 @@ class _CategoryProductCardList extends StatelessWidget {
   Widget _buildProductImage(String image) {
     if (image.isEmpty) return _placeholder();
 
-    try {
-      if (image.startsWith('data:image')) {
-        final base64Data = image.split(',').last;
-        final bytes = base64Decode(base64Data);
-        return Image.memory(bytes, fit: BoxFit.contain);
-      } else if (image.startsWith('/9j/') || image.startsWith('iVBOR')) {
-        final bytes = base64Decode(image);
-        return Image.memory(bytes, fit: BoxFit.contain);
-      } else if (image.startsWith('http')) {
-        return Image.network(image,
-            fit: BoxFit.contain, errorBuilder: (_, __, ___) => _placeholder());
-      } else {
-        return Image.asset(image,
-            fit: BoxFit.contain, errorBuilder: (_, __, ___) => _placeholder());
-      }
-    } catch (_) {
-      return _placeholder();
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return CachedNetworkImage(
+        imageUrl: image,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Container(
+          color: Colors.grey[200],
+          child: Center(
+            child: SizedBox(
+              width: 24.w,
+              height: 24.w,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.grey[400],
+              ),
+            ),
+          ),
+        ),
+        errorWidget: (context, url, error) => _placeholder(),
+      );
     }
+
+    return _placeholder();
   }
 
   Widget _placeholder() => Container(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/models/news_model.dart';
@@ -18,6 +18,7 @@ import 'package:my_app/providers/favorite_provider.dart';
 import 'package:my_app/pages/user/widgets/logo_card.dart';
 import 'package:my_app/brand_page.dart';
 import 'dart:async';
+import 'package:my_app/theme/app_colors.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -40,7 +41,7 @@ class _UserHomePageState extends State<UserHomePage> {
   }
 
   Stream<int> _getUnreadCommunityCountStream() {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
 
     if (userId == null) {
       print('⚠️ No user logged in for community count');
@@ -99,7 +100,7 @@ class _UserHomePageState extends State<UserHomePage> {
   }
 
   Stream<int> _getUnreadNewsCountStream() {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final userId = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
 
     if (userId == null) {
       print('⚠️ No user logged in for news count');
@@ -271,7 +272,7 @@ class _UserHomePageState extends State<UserHomePage> {
         },
       ),
       bottomNavigationBar: StreamBuilder<int>(
-        stream: _communityService.getUnreadPostsCount(),  
+        stream: _communityService.getUnreadPostsCountStream(),  
         builder: (context, communitySnapshot) {
           int communityUnreadCount = 0;
 
@@ -416,7 +417,7 @@ class _UserProductListPageState extends State<UserProductListPage> {
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('users')
-                .doc(FirebaseAuth.instance.currentUser?.uid)
+                .doc(firebase_auth.FirebaseAuth.instance.currentUser?.uid)
                 .collection('notifications')
                 .where('isRead', isEqualTo: false)
                 .snapshots(),

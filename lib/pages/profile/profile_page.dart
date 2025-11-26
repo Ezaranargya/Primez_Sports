@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +5,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/pages/profile/edit_profile_page.dart';
 import 'package:my_app/pages/profile/faq_page.dart';
+import 'package:my_app/services/supabase_migration_service.dart';
 import 'package:my_app/theme/app_colors.dart';
+import 'package:my_app/widgets/user_avatar.dart';
 
 class UserProfilePage extends StatefulWidget {
   const UserProfilePage({super.key});
@@ -17,6 +18,108 @@ class UserProfilePage extends StatefulWidget {
 
 class _UserProfilePageState extends State<UserProfilePage> {
   bool _isLoggingOut = false;
+  bool _isMigrating = false;
+
+  Future<void> _migrateToSupabase() async {
+    if (_isMigrating) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Migrasi ke Supabase Storage'),
+        content: const Text(
+          'Proses ini akan memindahkan semua gambar dari base64 ke Supabase Storage.\n\n'
+          'Proses memakan waktu beberapa menit tergantung jumlah data.\n\n'
+          'Proses ini hanya perlu dilakukan SEKALI SAJA.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Ya, Mulai Migrasi'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isMigrating = true);
+
+    try {
+      debugPrint('🚀 Starting migration to Supabase...');
+      
+      final migrationService = SupabaseMigrationService();
+      
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text('Migrasi sedang berjalan...'),
+                const SizedBox(height: 8),
+                Text(
+                  'Mohon jangan tutup aplikasi',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await migrationService.runFullMigration();
+
+      if (!mounted) return;
+      
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Migrasi berhasil! Semua gambar sudah di Supabase Storage'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 5),
+        ),
+      );
+
+      setState(() {});
+
+    } catch (e) {
+      debugPrint('❌ Error migration: $e');
+
+      if (!mounted) return;
+      
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error migrasi: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isMigrating = false);
+      }
+    }
+  }
 
   Future<void> _deleteFCMToken() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -38,8 +141,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => WillPopScope(
-        onWillPop: () async => false,
+      builder: (dialogContext) => PopScope(
+        canPop: false,
         child: AlertDialog(
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
@@ -55,7 +158,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
           content: const Text("Apakah Anda yakin ingin keluar?"),
           actions: [
             TextButton(
-              style: ElevatedButton.styleFrom(
+              style: TextButton.styleFrom(
                 foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10.r)
@@ -86,7 +189,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
     try {
       await _deleteFCMToken();
-
       await FirebaseAuth.instance.signOut();
 
       if (!mounted) return;
@@ -132,44 +234,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  Widget _buildProfileImage(String? base64Image) {
-    return Container(
-      width: 60.w,
-      height: 60.w,
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade300,
-            blurRadius: 2,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: ClipOval(
-        child: (base64Image != null && base64Image.isNotEmpty)
-            ? Image.memory(
-                base64Decode(base64Image),
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(Icons.person_outline,
-                      size: 32.sp, color: Colors.grey[600]);
-                },
-              )
-            : Icon(Icons.person_outline,
-                size: 32.sp, color: Colors.grey[600]),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      return const Center(child: Text("Sesi pengguna tidak valid. Silakan login kembali."));
+      return const Center(
+        child: Text("Sesi pengguna tidak valid. Silakan login kembali.")
+      );
     }
 
     return Scaffold(
@@ -179,8 +251,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
           Container(
             width: double.infinity,
             padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 20.h,
-                bottom: 20.h),
+              top: MediaQuery.of(context).padding.top + 20.h,
+              bottom: 20.h,
+            ),
             decoration: BoxDecoration(
               color: AppColors.primary,
               boxShadow: [
@@ -218,22 +291,27 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       }
 
                       if (snapshot.hasError) {
-                         debugPrint('Firebase Error: ${snapshot.error}');
-                         return _errorCard("Gagal memuat data: ${snapshot.error.toString()}");
+                        debugPrint('Firebase Error: ${snapshot.error}');
+                        return _errorCard("Gagal memuat data: ${snapshot.error.toString()}");
                       }
 
                       if (!snapshot.hasData || snapshot.data?.data() == null) {
                         return _emptyUserCard();
                       }
 
-                      final userData =
-                          snapshot.data!.data() as Map<String, dynamic>;
-                      final username =
-                          userData['username'] ?? user.displayName ?? 'User';
+                      final userData = snapshot.data!.data() as Map<String, dynamic>;
+                      final username = userData['username'] ?? user.displayName ?? 'User';
                       final profile = userData['profile'] ?? '';
-                      final photoBase64 = userData['photoBase64'];
+                      final photoUrl = userData['photoUrl'] ?? '';
+                      final bio = userData['bio'] ?? '';
 
-                      return _profileCard(username, profile, photoBase64);
+                      return _profileCard(
+                        userId: user.uid,
+                        username: username,
+                        profile: profile,
+                        photoUrl: photoUrl,
+                        bio: bio,
+                      );
                     },
                   ),
 
@@ -241,8 +319,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     padding: EdgeInsets.symmetric(horizontal: 16.w),
                     child: Column(
                       children: [
-                        _buildMenuItem(Icons.help_outline, "FAQ", _handleFaqTap),
                         SizedBox(height: 12.h),
+                        
+                        _buildMenuItem(
+                          Icons.help_outline,
+                          "FAQ",
+                          _handleFaqTap,
+                        ),
+                        SizedBox(height: 12.h),
+                        
                         _buildMenuItem(
                           Icons.logout,
                           "Logout",
@@ -264,22 +349,26 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-
   Widget _loadingCard() {
     return Container(
       margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
       padding: EdgeInsets.all(20.w),
       decoration: _cardDecoration(),
-      child: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      child: const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
     );
   }
   
   Widget _errorCard(String message) {
-     return Container(
+    return Container(
       margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
       padding: EdgeInsets.all(20.w),
       decoration: _cardDecoration(),
-      child: Text("Error: $message", style: const TextStyle(color: Colors.red)),
+      child: Text(
+        "Error: $message",
+        style: const TextStyle(color: Colors.red),
+      ),
     );
   }
 
@@ -307,15 +396,29 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  Widget _profileCard(String username, String profile, String? photoBase64) {
+  Widget _profileCard({
+    required String userId,
+    required String username,
+    required String profile,
+    required String photoUrl,
+    required String bio,
+  }) {
     return Container(
       margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
       padding: EdgeInsets.all(20.w),
       decoration: _cardDecoration(),
       child: Row(
         children: [
-          _buildProfileImage(photoBase64),
+          UserAvatar(
+            photoUrl: photoUrl,
+            userId: userId,
+            username: username,
+            bio: bio,
+            size: 60,
+          ),
+          
           SizedBox(width: 16.w),
+          
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,21 +435,35 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   SizedBox(height: 4.h),
                   Text(
                     profile,
-                    style:
-                        TextStyle(fontSize: 13.sp, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: Colors.grey[600],
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
+                if (bio.isNotEmpty) ...[
+                  SizedBox(height: 4.h),
+                  Text(
+                    bio,
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: Colors.grey[700],
+                      ),
+                  )
+                ]
               ],
             ),
           ),
+          
           TextButton(
             onPressed: _handleEditProfile,
             style: TextButton.styleFrom(
               backgroundColor: Colors.grey[100],
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
             ),
             child: Text(
               "Edit",
@@ -367,24 +484,21 @@ class _UserProfilePageState extends State<UserProfilePage> {
     VoidCallback onTap, {
     bool isDestructive = false,
     bool isLoading = false,
+    Color? iconColor,
   }) {
     return InkWell(
-      onTap: isLoading
-          ? null
-          : () {
-              if (mounted && !_isLoggingOut) {
-                onTap();
-              }
-            },
+      onTap: isLoading ? null : onTap,
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
         decoration: _cardDecoration(),
         child: Row(
           children: [
-            Icon(icon,
-                size: 24.sp,
-                color: isDestructive ? AppColors.primary : Colors.black87),
+            Icon(
+              icon,
+              size: 24.sp,
+              color: iconColor ?? (isDestructive ? AppColors.primary : Colors.black87),
+            ),
             SizedBox(width: 16.w),
             Expanded(
               child: Text(
@@ -402,13 +516,17 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 height: 16.sp,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    iconColor ?? AppColors.primary
+                  ),
                 ),
               )
             else
-              Icon(Icons.arrow_forward_ios,
-                  size: 16.sp, color: Colors.grey[400]),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16.sp,
+                color: Colors.grey[400],
+              ),
           ],
         ),
       ),

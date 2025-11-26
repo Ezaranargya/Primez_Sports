@@ -22,7 +22,7 @@ class PurchaseOption {
       final link = map['link']?.toString() ?? '';
       final logoUrl = map['logoUrl']?.toString() ?? '';
       final name = map['name']?.toString() ?? '';
-      
+
       double price = 0.0;
       final priceValue = map['price'];
       if (priceValue != null) {
@@ -115,33 +115,33 @@ class Product {
   final List<String> categories;
   final DateTime? createdAt;
   final String description;
-  final String imageBase64;
+
+  final String imageUrl;
+
   final String name;
   final double price;
   final List<PurchaseOption> purchaseOptions;
   final DateTime? updatedAt;
   final String userId;
-  final String bannerImage;
+
+  final String bannerUrl;
 
   Product({
     required this.id,
     this.brand = '',
     List<String>? categories,
-    String? category,  
-    String? subCategory,  
+    String? category,
+    String? subCategory,
     this.createdAt,
     this.description = '',
-    String? imageBase64,
-    String? imageUrl,  
+    this.imageUrl = '',
     required this.name,
     this.price = 0.0,
     this.purchaseOptions = const [],
     this.updatedAt,
     this.userId = '',
-    String? bannerImage,
-  }) : categories = categories ?? _buildCategories(category, subCategory),
-       imageBase64 = imageBase64 ?? imageUrl ?? '',
-       bannerImage = bannerImage ?? '';
+    this.bannerUrl = '',
+  }) : categories = categories ?? _buildCategories(category, subCategory);
 
   static List<String> _buildCategories(String? category, String? subCategory) {
     final result = <String>[];
@@ -170,15 +170,13 @@ class Product {
 
       final createdAt = _parseTimestamp(data['createdAt']);
       final description = data['description']?.toString() ?? '';
-      final imageBase64 = data['imageBase64']?.toString() ?? '';
+      final imageUrl = data['imageUrl']?.toString() ?? '';
       final name = data['name']?.toString() ?? 'Produk Tanpa Nama';
       final price = _parsePrice(data['price']);
-
       final purchaseOptions = _parsePurchaseOptions(data['purchaseOptions']);
-
       final updatedAt = _parseTimestamp(data['updatedAt']);
       final userId = data['userId']?.toString() ?? '';
-      final bannerImage = data['bannerImage']?.toString() ?? '';
+      final bannerUrl = data['bannerUrl']?.toString() ?? '';
 
       return Product(
         id: docId,
@@ -186,13 +184,13 @@ class Product {
         categories: categories,
         createdAt: createdAt,
         description: description,
-        imageBase64: imageBase64,
+        imageUrl: imageUrl,
         name: name,
         price: price,
         purchaseOptions: purchaseOptions,
         updatedAt: updatedAt,
         userId: userId,
-        bannerImage: bannerImage,
+        bannerUrl: bannerUrl,
       );
     } catch (e, stackTrace) {
       print('❌ Error parsing Product: $e');
@@ -210,21 +208,21 @@ class Product {
       'brand': brand,
       'categories': categories,
       'description': description,
-      'imageBase64': imageBase64,
+      'imageUrl': imageUrl,
       'name': name,
       'price': price,
       'purchaseOptions': purchaseOptions.map((po) => po.toMap()).toList(),
       'userId': userId,
-      'bannerImage': bannerImage,
+      'bannerUrl': bannerUrl,
     };
-    
+
     if (createdAt != null) {
       map['createdAt'] = Timestamp.fromDate(createdAt!);
     }
     if (updatedAt != null) {
       map['updatedAt'] = Timestamp.fromDate(updatedAt!);
     }
-    
+
     return map;
   }
 
@@ -271,26 +269,28 @@ class Product {
 
   String get category => categories.isNotEmpty ? categories[0] : '';
   String get subCategory => categories.length > 1 ? categories[1] : '';
-  String get imageUrl => imageBase64;
-  bool get shouldUseBase64 => imageBase64.isNotEmpty;
-  String get displayImage => imageBase64;
+
+  /**
+   * Getter untuk mengembalikan imageUrl. Ini menyelesaikan error 'displayImage'
+   * yang mungkin digunakan di widget lain, setelah properti imageBase64 dihapus.
+   */
+  String get displayImage => imageUrl;
 
   Product copyWith({
     String? id,
     String? brand,
     List<String>? categories,
-    String? category,  
-    String? subCategory,  
+    String? category,
+    String? subCategory,
     DateTime? createdAt,
     String? description,
-    String? imageBase64,
-    String? imageUrl, 
+    String? imageUrl,
     String? name,
     double? price,
     List<PurchaseOption>? purchaseOptions,
     DateTime? updatedAt,
     String? userId,
-    String? bannerImage,
+    String? bannerUrl,
   }) {
     List<String>? newCategories = categories;
     if (newCategories == null && (category != null || subCategory != null)) {
@@ -306,13 +306,13 @@ class Product {
       categories: newCategories ?? this.categories,
       createdAt: createdAt ?? this.createdAt,
       description: description ?? this.description,
-      imageBase64: imageBase64 ?? imageUrl ?? this.imageBase64,
+      imageUrl: imageUrl ?? this.imageUrl,
       name: name ?? this.name,
       price: price ?? this.price,
       purchaseOptions: purchaseOptions ?? this.purchaseOptions,
       updatedAt: updatedAt ?? this.updatedAt,
       userId: userId ?? this.userId,
-      bannerImage: bannerImage ?? this.bannerImage,
+      bannerUrl: bannerUrl ?? this.bannerUrl,
     );
   }
 

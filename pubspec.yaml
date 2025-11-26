@@ -37,7 +37,7 @@ dependencies:
 
   # --- Gambar & ML Kit ---
   image_picker: ^1.1.1
-  image: ^4.2.0
+  image: ^4.5.4
   google_mlkit_commons: ^0.11.0
   google_mlkit_text_recognition: ^0.15.0
 
@@ -54,6 +54,13 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: any
+  timeago: ^3.6.0
+  path_provider: ^2.1.2
+  cached_network_image: ^3.3.1
+  shared_preferences: ^2.5.3
+  readmore: ^2.2.0
+  supabase_flutter: ^2.9.1
+  firebase_app_check: ^0.4.1+2
 
 dev_dependencies:
   flutter_test:

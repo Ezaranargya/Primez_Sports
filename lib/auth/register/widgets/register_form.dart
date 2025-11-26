@@ -42,19 +42,20 @@ class _RegisterFormState extends State<RegisterForm> {
   }
 
   Future<void> _saveUserData(String uid, String username, String email) async {
-    final defaultRole = email.contains('admin') ? 'admin' : 'user';
-    try {
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'username': username,
-        'email': email,
-        'role': defaultRole,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      print("✅ Firestore: User $uid dengan username '$username' dan role '$defaultRole' tersimpan.");
-    } catch (e) {
-      print("❌ Firestore Error: Gagal menyimpan data user: $e");
-    }
+  const defaultRole = 'user';
+  try {
+    await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      'username': username,
+      'email': email,
+      'role': defaultRole,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    print("✅ Firestore: User $uid tersimpan dengan role USER.");
+  } catch (e) {
+    print("❌ Firestore Error: $e");
   }
+}
+
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) {
@@ -78,7 +79,6 @@ class _RegisterFormState extends State<RegisterForm> {
 
       await _saveUserData(user.uid, username, user.email!);
 
-      // ✅ LOGOUT USER SETELAH REGISTRASI
       await FirebaseAuth.instance.signOut();
       print("🔓 User berhasil logout setelah registrasi");
 

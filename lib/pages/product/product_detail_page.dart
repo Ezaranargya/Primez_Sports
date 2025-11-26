@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -272,18 +271,6 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
 
   Widget _buildProductImage(Product product) {
     try {
-      if (product.imageBase64 != null && product.imageBase64!.isNotEmpty) {
-        final decodedBytes = base64Decode(product.imageBase64!);
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12.r),
-          child: Image.memory(
-            decodedBytes,
-            height: 250.h,
-            width: double.infinity,
-            fit: BoxFit.cover,
-          ),
-        );
-      }
       if (product.imageUrl.isNotEmpty) {
         return ClipRRect(
           borderRadius: BorderRadius.circular(12.r),
@@ -410,14 +397,14 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
                         : 'Produk tidak ditemukan',
                     style: snapshot.hasError
                         ? GoogleFonts.poppins(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w600,
-                          )
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w600,
+                            )
                         : GoogleFonts.poppins(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade700,
-                          ),
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
                   ),
                   if (snapshot.hasError)
                     Padding(

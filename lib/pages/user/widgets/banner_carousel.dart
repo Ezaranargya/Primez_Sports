@@ -36,8 +36,8 @@ class BannerCarousel extends StatefulWidget {
 class _BannerCarouselState extends State<BannerCarousel> {
   late PageController _pageController;
   int _currentPage = 0;
-  final Map<int, Uint8List> _imageCache = {};
-  bool _isInitialized = false;
+  // Menghapus: final Map<int, Uint8List> _imageCache = {};
+  // Menghapus: bool _isInitialized = false; // Sekarang dihitung langsung di build
 
   static const int _infiniteMultiplier = 10000;
   int get _initialPage =>
@@ -51,7 +51,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
       viewportFraction: 0.9,
     );
 
-    _preloadImages();
+    // Menghapus: _preloadImages();
 
     if (widget.autoPlay && widget.banners.isNotEmpty) {
       Future.delayed(widget.autoPlayInterval, _autoSlide);
@@ -61,28 +61,10 @@ class _BannerCarouselState extends State<BannerCarousel> {
   @override
   void didUpdateWidget(BannerCarousel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.banners != widget.banners) {
-      _imageCache.clear();
-      _preloadImages();
-    }
+    // Menghapus: if (oldWidget.banners != widget.banners) { _imageCache.clear(); _preloadImages(); }
   }
 
-  Future<void> _preloadImages() async {
-    for (int i = 0; i < widget.banners.length; i++) {
-      final product = widget.banners[i];
-      try {
-        if (product.bannerImage.isNotEmpty) {
-          _imageCache[i] = base64Decode(product.bannerImage);
-        } else if (product.imageBase64.isNotEmpty) {
-          _imageCache[i] = base64Decode(product.imageBase64);
-        }
-      } catch (e) {
-        print('❌ Error preloading image $i: $e');
-      }
-    }
-
-    if (mounted) setState(() => _isInitialized = true);
-  }
+  // Menghapus: Future<void> _preloadImages() async { ... }
 
   void _autoSlide() {
     if (!mounted || widget.banners.isEmpty) return;
@@ -103,37 +85,37 @@ class _BannerCarouselState extends State<BannerCarousel> {
   @override
   void dispose() {
     _pageController.dispose();
-    _imageCache.clear();
+    // Menghapus: _imageCache.clear();
     super.dispose();
   }
 
-  Widget _buildBannerImage(Product product, int index) {
-    if (_imageCache.containsKey(index)) {
-      return Image.memory(
-        _imageCache[index]!,
+  Widget _buildBannerImage(Product product) {
+    // Memastikan kita menggunakan URL yang valid.
+    final imageUrl = product.imageUrl; 
+    
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Image.network(
+        imageUrl,
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
         gaplessPlayback: true,
         filterQuality: FilterQuality.high,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              color: widget.activeColor,
+              strokeWidth: 2,
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
         errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
       );
-    }
-
-    try {
-      if (product.bannerImage.isNotEmpty) {
-        return Image.memory(
-          base64Decode(product.bannerImage),
-          fit: BoxFit.cover,
-        );
-      } else if (product.imageBase64.isNotEmpty) {
-        return Image.memory(
-          base64Decode(product.imageBase64),
-          fit: BoxFit.cover,
-        );
-      }
-    } catch (e) {
-      print('❌ Error decoding image: $e');
     }
 
     return _buildPlaceholder();
@@ -179,21 +161,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
       );
     }
 
-    if (!_isInitialized) {
-      return Container(
-        height: widget.height.h,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(widget.borderRadius.r),
-        ),
-        child: Center(
-          child: CircularProgressIndicator(
-            color: widget.activeColor,
-            strokeWidth: 2,
-          ),
-        ),
-      );
-    }
+    // Menghapus kondisi _isInitialized karena kita menggunakan Image.network
 
     return Column(
       children: [
@@ -242,8 +210,8 @@ class _BannerCarouselState extends State<BannerCarousel> {
                         fit: StackFit.expand,
                         children: [
                           Container(color: Colors.grey[200]),
-                          _buildBannerImage(product, actualIndex),
-
+                          _buildBannerImage(product), // Memanggil tanpa index
+                          
                           Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -288,7 +256,8 @@ class _BannerCarouselState extends State<BannerCarousel> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  product.formattedPrice,
+                                  // Asumsi product.formattedPrice tersedia
+                                  product.formattedPrice, 
                                   style: TextStyle(
                                     color: AppColors.primary,
                                     fontSize: 18.sp,

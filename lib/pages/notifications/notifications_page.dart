@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -47,10 +46,6 @@ class NotificationPage extends StatelessWidget {
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _getCombinedNotifications(userId),
         builder: (context, snapshot) {
-          print('🔔 Connection state: ${snapshot.connectionState}');
-          print('🔔 Has data: ${snapshot.hasData}');
-          print('🔔 Current user UID: $userId');
-
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
@@ -58,16 +53,12 @@ class NotificationPage extends StatelessWidget {
           }
 
           if (snapshot.hasError) {
-            print('🔔 Error: ${snapshot.error}');
+            debugPrint('❌ Error: ${snapshot.error}');
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
                   Text('Error: ${snapshot.error}'),
                   const SizedBox(height: 16),
@@ -88,18 +79,13 @@ class NotificationPage extends StatelessWidget {
           }
 
           final notifications = snapshot.data ?? [];
-          print('🔔 Notifications count: ${notifications.length}');
 
           if (notifications.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.notifications_off_outlined,
-                    size: 80,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
                     'Belum ada notifikasi',
@@ -122,13 +108,6 @@ class NotificationPage extends StatelessWidget {
               final isRead = notif['isRead'] ?? false;
               final source = notif['source'] ?? 'personal';
               final imageUrl = notif['imageUrl'] as String?;
-              
-              print('🖼️ [Notif ${index}] Title: ${notif['title']}');
-              print('🖼️ [Notif ${index}] ImageUrl exists: ${imageUrl != null}');
-              print('🖼️ [Notif ${index}] ImageUrl length: ${imageUrl?.length ?? 0}');
-              if (imageUrl != null && imageUrl.isNotEmpty) {
-                print('🖼️ [Notif ${index}] First 50 chars: ${imageUrl.substring(0, imageUrl.length > 50 ? 50 : imageUrl.length)}');
-              }
 
               return Dismissible(
                 key: Key('${source}_${notif['id']}'),
@@ -165,37 +144,10 @@ class NotificationPage extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
                   decoration: BoxDecoration(
                     color: isRead ? Colors.white : AppColors.secondary,
-                    borderRadius: BorderRadius.circular(8.r)
+                    borderRadius: BorderRadius.circular(8.r),
                   ),
                   child: ListTile(
-                    leading: imageUrl != null && imageUrl.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.memory(
-                              base64Decode(imageUrl),
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return CircleAvatar(
-                                  backgroundColor: isRead ? Colors.grey : AppColors.primary,
-                                  child: Icon(
-                                    _getNotificationIcon(notif['type']),
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                );
-                              },
-                            ),
-                          )
-                        : CircleAvatar(
-                            backgroundColor: isRead ? Colors.grey : AppColors.primary,
-                            child: Icon(
-                              _getNotificationIcon(notif['type']),
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
+                    leading: _buildNotificationImage(imageUrl, notif['type'], isRead),
                     title: Text(
                       notif['title'] ?? 'Notifikasi',
                       style: TextStyle(
@@ -219,10 +171,7 @@ class NotificationPage extends StatelessWidget {
                           children: [
                             Text(
                               _formatTimestamp(notif['createdAt'] ?? notif['timestamp']),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[600],
-                              ),
+                              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                             ),
                             if (source == 'global') ...[
                               const SizedBox(width: 8),
@@ -267,6 +216,55 @@ class NotificationPage extends StatelessWidget {
     );
   }
 
+  Widget _buildNotificationImage(String? imageUrl, String? type, bool isRead) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          imageUrl,
+          width: 50,
+          height: 50,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              width: 50,
+              height: 50,
+              color: Colors.grey[200],
+              child: const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            debugPrint('❌ Error loading notification image: $error');
+            return CircleAvatar(
+              backgroundColor: isRead ? Colors.grey : AppColors.primary,
+              child: Icon(
+                _getNotificationIcon(type),
+                color: Colors.white,
+                size: 20,
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    return CircleAvatar(
+      backgroundColor: isRead ? Colors.grey : AppColors.primary,
+      child: Icon(
+        _getNotificationIcon(type),
+        color: Colors.white,
+        size: 20,
+      ),
+    );
+  }
+
   Stream<List<Map<String, dynamic>>> _getCombinedNotifications(String userId) {
     final personalStream = FirebaseFirestore.instance
         .collection('users')
@@ -304,8 +302,6 @@ class NotificationPage extends StatelessWidget {
               onTimeout: () => throw TimeoutException('Global notifications timeout'),
             );
 
-        print('✅ Successfully fetched ${globalSnapshot.docs.length} global notifications');
-
         Set<String> readGlobalIds = {};
         try {
           final readGlobalSnapshot = await FirebaseFirestore.instance
@@ -314,17 +310,16 @@ class NotificationPage extends StatelessWidget {
               .collection('readGlobalNotifications')
               .get()
               .timeout(const Duration(seconds: 3));
-          
+
           readGlobalIds = readGlobalSnapshot.docs.map((doc) => doc.id).toSet();
-          print('📚 User has read ${readGlobalIds.length} global notifications');
         } catch (e) {
-          print('⚠️ Cannot get readGlobalNotifications: $e');
+          debugPrint('⚠️ Cannot get readGlobalNotifications: $e');
         }
 
         for (var doc in globalSnapshot.docs) {
-          final data = doc.data() as Map<String, dynamic>;
+          final data = doc.data();
           final isReadGlobal = readGlobalIds.contains(doc.id);
-          
+
           allNotifications.add({
             'id': doc.id,
             'source': 'global',
@@ -339,9 +334,8 @@ class NotificationPage extends StatelessWidget {
           });
         }
       } catch (e) {
-        print('⚠️ Error fetching global notifications: $e');
+        debugPrint('⚠️ Error fetching global notifications: $e');
       }
-
 
       allNotifications.sort((a, b) {
         final aTime = a['createdAt'];
@@ -428,6 +422,8 @@ class NotificationPage extends StatelessWidget {
   }
 
   void _showNotificationDetail(BuildContext context, Map<String, dynamic> notif) {
+    final imageUrl = notif['imageUrl'] as String?;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -438,13 +434,17 @@ class NotificationPage extends StatelessWidget {
           children: [
             if (notif['message'] != null && notif['message'].toString().isNotEmpty)
               Text(notif['message']),
-            if (notif['imageUrl'] != null && notif['imageUrl'].toString().isNotEmpty) ...[
+            if (imageUrl != null && imageUrl.isNotEmpty) ...[
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.memory(
-                  base64Decode(notif['imageUrl']),
+                child: Image.network(
+                  imageUrl,
                   fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const Center(child: CircularProgressIndicator());
+                  },
                   errorBuilder: (_, __, ___) => const SizedBox(),
                 ),
               ),
@@ -470,7 +470,7 @@ class NotificationPage extends StatelessWidget {
           .doc(notificationId)
           .update({'isRead': true});
     } catch (e) {
-      print('Error marking notification as read: $e');
+      debugPrint('Error marking notification as read: $e');
     }
   }
 
@@ -483,10 +483,9 @@ class NotificationPage extends StatelessWidget {
           .doc(globalNotifId)
           .set({
         'readAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true)); 
-      print('✅ Global notification marked as read: $globalNotifId');
+      }, SetOptions(merge: true));
     } catch (e) {
-      print('❌ Error marking global notification as read: $e');
+      debugPrint('Error marking global notification as read: $e');
     }
   }
 
@@ -496,23 +495,15 @@ class NotificationPage extends StatelessWidget {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.backgroundColor,
         title: const Text('Tandai Semua Sudah Dibaca?'),
-        content: const Text(
-          'Semua notifikasi akan ditandai sebagai sudah dibaca.',
-        ),
+        content: const Text('Semua notifikasi akan ditandai sebagai sudah dibaca.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             style: TextButton.styleFrom(
-              elevation: 25,
               backgroundColor: AppColors.secondary,
               foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              )
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('Batal'),
           ),
@@ -522,7 +513,7 @@ class NotificationPage extends StatelessWidget {
 
               try {
                 final batch = FirebaseFirestore.instance.batch();
-                
+
                 final personalNotifications = await FirebaseFirestore.instance
                     .collection('users')
                     .doc(userId)
@@ -535,15 +526,11 @@ class NotificationPage extends StatelessWidget {
                   batch.update(doc.reference, {'isRead': true});
                 }
 
-                print('📝 Prepared ${personalNotifications.docs.length} personal notifications for update');
-
                 try {
                   final globalNotifications = await FirebaseFirestore.instance
                       .collection('notifications')
                       .get()
                       .timeout(const Duration(seconds: 10));
-
-                  print('📝 Fetched ${globalNotifications.docs.length} global notifications');
 
                   for (var doc in globalNotifications.docs) {
                     final readGlobalRef = FirebaseFirestore.instance
@@ -551,38 +538,34 @@ class NotificationPage extends StatelessWidget {
                         .doc(userId)
                         .collection('readGlobalNotifications')
                         .doc(doc.id);
-                    
-                    batch.set(readGlobalRef, {
-                      'readAt': FieldValue.serverTimestamp(),
-                    }, SetOptions(merge: true));
-                  }
 
-                  print('📝 Prepared ${globalNotifications.docs.length} global notifications for update');
+                    batch.set(
+                      readGlobalRef,
+                      {'readAt': FieldValue.serverTimestamp()},
+                      SetOptions(merge: true),
+                    );
+                  }
                 } catch (e) {
-                  print('⚠️ Error preparing global notifications: $e');
+                  debugPrint('⚠️ Error preparing global notifications: $e');
                 }
 
                 await batch.commit().timeout(const Duration(seconds: 15));
-
-                print('✅ All notifications marked as read successfully');
 
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Semua notifikasi ditandai sudah dibaca'),
                       backgroundColor: Colors.green,
-                      duration: Duration(seconds: 2),
                     ),
                   );
                 }
               } catch (e) {
-                print('❌ Error marking all notifications as read: $e');
+                debugPrint('❌ Error marking all notifications as read: $e');
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Gagal menandai notifikasi: ${e.toString()}'),
+                      content: Text('Gagal menandai notifikasi: $e'),
                       backgroundColor: Colors.red,
-                      duration: const Duration(seconds: 3),
                     ),
                   );
                 }
@@ -591,13 +574,8 @@ class NotificationPage extends StatelessWidget {
             style: TextButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.secondary,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              )
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('Iya'),
           ),
@@ -615,7 +593,7 @@ class NotificationPage extends StatelessWidget {
           .doc(notificationId)
           .delete();
     } catch (e) {
-      print('Error deleting notification: $e');
+      debugPrint('Error deleting notification: $e');
     }
   }
 }

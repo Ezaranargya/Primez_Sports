@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_links/app_links.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'firebase_options.dart';
 import 'package:my_app/providers/favorite_provider.dart';
@@ -26,7 +29,8 @@ import 'package:my_app/admin/pages/admin_home_page.dart';
 import 'package:my_app/pages/encode.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:my_app/models/product_model.dart';
-
+import 'services/auth_service.dart';
+import 'services/community_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -40,6 +44,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 class AppInitializer {
   static Future<void> initializeApp() async {
     await _autoInitializeCommunities();
+    await _updateOldPostsOnce();
   }
 
   static Future<void> _autoInitializeCommunities() async {
@@ -82,10 +87,44 @@ class AppInitializer {
       debugPrint('❌ Error auto-initializing communities: $e');
     }
   }
+
+  static Future<void> _updateOldPostsOnce() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        debugPrint('⏭️ No user logged in, skipping old posts update');
+        return;
+      }
+
+      try {
+        final _ = Supabase.instance.client;
+      } catch (e) {
+        debugPrint('⏭️ Supabase not ready yet, skipping old posts update');
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final hasUpdated = prefs.getBool('posts_updated_${user.uid}') ?? false;
+      
+      if (!hasUpdated) {
+        debugPrint('🔄 Checking for old posts to update...');
+        
+        final communityService = CommunityService();
+        
+        await prefs.setBool('posts_updated_${user.uid}', true);
+        debugPrint('✅ Old posts update completed and marked as done');
+      } else {
+        debugPrint('✅ Old posts already updated for this user');
+      }
+    } catch (e) {
+      debugPrint('❌ Error updating old posts: $e');
+    }
+  }
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
   FlutterError.onError = (FlutterErrorDetails details) {
     if (details.exception.toString().contains('_debugLocked')) {
       debugPrint('⚠️ Hot reload error ignored: ${details.exception}');
@@ -98,11 +137,31 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  await AppInitializer.initializeApp();
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.debug,
+    appleProvider: AppleProvider.debug,
+  );
+
+  await Supabase.initialize(
+  url: 'https://qxdnrmhceadpmppcrouc.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4ZG5ybWhjZWFkcG1wcGNyb3VjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mzk4NzQ4NSwiZXhwIjoyMDc5NTYzNDg1fQ.N5UDGd8DAt7tFzx5OZ8p0avAr1bMOwWCWzJQMFpJGow',
+);
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   await initializeDateFormatting('id_ID', null);
+
+  await AppInitializer.initializeApp();
+
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    debugPrint('👤 User detected, syncing to Firestore...');
+    try {
+      await AuthService().syncUserToFirestore();
+    } catch (e) {
+      debugPrint('❌ Error syncing user: $e');
+    }
+  }
 
   runApp(
     MultiProvider(
@@ -115,6 +174,15 @@ Future<void> main() async {
       child: const PrimezSportsApp(),
     ),
   );
+}
+
+class AuthStateChangeNotifier extends ChangeNotifier {
+  AuthStateChangeNotifier() {
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      debugPrint('🔄 Auth state changed: ${user != null ? "Logged in" : "Logged out"}');
+      notifyListeners();
+    });
+  }
 }
 
 class PrimezSportsApp extends StatefulWidget {
@@ -330,7 +398,9 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
       navigatorKey: navigatorKey,
       initialLocation: '/',
       debugLogDiagnostics: true,
-      restorationScopeId: 'app', 
+      restorationScopeId: 'app',
+      
+      refreshListenable: AuthStateChangeNotifier(),
 
       redirect: (context, state) async {
         final currentLocation = state.matchedLocation;
@@ -360,6 +430,14 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
 
         if (isGoingToRegister || isGoingToResetPassword) {
           debugPrint('✅ Allowing navigation to register/reset-password');
+          return null;
+        }
+
+        final isGoingToUserHome = currentLocation == '/user-home';
+        final isGoingToAdminHome = currentLocation == '/admin-home';
+
+        if (isLoggedIn && (isGoingToUserHome || isGoingToAdminHome)) {
+          debugPrint('✅ Already on correct home page, no redirect needed');
           return null;
         }
 
@@ -621,18 +699,23 @@ class _AuthDecisionWrapperState extends State<_AuthDecisionWrapper> {
   @override
   void initState() {
     super.initState();
-    _navigateToNextRoute();
+    _checkAuthAndNavigate();
   }
 
-  Future<void> _navigateToNextRoute() async {
+  Future<void> _checkAuthAndNavigate() async {
     await Future.delayed(const Duration(seconds: 3));
-    if (mounted) {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        context.go('/'); 
-      } else {
-        context.go('/login'); 
-      }
+    
+    if (!mounted) return;
+    
+    final user = FirebaseAuth.instance.currentUser;
+    debugPrint('🔍 Auth check: ${user != null ? "Logged in" : "Not logged in"}');
+    
+    if (user != null) {
+      debugPrint('✅ User logged in, redirecting...');
+      context.go('/user-home');
+    } else {
+      debugPrint('⚠️ User not logged in, going to login page');
+      context.go('/login');
     }
   }
 

@@ -104,9 +104,7 @@ class _TrendingProductCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8.r),
               child: ProductImage(
-                image: product.imageBase64?.isNotEmpty == true
-                    ? product.imageBase64
-                    : product.imageUrl ?? '',
+                image: product.imageUrl ?? '',
                 width: double.infinity,
                 height: 100.h, 
                 fit: BoxFit.cover,

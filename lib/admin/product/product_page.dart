@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
@@ -37,6 +35,13 @@ class _AdminProductPageState extends State<AdminProductPage> {
               ),
             ),
             centerTitle: true,
+            actions: [
+              IconButton(
+                icon: Icon(Icons.cloud_upload, color: Colors.white),
+                onPressed: _migrateToSupabase,
+                tooltip: 'Migrate to Supabase',
+              ),
+            ],
           ),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           floatingActionButton: Padding(
@@ -51,7 +56,8 @@ class _AdminProductPageState extends State<AdminProductPage> {
                   ),
                 );
                 if (result == true && mounted) {
-                  setState(() {});                 }
+                  setState(() {});
+                }
               },
               child: Icon(Icons.add, size: 24.sp, color: Colors.white),
             ),
@@ -172,7 +178,7 @@ class _AdminProductPageState extends State<AdminProductPage> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                              IconButton(
+                            IconButton(
                               icon: Icon(Icons.edit, size: 20.sp),
                               onPressed: () async {
                                 final result = await Navigator.push(
@@ -183,7 +189,8 @@ class _AdminProductPageState extends State<AdminProductPage> {
                                   ),
                                 );
                                 if (result == true && mounted) {
-                                  setState(() {});                                 }
+                                  setState(() {});
+                                }
                               },
                             ),
                             IconButton(
@@ -252,46 +259,89 @@ class _AdminProductPageState extends State<AdminProductPage> {
     }
   }
 
-  Widget _buildProductImage(Product product) {
-    if (product.imageBase64 != null && product.imageBase64!.isNotEmpty) {
-      try {
-        return Image.memory(
-          base64Decode(product.imageBase64!),
-          width: 50.w,
-          height: 50.w,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildPlaceholder(),
+  Future<void> _migrateToSupabase() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Migrate to Supabase'),
+        content: const Text(
+          'Apakah Anda yakin ingin memigrasikan semua gambar produk ke Supabase Storage? Proses ini mungkin memakan waktu.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Migrate'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Memigrasikan produk...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      await _productService.migrateProductsToSupabase();
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Migrasi selesai!'),
+            backgroundColor: Colors.green,
+          ),
         );
-      } catch (_) {
-        return _buildPlaceholder();
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Migrasi gagal: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
+  }
 
+  Widget _buildProductImage(Product product) {
     if (product.imageUrl.isNotEmpty) {
-      if (product.imageUrl.startsWith('/data')) {
-        return Image.file(
-          File(product.imageUrl),
-          width: 50.w,
-          height: 50.w,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildPlaceholder(),
-        );
-      }
-      if (product.imageUrl.startsWith('assets/')) {
-        return Image.asset(
-          product.imageUrl,
-          width: 50.w,
-          height: 50.w,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildPlaceholder(),
-        );
-      }
       return Image.network(
         product.imageUrl,
         width: 50.w,
         height: 50.w,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _buildPlaceholder(),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
       );
     }
 

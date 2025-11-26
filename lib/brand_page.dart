@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
@@ -7,6 +6,7 @@ import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/utils/formatter.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BrandPage extends StatelessWidget {
   final String brandName;
@@ -123,105 +123,26 @@ class _ProductCard extends StatelessWidget {
 
   const _ProductCard({required this.product});
 
-  Widget _buildImage() {
-    final url = product.imageUrl;
-    final base64Data = product.imageBase64 ?? '';
+  String? _getSupabaseImageUrl(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) return null;
 
-    if (base64Data.isNotEmpty) {
-      try {
-        final cleaned = base64Data.replaceFirst(
-          RegExp(r'data:image/[^;]+;base64,'),
-          '',
-        );
-        final bytes = base64Decode(cleaned);
-        return Image.memory(
-          bytes,
-          width: double.infinity,
-          height: double.infinity,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: Colors.grey[200],
-              child: Center(
-                child: Icon(
-                  Icons.broken_image,
-                  size: 40.sp,
-                  color: Colors.grey,
-                ),
-              ),
-            );
-          },
-        );
-      } catch (_) {}
-    }
-
-    if (url.isEmpty) {
-      return Container(
-        color: Colors.grey[200],
-        child: Center(
-          child: Icon(Icons.image_outlined, size: 40.sp, color: Colors.grey),
-        ),
-      );
-    }
-
-    if (url.startsWith('http')) {
-      return Image.network(
-        url,
-        width: double.infinity,
-        height: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color: Colors.grey[200],
-            child: Center(
-              child: Icon(Icons.broken_image, size: 40.sp, color: Colors.grey),
-            ),
-          );
-        },
-      );
-    }
-
-    if (!url.startsWith('/')) {
-      return Image.asset(
-        url,
-        width: double.infinity,
-        height: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color: Colors.grey[200],
-            child: Center(
-              child: Icon(
-                Icons.image_outlined,
-                size: 40.sp,
-                color: Colors.grey,
-              ),
-            ),
-          );
-        },
-      );
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
     }
 
     try {
-      return Image.file(
-        File(url),
-        width: double.infinity,
-        height: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color: Colors.grey[200],
-            child: Center(
-              child: Icon(
-                Icons.image_outlined,
-                size: 40.sp,
-                color: Colors.grey,
-              ),
-            ),
-          );
-        },
-      );
-    } catch (_) {
+      final supabase = Supabase.instance.client;
+      return supabase.storage.from('products').getPublicUrl(imageUrl);
+    } catch (e) {
+      debugPrint('Error generating Supabase URL: $e');
+      return null;
+    }
+  }
+
+  Widget _buildImage() {
+    final imageUrl = _getSupabaseImageUrl(product.imageUrl);
+
+    if (imageUrl == null || imageUrl.isEmpty) {
       return Container(
         color: Colors.grey[200],
         child: Center(
@@ -229,6 +150,38 @@ class _ProductCard extends StatelessWidget {
         ),
       );
     }
+
+    return Image.network(
+      imageUrl,
+      width: double.infinity,
+      height: double.infinity,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: Colors.grey[200],
+          child: Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+              color: AppColors.primary,
+              strokeWidth: 2,
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('Error loading image: $error');
+        return Container(
+          color: Colors.grey[200],
+          child: Center(
+            child: Icon(Icons.broken_image, size: 40.sp, color: Colors.grey),
+          ),
+        );
+      },
+    );
   }
 
   @override

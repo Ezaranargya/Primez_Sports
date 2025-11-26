@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class News {
@@ -79,7 +80,6 @@ class News {
     if (rawImage is String && rawImage.startsWith('assets/')) {
       assetPath = rawImage;
     }
-    print("🔥 Firestore content field for $id: ${map['content']}");
 
     return News(
       id: id,
@@ -139,11 +139,13 @@ class ContentBlock {
   final String type;
   final String value;
   final String? caption;
+  final File? imageFile;
 
   ContentBlock({
     required this.type,
     required this.value,
     this.caption,
+    this.imageFile,
   });
 
   Map<String, dynamic> toMap() {

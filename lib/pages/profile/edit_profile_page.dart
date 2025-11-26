@@ -1,11 +1,12 @@
 import 'dart:io';
-import 'dart:convert';
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:my_app/theme/app_colors.dart';
+import 'package:my_app/services/auth_service.dart';
+import 'package:my_app/services/supabase_storage_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -15,13 +16,19 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
-  final _usernameController = TextEditingController();
-  final _bioController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  File? _imageFile;
+  final _usernameController = TextEditingController();
+  final _profileController = TextEditingController();
+  final _bioController = TextEditingController();
+  final _authService = AuthService();
+  final _storageService = SupabaseStorageService();
   final picker = ImagePicker();
-  String? _base64Image;
+  
   bool _isLoading = false;
+  bool _isSaving = false;
+  String? _currentPhotoUrl;
+  File? _newImageFile;
+  String _userId = '';
 
   @override
   void initState() {
@@ -29,44 +36,110 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _loadUserData();
   }
 
-  Future<void> _loadUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _profileController.dispose();
+    _bioController.dispose();
+    super.dispose();
+  }
 
-        if (doc.exists) {
-          final data = doc.data();
-          setState(() {
-            _usernameController.text = data?['username'] ?? user.displayName ?? '';
-            _bioController.text = data?['profile'] ?? '';
-            if (data?['photoBase64'] != null && data!['photoBase64'].toString().isNotEmpty) {
-              _base64Image = data['photoBase64'];
-            }
-          });
-        } else {
-          setState(() {
-            _usernameController.text = user.displayName ?? '';
-          });
-        }
-      } catch (e) {
-        print('Error loading profile: $e');
+  Future<void> _loadUserData() async {
+    setState(() => _isLoading = true);
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        setState(() {
+          _userId = user.uid;
+          _usernameController.text = data['username'] ?? user.displayName ?? '';
+          _profileController.text = data['profile'] ?? '';
+          _bioController.text = data['bio'] ?? data['profile'] ?? '';
+          _currentPhotoUrl = data['photoUrl'] ?? '';
+          _isLoading = false;
+        });
+        
+        debugPrint('✅ User data loaded');
+        debugPrint('   Username: ${_usernameController.text}');
+        debugPrint('   Photo URL: ${_currentPhotoUrl?.isNotEmpty == true ? "EXISTS" : "EMPTY"}');
+      } else {
+        setState(() {
+          _usernameController.text = user.displayName ?? '';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading user data: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
 
   Future<void> _pickImage() async {
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 70,
+    try {
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        _newImageFile = File(image.path);
+      });
+
+      debugPrint('✅ Image selected: ${image.path}');
+    } catch (e) {
+      debugPrint('❌ Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error memilih gambar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removePhoto() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Foto'),
+        content: const Text('Yakin ingin menghapus foto profil?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
     );
 
-    if (pickedFile != null) {
+    if (confirmed == true) {
       setState(() {
-        _imageFile = File(pickedFile.path);
+        _newImageFile = null;
+        _currentPhotoUrl = '';
       });
     }
   }
@@ -74,56 +147,116 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isSaving = true;
+      _isLoading = true;
+    });
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await user.updateDisplayName(_usernameController.text.trim());
+      if (user == null) throw Exception('User not logged in');
+
+      debugPrint('💾 Saving profile...');
+
+      final newUsername = _usernameController.text.trim();
+      
+      await user.updateDisplayName(newUsername);
+
+      String? finalPhotoUrl = _currentPhotoUrl;
+
+      if (_newImageFile != null) {
+        debugPrint('📤 Uploading new photo to Supabase...');
         
-        String? base64Image = _base64Image;
-        if (_imageFile != null) {
-          final bytes = await _imageFile!.readAsBytes();
-          base64Image = base64Encode(bytes);
-          print("✅ Image converted to Base64 (preview): ${base64Image.substring(0, 30)}...");
+        if (_currentPhotoUrl != null && 
+            _currentPhotoUrl!.isNotEmpty && 
+            _currentPhotoUrl!.startsWith('http')) {
+          await _storageService.deleteImage(_currentPhotoUrl!);
+          debugPrint('🗑️ Old photo deleted');
         }
 
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({
-          'username': _usernameController.text.trim(),
-          'bio': _bioController.text.trim(),
-          'photoBase64': base64Image,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        finalPhotoUrl = await _storageService.uploadProfileImage(
+          _newImageFile!,
+          user.uid,
+        );
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Profile berhasil diperbarui'),
-              backgroundColor: const Color(0xFFE53E3E),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-            ),
-          );
-          Navigator.pop(context, true);
+        if (finalPhotoUrl == null) {
+          throw Exception('Gagal upload foto ke Supabase Storage');
         }
+
+        debugPrint('✅ Photo uploaded: $finalPhotoUrl');
+      } else if (_currentPhotoUrl == '') {
+        if (_currentPhotoUrl != null && 
+            _currentPhotoUrl!.isNotEmpty && 
+            _currentPhotoUrl!.startsWith('http')) {
+          await _storageService.deleteImage(_currentPhotoUrl!);
+          debugPrint('🗑️ Photo deleted');
+        }
+        finalPhotoUrl = '';
       }
+
+      final updates = <String, dynamic>{
+        'username': newUsername,
+        'name': newUsername,
+        'profile': _profileController.text.trim(),
+        'bio': _bioController.text.trim(),
+        'photoUrl': finalPhotoUrl ?? '',
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      debugPrint('📝 Updating Firestore...');
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(updates, SetOptions(merge: true));
+
+      debugPrint('✅ Firestore updated');
+
+      if (newUsername.isNotEmpty) {
+        await _authService.updateUsername(newUsername);
+        debugPrint('✅ Username updated in posts');
+      }
+
+      if (finalPhotoUrl != null && finalPhotoUrl.isNotEmpty) {
+        await _authService.updatePhotoUrl(finalPhotoUrl, isBase64: false);
+        debugPrint('✅ Photo URL updated in posts');
+      } else if (finalPhotoUrl == '') {
+        await _authService.removeProfilePhoto();
+        debugPrint('✅ Photo removed from posts');
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('✅ Profile berhasil diperbarui'),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.r),
+          ),
+        ),
+      );
+
+      Navigator.pop(context, true);
+      
     } catch (e) {
+      debugPrint('❌ Error saving profile: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('❌ Error: $e'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -147,42 +280,71 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ]
       ),
       child: ClipOval(
-        child: _imageFile != null
-            ? Image.file(
-                _imageFile!,
-                fit: BoxFit.cover,
-              )
-            : _base64Image != null && _base64Image!.isNotEmpty
-                ? Image.memory(
-                    base64Decode(_base64Image!),
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      print('Error decoding base64: $error');
-                      return Icon(
-                        Icons.person,
-                        size: 60.sp,
-                        color: Colors.grey[400],
-                      );
-                    },
-                  )
-                : Icon(
-                    Icons.person,
-                    size: 60.sp,
-                    color: Colors.grey[400],
-                  ),
+        child: _buildImageContent(),
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _bioController.dispose();
-    super.dispose();
+  Widget _buildImageContent() {
+    if (_newImageFile != null) {
+      return Image.file(
+        _newImageFile!,
+        fit: BoxFit.cover,
+      );
+    }
+
+    if (_currentPhotoUrl != null && _currentPhotoUrl!.isNotEmpty) {
+      if (_currentPhotoUrl!.startsWith('http')) {
+        return Image.network(
+          _currentPhotoUrl!,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            debugPrint('❌ Error loading photo: $error');
+            return _buildPlaceholder();
+          },
+        );
+      }
+    }
+
+    return _buildPlaceholder();
+  }
+
+  Widget _buildPlaceholder() {
+    return Icon(
+      Icons.person,
+      size: 60.sp,
+      color: Colors.grey[400],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading && _userId.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          title: const Text('Edit Profile'),
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          centerTitle: true,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -211,34 +373,69 @@ class _EditProfilePageState extends State<EditProfilePage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 SizedBox(height: 20.h),
+                
                 Stack(
                   children: [
                     _buildProfileImage(),
                     Positioned(
                       bottom: 0,
                       right: 0,
-                      child: GestureDetector(
-                        onTap: _pickImage,
-                        child: Container(
-                          width: 36.w,
-                          height: 36.w,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE53E3E),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 3),
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: _pickImage,
+                            child: Container(
+                              width: 36.w,
+                              height: 36.w,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE53E3E),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 3),
+                              ),
+                              child: Icon(
+                                Icons.camera_alt,
+                                size: 18.sp,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
-                          child: Icon(
-                            Icons.camera_alt,
-                            size: 18.sp,
-                            color: Colors.white,
-                          ),
-                        ),
+
+                          if (_currentPhotoUrl?.isNotEmpty == true || 
+                              _newImageFile != null) ...[
+                            SizedBox(width: 8.w),
+                            InkWell(
+                              onTap: _removePhoto,
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 4,
+                                      spreadRadius: 2,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                  size: 20.sp,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
                 ),
 
                 SizedBox(height: 40.h),
+                
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -289,6 +486,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         if (value == null || value.trim().isEmpty) {
                           return 'Username tidak boleh kosong';
                         }
+                        if (value.trim().length < 3) {
+                          return 'Username minimal 3 karakter';
+                        }
                         return null;
                       },
                     ),
@@ -296,6 +496,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
 
                 SizedBox(height: 24.h),
+                
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -316,8 +517,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         fontSize: 14.sp,
                       ),
                       decoration: InputDecoration(
-                        hintText:
-                            'Silahkan menaruh bio anda disini',
+                        hintText: 'Silahkan menaruh bio anda disini',
                         hintStyle: TextStyle(
                           color: Colors.grey[400],
                           fontSize: 14.sp,
@@ -349,11 +549,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
 
                 SizedBox(height: 40.h),
+                
                 SizedBox(
                   width: double.infinity,
                   height: 50.h,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _saveProfile,
+                    onPressed: (_isLoading || _isSaving) ? null : _saveProfile,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFE53E3E),
                       shape: RoundedRectangleBorder(
@@ -361,7 +562,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                       elevation: 0,
                     ),
-                    child: _isLoading
+                    child: (_isLoading || _isSaving)
                         ? SizedBox(
                             width: 24.w,
                             height: 24.w,

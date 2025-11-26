@@ -54,9 +54,7 @@ class ProductCard extends StatelessWidget {
           children: [
             
             ProductImage(
-              image: product.imageBase64?.isNotEmpty == true
-                  ? product.imageBase64
-                  : product.imageUrl ?? '',
+              image: product.imageUrl ?? '',
               width: double.infinity,
               height: 130.h, 
               fit: BoxFit.cover,
@@ -146,9 +144,7 @@ class CompactProductCard extends StatelessWidget {
             Expanded(
               flex: 6,
               child: ProductImage(
-                image: product.imageBase64?.isNotEmpty == true
-                    ? product.imageBase64
-                    : product.imageUrl ?? '',
+                image: product.imageUrl ?? '',
                 width: double.infinity,
                 height: 130.h, 
                 fit: BoxFit.cover,
@@ -239,9 +235,7 @@ class LargeProductCard extends StatelessWidget {
           children: [
             
             ProductImage(
-              image: product.imageBase64?.isNotEmpty == true
-                  ? product.imageBase64
-                  : product.imageUrl ?? '',
+              image: product.imageUrl ?? '',
               width: double.infinity,
               height: 200.h, 
               fit: BoxFit.cover,

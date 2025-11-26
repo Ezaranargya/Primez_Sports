@@ -1,6 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:my_app/models/news_model.dart';
 import 'package:my_app/pages/news/news_detail_page.dart';
 
@@ -28,6 +28,19 @@ class NewsBannerCard extends StatelessWidget {
           child: Stack(
             children: [
               _buildNewsImage(),
+              Container(
+                height: 180.h,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
+                  ),
+                ),
+              ),
               Positioned(
                 bottom: 12.h,
                 left: 12.w,
@@ -75,51 +88,34 @@ class NewsBannerCard extends StatelessWidget {
     );
   }
 
-  
   Widget _buildNewsImage() {
     final image = news.imageUrl;
 
     if (image.isEmpty) return _placeholder();
 
-    
-    if (image.startsWith('data:image')) {
-      try {
-        final base64Data = image.split(',').last;
-        final bytes = base64Decode(base64Data);
-        return Image.memory(
-          bytes,
-          height: 180.h,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _placeholder(),
-        );
-      } catch (e) {
-        return _placeholder();
-      }
-    }
-
-    
-    if (image.startsWith('http')) {
-      return Image.network(
-        image,
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return CachedNetworkImage(
+        imageUrl: image,
         height: 180.h,
         width: double.infinity,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _placeholder(),
+        placeholder: (context, url) => Container(
+          height: 180.h,
+          color: Colors.grey[200],
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.grey[400],
+            ),
+          ),
+        ),
+        errorWidget: (context, url, error) => _placeholder(),
       );
     }
 
-    
-    return Image.asset(
-      news.safeImageAsset,
-      height: 180.h,
-      width: double.infinity,
-      fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) => _placeholder(),
-    );
+    return _placeholder();
   }
 
-  
   Widget _placeholder() {
     return Container(
       height: 180.h,

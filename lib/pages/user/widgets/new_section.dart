@@ -23,7 +23,7 @@ class NewSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-                Padding(
+        Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.w),
           child: Text(
             title,
@@ -37,7 +37,7 @@ class NewSection extends StatelessWidget {
         ),
         SizedBox(height: 12.h),
 
-                Container(
+        Container(
           width: double.infinity,
           padding: EdgeInsets.all(12.w),
           decoration: BoxDecoration(
@@ -60,7 +60,7 @@ class NewSection extends StatelessWidget {
                   children: [
                     _NewProductCard(product: product),
 
-                                        if (index != products.length - 1)
+                    if (index != products.length - 1)
                       Container(
                         height: 120.h,
                         width: 1.2.w,
@@ -98,12 +98,11 @@ class _NewProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-                        ClipRRect(
+            
+            ClipRRect(
               borderRadius: BorderRadius.circular(8.r),
               child: ProductImage(
-                image: product.imageBase64?.isNotEmpty == true
-                    ? product.imageBase64
-                    : product.imageUrl ?? '',
+                image: product.imageUrl ?? '',
                 width: double.infinity,
                 height: 100.h,
                 fit: BoxFit.cover,
@@ -113,10 +112,8 @@ class _NewProductCard extends StatelessWidget {
               ),
             ),
             SizedBox(height: 6.h),
-            Container(
-              width: 130.w,
-              alignment: Alignment.center,
-            child: Text(
+            
+            Text(
               Formatter.formatPrice(product.price),
               style: TextStyle(
                 fontSize: 13.sp,
@@ -124,14 +121,11 @@ class _NewProductCard extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Poppins',
               ),
-              textAlign: TextAlign.center,
-            ),
+              textAlign: TextAlign.start,
             ),
             SizedBox(height: 3.h),
-            Container(
-            width: 130.w,
-            alignment: Alignment.center,
-            child: Text(
+            
+            Text(
               product.name,
               style: TextStyle(
                 fontSize: 11.sp,
@@ -142,8 +136,7 @@ class _NewProductCard extends StatelessWidget {
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
+              textAlign: TextAlign.start,
             ),
           ],
         ),

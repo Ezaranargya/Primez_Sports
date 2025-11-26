@@ -1,13 +1,12 @@
-import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:my_app/models/news_model.dart';
 import 'package:my_app/theme/app_colors.dart';
-import 'package:my_app/pages/product/widgets/product_image.dart';
-
+import 'package:my_app/services/supabase_storage_service.dart';
 
 class AdminNewsFormPage extends StatefulWidget {
   final News? news;
@@ -24,13 +23,16 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
   final _subtitleController = TextEditingController();
   final _authorController = TextEditingController();
   final _brandController = TextEditingController();
+  final _storageService = SupabaseStorageService();
   
   DateTime _selectedDate = DateTime.now();
   final List<String> _selectedCategories = [];
   final List<ContentBlock> _contentItems = [];
   
-  String? _mainImageBase64;
+  File? _mainImageFile;
+  String? _existingMainImageUrl;
   bool _isLoading = false;
+  bool _mainImageChanged = false;
   
   final List<String> _availableCategories = [
     'Trending',
@@ -56,8 +58,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
     _brandController.text = news.brand;
     _selectedDate = news.date;
     _selectedCategories.addAll(news.categories);
-    _mainImageBase64 = news.imageUrl1;
-    
+    _existingMainImageUrl = news.imageUrl1;
     
     for (var item in news.content) {
       _contentItems.add(ContentBlock(
@@ -66,6 +67,9 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         caption: item.caption,
       ));
     }
+    
+    debugPrint('✅ Loaded existing news');
+    debugPrint('   Main image URL: ${_existingMainImageUrl ?? "No image"}');
   }
 
   @override
@@ -87,18 +91,21 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
     );
 
     if (pickedFile != null) {
-      final bytes = await pickedFile.readAsBytes();
-      final base64String = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+      final file = File(pickedFile.path);
       
       setState(() {
         if (isMainImage) {
-          _mainImageBase64 = base64String;
+          _mainImageFile = file;
+          _mainImageChanged = true;
+          debugPrint('📸 Main image selected');
         } else if (contentIndex != null) {
           _contentItems[contentIndex] = ContentBlock(
             type: 'image',
-            value: base64String,
+            value: file.path, 
             caption: _contentItems[contentIndex].caption,
+            imageFile: file,
           );
+          debugPrint('📸 Content image selected at index $contentIndex');
         }
       });
     }
@@ -161,7 +168,8 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
 
   Future<void> _saveNews() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_mainImageBase64 == null || _mainImageBase64!.isEmpty) {
+    
+    if (_mainImageFile == null && _existingMainImageUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Silakan pilih gambar utama'),
@@ -184,6 +192,41 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
     setState(() => _isLoading = true);
 
     try {
+      String? mainImageUrl = _existingMainImageUrl;
+
+      if (_mainImageFile != null && _mainImageChanged) {
+        debugPrint('📤 Uploading main image to Supabase...');
+        
+        mainImageUrl = await _storageService.uploadNewsImage(_mainImageFile!);
+        
+        if (_existingMainImageUrl != null && _existingMainImageUrl!.isNotEmpty) {
+          await _storageService.deleteImage(_existingMainImageUrl!);
+          debugPrint('🗑️ Old main image deleted');
+        }
+        
+        debugPrint('✅ Main image uploaded: $mainImageUrl');
+      }
+
+      final processedContent = <ContentBlock>[];
+      
+      for (var item in _contentItems) {
+        if (item.type == 'image' && item.imageFile != null) {
+          debugPrint('📤 Uploading content image...');
+          
+          final imageUrl = await _storageService.uploadNewsImage(item.imageFile!);
+          
+          processedContent.add(ContentBlock(
+            type: 'image',
+            value: imageUrl ?? '',
+            caption: item.caption,
+          ));
+          
+          debugPrint('✅ Content image uploaded: $imageUrl');
+        } else {
+          processedContent.add(item);
+        }
+      }
+
       final news = News(
         id: widget.news?.id ?? '',
         title: _titleController.text.trim(),
@@ -193,8 +236,8 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         date: _selectedDate,
         createdAt: widget.news?.createdAt ?? DateTime.now(),
         categories: _selectedCategories,
-        imageUrl1: _mainImageBase64!,
-        content: _contentItems,
+        imageUrl1: mainImageUrl!,
+        content: processedContent,
         readBy: widget.news?.readBy ?? [],
         isNew: widget.news == null ? true : widget.news!.isNew,
       );
@@ -213,8 +256,8 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
           SnackBar(
             content: Text(
               widget.news == null 
-                  ? 'Berita berhasil ditambahkan' 
-                  : 'Berita berhasil diperbarui'
+                  ? '✅ Berita berhasil ditambahkan' 
+                  : '✅ Berita berhasil diperbarui'
             ),
             backgroundColor: Colors.green,
           ),
@@ -222,6 +265,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         Navigator.pop(context);
       }
     } catch (e) {
+      debugPrint('❌ Error saving news: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -254,7 +298,6 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         ),
         backgroundColor: AppColors.primary,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Form(
         key: _formKey,
@@ -329,18 +372,24 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
               ),
             ),
             SizedBox(height: 12.h),
-            if (_mainImageBase64 != null && _mainImageBase64!.isNotEmpty)
+            if (_mainImageFile != null || _existingMainImageUrl != null)
               Stack(
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12.r),
-                    child: _buildImagePreview(_mainImageBase64!),
+                    child: _mainImageFile != null
+                        ? Image.file(_mainImageFile!, height: 200.h, width: double.infinity, fit: BoxFit.cover)
+                        : Image.network(_existingMainImageUrl!, height: 200.h, width: double.infinity, fit: BoxFit.cover),
                   ),
                   Positioned(
                     top: 8.h,
                     right: 8.w,
                     child: IconButton(
-                      onPressed: () => setState(() => _mainImageBase64 = null),
+                      onPressed: () => setState(() {
+                        _mainImageFile = null;
+                        _existingMainImageUrl = null;
+                        _mainImageChanged = true;
+                      }),
                       icon: const Icon(Icons.close),
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.red,
@@ -366,14 +415,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
                       children: [
                         Icon(Icons.add_photo_alternate, size: 50.sp, color: Colors.grey),
                         SizedBox(height: 8.h),
-                        Text(
-                          'Pilih Gambar',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: Colors.grey[600],
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
+                        Text('Pilih Gambar', style: TextStyle(fontSize: 14.sp, fontFamily: 'Poppins')),
                       ],
                     ),
                   ),
@@ -394,9 +436,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
   }) {
     return Card(
       color: AppColors.secondary,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: Padding(
         padding: EdgeInsets.all(16.w),
         child: TextFormField(
@@ -406,10 +446,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
             labelText: label,
             hintText: hint,
             labelStyle: const TextStyle(fontFamily: 'Poppins'),
-            hintStyle: TextStyle(fontFamily: 'Poppins', color: Colors.grey[400]),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.r),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
           ),
           validator: validator,
         ),
@@ -420,20 +457,11 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
   Widget _buildDatePicker() {
     return Card(
       color: AppColors.secondary,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: ListTile(
         leading: const Icon(Icons.calendar_today, color: AppColors.primary),
-        title: const Text(
-          'Tanggal Publikasi',
-          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500),
-        ),
-        subtitle: Text(
-          '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-          style: const TextStyle(fontFamily: 'Poppins'),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.secondary),
+        title: const Text('Tanggal Publikasi', style: TextStyle(fontFamily: 'Poppins')),
+        subtitle: Text('${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
         onTap: _selectDate,
       ),
     );
@@ -442,22 +470,13 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
   Widget _buildCategorySection() {
     return Card(
       color: AppColors.secondary,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: Padding(
         padding: EdgeInsets.all(16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Kategori',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
-              ),
-            ),
+            Text('Kategori', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
             SizedBox(height: 12.h),
             Wrap(
               spacing: 8.w,
@@ -465,13 +484,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
               children: _availableCategories.map((category) {
                 final isSelected = _selectedCategories.contains(category);
                 return FilterChip(
-                  label: Text(
-                    category,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      color: isSelected ? Colors.white : Colors.black87,
-                    ),
-                  ),
+                  label: Text(category, style: TextStyle(color: isSelected ? Colors.white : Colors.black87)),
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() {
@@ -484,7 +497,6 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
                   },
                   backgroundColor: Colors.grey[200],
                   selectedColor: AppColors.primary,
-                  checkmarkColor: Colors.white,
                 );
               }).toList(),
             ),
@@ -501,31 +513,12 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Konten Berita',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
-              ),
-            ),
+            Text('Konten Berita', style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
             ElevatedButton.icon(
               onPressed: _addContentItem,
-              icon: const Icon(Icons.add, size: 20, color: Colors.white),
-              label: const Text(
-                'Tambah',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  color: Colors.white,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-              ),
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text('Tambah', style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             ),
           ],
         ),
@@ -535,61 +528,12 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
             color: AppColors.secondary,
             child: Padding(
               padding: EdgeInsets.all(32.w),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(Icons.article_outlined, size: 50.sp, color: Colors.grey[400]),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Belum ada konten',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Colors.grey[600],
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              child: Center(child: Text('Belum ada konten', style: TextStyle(fontSize: 14.sp, fontFamily: 'Poppins'))),
             ),
           )
         else
-          ...List.generate(_contentItems.length, (index) {
-            return _buildContentItemCard(index);
-          }),
+          ...List.generate(_contentItems.length, (index) => _buildContentItemCard(index)),
       ],
-    );
-  }
-
-  Widget _buildSaveButton() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: SizedBox(
-        width: double.infinity,
-        height: 50.h,
-        child: ElevatedButton(
-          onPressed: _isLoading ? null : _saveNews,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-          ), 
-          child: _isLoading
-          ? const CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-          )
-          : const Text(
-            'Simpan',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.bold,
-              color: AppColors.backgroundColor,
-              fontSize: 16,
-            ),
-          )
-        ),
-      ),
     );
   }
 
@@ -600,9 +544,6 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
     return Card(
       color: AppColors.secondary,
       margin: EdgeInsets.only(bottom: 12.h),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-      ),
       child: Padding(
         padding: EdgeInsets.all(16.w),
         child: Column(
@@ -611,83 +552,30 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      isImageType ? Icons.image : Icons.text_fields,
-                      color: AppColors.primary,
-                      size: 20.sp,
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Konten ${index + 1} - ${isImageType ? "Image" : "Text"}',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ],
-                ),
+                Text('Konten ${index + 1} - ${isImageType ? "Image" : "Text"}', 
+                     style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold)),
                 IconButton(
                   onPressed: () => _removeContentItem(index),
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: const Icon(Icons.delete, color: Colors.red),
                 ),
               ],
             ),
-            SizedBox(height: 12.h),
-            
-            if (!isImageType) ...[
+            if (!isImageType)
               TextFormField(
                 initialValue: item.value,
                 maxLines: 4,
-                decoration: InputDecoration(
-                  labelText: 'Teks',
-                  hintText: 'Masukkan teks konten',
-                  labelStyle: const TextStyle(fontFamily: 'Poppins'),
-                  hintStyle: TextStyle(fontFamily: 'Poppins', color: Colors.grey[400]),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                ),
+                decoration: const InputDecoration(labelText: 'Teks', border: OutlineInputBorder()),
                 onChanged: (value) {
-                  _contentItems[index] = ContentBlock(
-                    type: 'text',
-                    value: value,
-                    caption: item.caption,
-                  );
+                  _contentItems[index] = ContentBlock(type: 'text', value: value);
                 },
-              ),
-            ]
+              )
             else ...[
-              if (item.value.isNotEmpty)
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8.r),
-                      child: _buildImagePreview(item.value),
-                    ),
-                    Positioned(
-                      top: 8.h,
-                      right: 8.w,
-                      child: IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _contentItems[index] = ContentBlock(
-                              type: 'image',
-                              value: '',
-                              caption: item.caption,
-                            );
-                          });
-                        },
-                        icon: const Icon(Icons.close),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
+              if (item.imageFile != null || item.value.startsWith('http'))
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8.r),
+                  child: item.imageFile != null 
+                      ? Image.file(item.imageFile!, height: 150.h, width: double.infinity, fit: BoxFit.cover)
+                      : Image.network(item.value, height: 150.h, width: double.infinity, fit: BoxFit.cover),
                 )
               else
                 InkWell(
@@ -699,47 +587,9 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
                       borderRadius: BorderRadius.circular(8.r),
                       border: Border.all(color: Colors.grey[400]!),
                     ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.add_photo_alternate, size: 40.sp, color: Colors.grey),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'Pilih Gambar',
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: Colors.grey[600],
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    child: Center(child: Icon(Icons.add_photo_alternate, size: 40.sp)),
                   ),
                 ),
-              if (item.value.isNotEmpty) ...[
-                SizedBox(height: 12.h),
-                TextFormField(
-                  initialValue: item.caption,
-                  decoration: InputDecoration(
-                    labelText: 'Caption Gambar',
-                    hintText: 'Masukkan caption (opsional)',
-                    labelStyle: const TextStyle(fontFamily: 'Poppins'),
-                    hintStyle: TextStyle(fontFamily: 'Poppins', color: Colors.grey[400]),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    _contentItems[index] = ContentBlock(
-                      type: 'image',
-                      value: item.value,
-                      caption: value,
-                    );
-                  },
-                ),
-              ],
             ],
           ],
         ),
@@ -747,13 +597,20 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
     );
   }
 
-  Widget _buildImagePreview(String imageData) {
-    return ProductImage(
-      image: imageData,
+  Widget _buildSaveButton() {
+    return SizedBox(
       width: double.infinity,
-      height: 200.h,
-      fit: BoxFit.cover,
-      borderRadius: BorderRadius.circular(12.r),
+      height: 50.h,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _saveNews,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+        ),
+        child: _isLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+      ),
     );
   }
 }

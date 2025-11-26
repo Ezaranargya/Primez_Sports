@@ -1,14 +1,14 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image/image.dart' as img;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/services/product_service.dart';
 import 'package:my_app/services/notification_service.dart';
+import 'package:my_app/services/supabase_storage_service.dart';
 import 'package:my_app/theme/app_colors.dart';
 
 class AdminAddProductPage extends StatefulWidget {
@@ -23,16 +23,20 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   final _formKey = GlobalKey<FormState>();
   final ProductService _service = ProductService();
   final NotificationService _notificationService = NotificationService();
+  final SupabaseStorageService _storageService = SupabaseStorageService();
 
   final TextEditingController _title = TextEditingController();
   final TextEditingController _desc = TextEditingController();
   final TextEditingController _mainPrice = TextEditingController();
 
   final List<Map<String, dynamic>> _purchaseOptions = [];
+  
   File? _bannerFile;
-  String? _bannerBase64;
+  String? _bannerUrl;
   File? _imageFile;
-  String? _base64Image;
+  String? _imageUrl;
+  
+  bool _isUploading = false;
 
   static const List<String> _brands = [
     'Nike',
@@ -63,8 +67,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       _title.text = p.name;
       _desc.text = p.description;
       _mainPrice.text = p.price.toString();
-      _base64Image = p.imageBase64.isNotEmpty ? p.imageBase64 : null;
-      _bannerBase64 = p.bannerImage.isNotEmpty ? p.bannerImage : null;
+      _imageUrl = p.imageUrl;
+      _bannerUrl = p.bannerUrl;
       _selectedBrand = _brands.contains(p.brand) ? p.brand : null;
       _selectedCategory1 = _categoriesMain.contains(p.category) ? p.category : null;
       _selectedCategory2 = _categoriesSub.contains(p.subCategory) ? p.subCategory : null;
@@ -116,18 +120,12 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
 
     if (brand != null) {
       switch (brand.toLowerCase()) {
-        case 'nike':
-          return 'assets/logo_nike.png';
-        case 'adidas':
-          return 'assets/logo_adidas.png';
-        case 'puma':
-          return 'assets/logo_puma.png';
-        case 'under armour':
-          return 'assets/logo_under_armour.png';
-        case 'jordan':
-          return 'assets/logo_jordan.png';
-        case 'mizuno':
-          return 'assets/logo_mizuno.png';
+        case 'nike': return 'assets/logo_nike.png';
+        case 'adidas': return 'assets/logo_adidas.png';
+        case 'puma': return 'assets/logo_puma.png';
+        case 'under armour': return 'assets/logo_under_armour.png';
+        case 'jordan': return 'assets/logo_jordan.png';
+        case 'mizuno': return 'assets/logo_mizuno.png';
       }
     }
     return '';
@@ -155,25 +153,22 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   Future<void> _pickBannerImage() async {
     try {
       final picker = ImagePicker();
-      final picked = await picker.pickImage(source: ImageSource.gallery);
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      
       if (picked == null) return;
 
-      final bytes = await picked.readAsBytes();
-      final decoded = img.decodeImage(bytes);
-      if (decoded != null) {
-        final resized = img.copyResize(decoded, width: 1200);
-        final compressed = img.encodeJpg(resized, quality: 85);
-        final base64Image = base64Encode(compressed);
+      setState(() {
+        _bannerFile = File(picked.path);
+      });
 
-        setState(() {
-          _bannerFile = File(picked.path);
-          _bannerBase64 = base64Image;
-        });
-
-        print('✅ Banner converted to Base64 (${base64Image.length} chars)');
-      }
+      debugPrint('✅ Banner image selected');
     } catch (e) {
-      print('❌ Error picking banner image: $e');
+      debugPrint('❌ Error picking banner image: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Gagal memilih banner: $e')),
@@ -185,87 +180,27 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   Future<void> _pickImage() async {
     try {
       final picker = ImagePicker();
-      final picked = await picker.pickImage(source: ImageSource.gallery);
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      
       if (picked == null) return;
 
-      final bytes = await picked.readAsBytes();
-      final decoded = img.decodeImage(bytes);
-      if (decoded != null) {
-        final resized = img.copyResize(decoded, width: 800);
-        final compressed = img.encodeJpg(resized, quality: 85);
-        final base64Image = base64Encode(compressed);
+      setState(() {
+        _imageFile = File(picked.path);
+      });
 
-        setState(() {
-          _imageFile = File(picked.path);
-          _base64Image = base64Image;
-        });
-
-        print('✅ Gambar utama berhasil dikonversi ke Base64 (${base64Image.length} chars)');
-      }
+      debugPrint('✅ Main image selected');
     } catch (e) {
-      print('❌ Error picking main image: $e');
+      debugPrint('❌ Error picking main image: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Gagal memilih gambar: $e')),
         );
       }
-    }
-  }
-
-  Future<void> _syncProductToCommunityPosts({
-    required String productId,
-    required Product product,
-    required String? communityId,
-  }) async {
-    try {
-      print('🔄 Syncing product to community posts...');
-      
-      final links = product.purchaseOptions.map((option) {
-        return {
-          'url': option.link,
-          'price': option.price.toInt(),
-          'store': _detectStoreNameFromUrl(option.link),
-          'logoUrl': option.logoUrl,
-        };
-      }).toList();
-
-      final postData = {
-        'brand': product.brand,
-        'title': product.name,
-        'content': product.price.toString(),
-        'description': product.description,
-        'imageUrl': '',
-        'imageBase64': product.imageBase64,
-        'links': links,
-        'mainCategory': _selectedCategory1,
-        'subCategory': _selectedCategory2,
-        'communityId': communityId,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-
-      final existingPosts = await FirebaseFirestore.instance
-          .collection('posts')
-          .where('brand', isEqualTo: product.brand)
-          .where('title', isEqualTo: product.name)
-          .limit(1)
-          .get();
-
-      if (existingPosts.docs.isNotEmpty) {
-        final postId = existingPosts.docs.first.id;
-        await FirebaseFirestore.instance
-            .collection('posts')
-            .doc(postId)
-            .update(postData);
-        print('✅ Updated existing post: $postId');
-      } else {
-        await FirebaseFirestore.instance
-            .collection('posts')
-            .add(postData);
-        print('✅ Created new post for product: ${product.name}');
-      }
-    } catch (e) {
-      print('❌ Error syncing to community posts: $e');
     }
   }
 
@@ -290,10 +225,10 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      print('✅ Created new community for $brand: ${newCommunity.id}');
+      debugPrint('✅ Created new community for $brand: ${newCommunity.id}');
       return newCommunity.id;
     } catch (e) {
-      print('❌ Error getting/creating community: $e');
+      debugPrint('❌ Error getting/creating community: $e');
       return null;
     }
   }
@@ -309,88 +244,134 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       return;
     }
 
-    final purchaseOptions = _purchaseOptions
-        .where((item) =>
-            (item['link'] as TextEditingController).text.trim().isNotEmpty)
-        .map((item) {
-      final link = (item['link'] as TextEditingController).text.trim();
-      final price =
-          double.tryParse((item['price'] as TextEditingController).text) ?? 0;
-      return PurchaseOption(
-        name: 'Link',
-        storeName: _detectStoreNameFromUrl(link),
-        price: price,
-        logoUrl: _getLogoFromUrl(link, brand: _selectedBrand),
-        link: link,
+    final supabaseUser = Supabase.instance.client.auth.currentUser;
+    if (supabaseUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Supabase user not authenticated')),
       );
-    }).toList();
-
-    final categoriesList = <String>[];
-    if (_selectedCategory1 != null && _selectedCategory1!.isNotEmpty) {
-      categoriesList.add(_selectedCategory1!);
-    }
-    if (_selectedCategory2 != null && _selectedCategory2!.isNotEmpty) {
-      categoriesList.add(_selectedCategory2!);
+      return;
     }
 
-    final productName = _title.text.trim();
-    final brandName = _selectedBrand ?? '';
-    final isNewProduct = widget.product == null;
-
-    final product = Product(
-      id: widget.product?.id ?? '',
-      name: productName,
-      brand: brandName,
-      description: _desc.text.trim(),
-      price: double.tryParse(_mainPrice.text) ?? 0,
-      categories: categoriesList,
-      imageBase64: _base64Image ?? widget.product?.imageBase64 ?? '',
-      bannerImage: _bannerBase64 ?? widget.product?.bannerImage ?? '',
-      userId: user.uid,
-      purchaseOptions: purchaseOptions,
-    );
-
-    print('🧾 [DEBUG] Product Data:');
-    print('Nama: ${product.name}');
-    print('Brand: ${product.brand}');
-    print('Harga: ${product.price}');
-    print('Categories: ${product.categories}');
-    print('Jumlah opsi pembelian: ${product.purchaseOptions.length}');
-    print('Image Base64: ${_base64Image != null ? "✅ Ada (${_base64Image!.length} chars)" : "❌ Kosong"}');
-    print('Banner Base64: ${_bannerBase64 != null ? "✅ Ada (${_bannerBase64!.length} chars)" : "❌ Kosong"}');
-
-    bool success = false;
-    String? savedProductId;
+    setState(() {
+      _isUploading = true;
+    });
 
     try {
-      final communityId = await _getOrCreateCommunity(brandName);
-      
+      String? finalImageUrl = _imageUrl;
+      String? finalBannerUrl = _bannerUrl;
+
+      if (_imageFile != null) {
+        debugPrint('📤 Uploading main image to Supabase...');
+        
+        if (_imageUrl != null && _imageUrl!.startsWith('http')) {
+          await _storageService.deleteImage(_imageUrl!);
+        }
+
+        finalImageUrl = await _storageService.uploadImage(
+          file: _imageFile!,
+          bucket: 'product-images',
+          folder: 'main',
+          userId: supabaseUser.id,
+        );
+
+        if (finalImageUrl == null) {
+          throw Exception('Gagal upload gambar utama');
+        }
+
+        debugPrint('✅ Main image uploaded: $finalImageUrl');
+      }
+
+      if (_bannerFile != null) {
+        debugPrint('📤 Uploading banner image to Supabase...');
+        
+        if (_bannerUrl != null && _bannerUrl!.startsWith('http')) {
+          await _storageService.deleteImage(_bannerUrl!);
+        }
+
+        finalBannerUrl = await _storageService.uploadImage(
+          file: _bannerFile!,
+          bucket: 'product-images',
+          folder: 'banners',
+          userId: supabaseUser.id,
+        );
+
+        if (finalBannerUrl == null) {
+          throw Exception('Gagal upload banner');
+        }
+
+        debugPrint('✅ Banner uploaded: $finalBannerUrl');
+      }
+
+      final purchaseOptions = _purchaseOptions
+          .where((item) =>
+              (item['link'] as TextEditingController).text.trim().isNotEmpty)
+          .map((item) {
+        final link = (item['link'] as TextEditingController).text.trim();
+        final price =
+            double.tryParse((item['price'] as TextEditingController).text) ?? 0;
+        return PurchaseOption(
+          name: 'Link',
+          storeName: _detectStoreNameFromUrl(link),
+          price: price,
+          logoUrl: _getLogoFromUrl(link, brand: _selectedBrand),
+          link: link,
+        );
+      }).toList();
+
+      final categoriesList = <String>[];
+      if (_selectedCategory1 != null && _selectedCategory1!.isNotEmpty) {
+        categoriesList.add(_selectedCategory1!);
+      }
+      if (_selectedCategory2 != null && _selectedCategory2!.isNotEmpty) {
+        categoriesList.add(_selectedCategory2!);
+      }
+
+      final productName = _title.text.trim();
+      final brandName = _selectedBrand ?? '';
+      final isNewProduct = widget.product == null;
+
+      final product = Product(
+        id: widget.product?.id ?? '',
+        name: productName,
+        brand: brandName,
+        description: _desc.text.trim(),
+        price: double.tryParse(_mainPrice.text) ?? 0,
+        categories: categoriesList,
+        imageUrl: finalImageUrl ?? '',
+        bannerUrl: finalBannerUrl ?? '',
+        userId: user.uid,
+        purchaseOptions: purchaseOptions,
+      );
+
+      debugPrint('🛒 [DEBUG] Product Data:');
+      debugPrint('Nama: ${product.name}');
+      debugPrint('Brand: ${product.brand}');
+      debugPrint('Image URL: ${finalImageUrl ?? "empty"}');
+      debugPrint('Banner URL: ${finalBannerUrl ?? "empty"}');
+
+      bool success = false;
+      String? savedProductId;
+
       if (isNewProduct) {
         savedProductId = await _service.addProductWithNotifications(product);
         success = savedProductId != null;
         
         if (success) {
-          print('✅ Produk baru berhasil ditambahkan dengan ID: $savedProductId');
-          
-          await _syncProductToCommunityPosts(
-            productId: savedProductId,
-            product: product,
-            communityId: communityId,
-          );
+          debugPrint('✅ New product added with ID: $savedProductId');
           
           try {
             await _notificationService.sendNotificationToAllUsers(
               title: "🎉 Produk Baru!",
               message: "$productName dari $brandName baru saja hadir!",
-              imageUrl: "",
+              imageUrl: finalImageUrl ?? "",
               brand: brandName,
               type: "product",
               productId: savedProductId,
               categories: categoriesList,
             );
-            print('✅ Notifikasi produk baru berhasil dikirim ke semua user');
+            debugPrint('✅ Notification sent to all users');
           } catch (notifError) {
-            print('⚠️ Produk berhasil disimpan, tapi notifikasi gagal: $notifError');
+            debugPrint('⚠️ Product saved but notification failed: $notifError');
           }
         }
       } else {
@@ -400,55 +381,58 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
         );
         
         if (success) {
-          print('✅ Produk berhasil diperbarui');
-          
-          await _syncProductToCommunityPosts(
-            productId: widget.product?.id ?? '',
-            product: product,
-            communityId: communityId,
-          );
-          
-          final finalImageUrl = _base64Image ?? widget.product?.imageBase64 ?? "";
-          print('🖼️ [DEBUG] _base64Image length: ${_base64Image?.length ?? 0}');
-          print('🖼️ [DEBUG] widget.product?.imageBase64 length: ${widget.product?.imageBase64?.length ?? 0}');
-          print('🖼️ [DEBUG] finalImageUrl length: ${finalImageUrl.length}');
+          debugPrint('✅ Product updated successfully');
           
           try {
             await _notificationService.sendGlobalNotification(
-              title: "Update Produk",
+              title: "📢 Update Produk",
               message: "$productName telah diperbarui!",
-              imageUrl: finalImageUrl,
+              imageUrl: finalImageUrl ?? "",
               brand: brandName,
               type: "product",
               productId: widget.product?.id ?? "",
             );
-            print('✅ Notifikasi update produk berhasil dibuat');
+            debugPrint('✅ Update notification created');
           } catch (notifError) {
-            print('⚠️ Produk berhasil diperbarui, tapi notifikasi gagal: $notifError');
+            debugPrint('⚠️ Product updated but notification failed: $notifError');
           }
         }
       }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success
+              ? (isNewProduct
+                  ? '✅ Produk berhasil ditambahkan!'
+                  : '✅ Perubahan berhasil disimpan!')
+              : '❌ Gagal menyimpan produk!'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+
+      if (success && mounted) {
+        Navigator.pop(context, true);
+      }
     } catch (e, stack) {
-      print('❌ Error saat saveOrUpdateProduct: $e');
-      print(stack);
-      success = false;
-    }
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(success
-            ? (isNewProduct
-                ? '✅ Produk berhasil ditambahkan & tersinkronisasi dengan komunitas!'
-                : '✅ Perubahan berhasil disimpan & tersinkronisasi!')
-            : '❌ Gagal menyimpan produk!'),
-        backgroundColor: success ? Colors.green : Colors.red,
-      ),
-    );
-
-    if (success && mounted) {
-      Navigator.pop(context, true);
+      debugPrint('❌ Error saving product: $e');
+      debugPrint(stack.toString());
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
     }
   }
 
@@ -485,305 +469,323 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 700.w),
-            child: Form(
-              key: _formKey,
+      body: _isUploading
+          ? const Center(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-                      height: 200.h,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(color: Colors.grey.shade400),
-                      ),
-                      child: _imageFile != null
-                          ? ClipRRect(
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Mengupload gambar ke Supabase...'),
+                  SizedBox(height: 8),
+                  Text(
+                    'Mohon tunggu',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            )
+          : SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: 700.w),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: _pickImage,
+                          child: Container(
+                            height: 200.h,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
                               borderRadius: BorderRadius.circular(12.r),
-                              child: Image.file(_imageFile!, fit: BoxFit.cover),
-                            )
-                          : (_base64Image != null && _base64Image!.isNotEmpty)
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  child: Image.memory(
-                                    base64Decode(_base64Image!),
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          const Icon(Icons.broken_image,
-                                              size: 40, color: Colors.red),
-                                          SizedBox(height: 8.h),
-                                          Text('Error loading image',
-                                              style: TextStyle(color: Colors.red)),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                )
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.image_outlined,
-                                        size: 40, color: Colors.grey),
-                                    SizedBox(height: 8.h),
-                                    Text('Pilih Foto Produk',
-                                        style: TextStyle(color: Colors.grey[600])),
-                                  ],
-                                ),
-                    ),
-                  ),
-
-                  SizedBox(height: 24.h),
-                  GestureDetector(
-                    onTap: _pickBannerImage,
-                    child: Container(
-                      height: 140.h,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(color: Colors.grey.shade400),
-                      ),
-                      child: _bannerFile != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12.r),
-                              child: Image.file(_bannerFile!, fit: BoxFit.cover),
-                            )
-                          : (_bannerBase64 != null && _bannerBase64!.isNotEmpty)
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  child: Image.memory(
-                                    base64Decode(_bannerBase64!),
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          const Icon(Icons.broken_image,
-                                              size: 36, color: Colors.red),
-                                          SizedBox(height: 8.h),
-                                          Text('Error loading banner',
-                                              style: TextStyle(color: Colors.red)),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                )
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.image_outlined,
-                                        size: 36, color: Colors.grey),
-                                    SizedBox(height: 8.h),
-                                    Text(
-                                      'Pilih Banner Produk',
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
-                    ),
-                  ),
-
-                  SizedBox(height: 24.h),
-                  TextFormField(
-                    controller: _title,
-                    decoration: _inputDecoration('Judul'),
-                    validator: (v) => v!.isEmpty ? 'Judul wajib diisi' : null,
-                    style: const TextStyle(color: Colors.black),
-                  ),
-                  SizedBox(height: 14.h),
-                  DropdownButtonFormField<String>(
-                    decoration: _inputDecoration('Brand'),
-                    value: _selectedBrand,
-                    items: _brands
-                        .map((b) => DropdownMenuItem(value: b, child: Text(b)))
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedBrand = v),
-                    validator: (v) => v == null ? 'Pilih brand' : null,
-                    style: const TextStyle(color: Colors.black),
-                  ),
-                  SizedBox(height: 14.h),
-                  TextFormField(
-                    controller: _desc,
-                    decoration: _inputDecoration('Deskripsi'),
-                    maxLines: 3,
-                    style: const TextStyle(color: Colors.black),
-                  ),
-                  SizedBox(height: 14.h),
-                  TextFormField(
-                    controller: _mainPrice,
-                    decoration: _inputDecoration('Harga Produk Utama'),
-                    keyboardType: TextInputType.number,
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Harga wajib diisi' : null,
-                    style: const TextStyle(color: Colors.black),
-                  ),
-                  SizedBox(height: 20.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          decoration: _inputDecoration('Kategori Utama'),
-                          value: _selectedCategory1,
-                          items: _categoriesMain
-                              .map((c) =>
-                                  DropdownMenuItem(value: c, child: Text(c)))
-                              .toList(),
-                          onChanged: (v) =>
-                              setState(() => _selectedCategory1 = v),
-                          validator: (v) =>
-                              v == null ? 'Pilih kategori utama' : null,
-                          style: const TextStyle(color: Colors.black),
-                        ),
-                      ),
-                      SizedBox(width: 10.w),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          decoration: _inputDecoration('Sub Kategori'),
-                          value: _selectedCategory2,
-                          items: _categoriesSub
-                              .map((c) =>
-                                  DropdownMenuItem(value: c, child: Text(c)))
-                              .toList(),
-                          onChanged: (v) =>
-                              setState(() => _selectedCategory2 = v),
-                          validator: (v) =>
-                              v == null ? 'Pilih sub kategori' : null,
-                          style: const TextStyle(color: Colors.black),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 24.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Opsi Pembelian:',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.black),
-                      ),
-                      TextButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _purchaseOptions.add({
-                              'link': TextEditingController(),
-                              'price': TextEditingController(),
-                              'logo': '',
-                            });
-                          });
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('Tambah'),
-                      ),
-                    ],
-                  ),
-                  ..._purchaseOptions.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final item = entry.value;
-                    final linkController = item['link'] as TextEditingController;
-                    final priceController = item['price'] as TextEditingController;
-                    final logo = item['logo'] as String?;
-
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: 12.h),
-                      child: Row(
-                        children: [
-                          if (logo != null && logo.isNotEmpty)
-                            Padding(
-                              padding: EdgeInsets.only(right: 8.w),
-                              child: Image.asset(logo,
-                                  width: 32.w,
-                                  height: 32.w,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(Icons.store, 
-                                        size: 32.sp, 
-                                        color: Colors.grey);
-                                  }),
+                              border: Border.all(color: Colors.grey.shade400),
                             ),
-                          Expanded(
-                            child: TextFormField(
-                              controller: linkController,
-                              decoration: _inputDecoration('Link ${index + 1}'),
-                              style: const TextStyle(color: Colors.black),
-                              onChanged: (v) {
+                            child: _imageFile != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    child: Image.file(_imageFile!, fit: BoxFit.cover),
+                                  )
+                                : (_imageUrl != null && _imageUrl!.isNotEmpty)
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(12.r),
+                                        child: Image.network(
+                                          _imageUrl!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(Icons.broken_image,
+                                                    size: 40, color: Colors.red),
+                                                SizedBox(height: 8.h),
+                                                const Text('Error loading image',
+                                                    style: TextStyle(color: Colors.red)),
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                      )
+                                    : Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.image_outlined,
+                                              size: 40, color: Colors.grey),
+                                          SizedBox(height: 8.h),
+                                          Text('Pilih Foto Produk',
+                                              style: TextStyle(color: Colors.grey[600])),
+                                        ],
+                                      ),
+                          ),
+                        ),
+
+                        SizedBox(height: 24.h),
+                        
+                        GestureDetector(
+                          onTap: _pickBannerImage,
+                          child: Container(
+                            height: 140.h,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12.r),
+                              border: Border.all(color: Colors.grey.shade400),
+                            ),
+                            child: _bannerFile != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    child: Image.file(_bannerFile!, fit: BoxFit.cover),
+                                  )
+                                : (_bannerUrl != null && _bannerUrl!.isNotEmpty)
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(12.r),
+                                        child: Image.network(
+                                          _bannerUrl!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(Icons.broken_image,
+                                                    size: 36, color: Colors.red),
+                                                SizedBox(height: 8.h),
+                                                const Text('Error loading banner',
+                                                    style: TextStyle(color: Colors.red)),
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                      )
+                                    : Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.image_outlined,
+                                              size: 36, color: Colors.grey),
+                                          SizedBox(height: 8.h),
+                                          Text(
+                                            'Pilih Banner Produk',
+                                            style: TextStyle(color: Colors.grey[600]),
+                                          ),
+                                        ],
+                                      ),
+                          ),
+                        ),
+
+                        SizedBox(height: 24.h),
+                        TextFormField(
+                          controller: _title,
+                          decoration: _inputDecoration('Judul'),
+                          validator: (v) => v!.isEmpty ? 'Judul wajib diisi' : null,
+                          style: const TextStyle(color: Colors.black),
+                        ),
+                        SizedBox(height: 14.h),
+                        DropdownButtonFormField<String>(
+                          decoration: _inputDecoration('Brand'),
+                          value: _selectedBrand,
+                          items: _brands
+                              .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                              .toList(),
+                          onChanged: (v) => setState(() => _selectedBrand = v),
+                          validator: (v) => v == null ? 'Pilih brand' : null,
+                          style: const TextStyle(color: Colors.black),
+                        ),
+                        SizedBox(height: 14.h),
+                        TextFormField(
+                          controller: _desc,
+                          decoration: _inputDecoration('Deskripsi'),
+                          maxLines: 3,
+                          style: const TextStyle(color: Colors.black),
+                        ),
+                        SizedBox(height: 14.h),
+                        TextFormField(
+                          controller: _mainPrice,
+                          decoration: _inputDecoration('Harga Produk Utama'),
+                          keyboardType: TextInputType.number,
+                          validator: (v) =>
+                              v == null || v.isEmpty ? 'Harga wajib diisi' : null,
+                          style: const TextStyle(color: Colors.black),
+                        ),
+                        SizedBox(height: 20.h),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                decoration: _inputDecoration('Kategori Utama'),
+                                value: _selectedCategory1,
+                                items: _categoriesMain
+                                    .map((c) =>
+                                        DropdownMenuItem(value: c, child: Text(c)))
+                                    .toList(),
+                                onChanged: (v) =>
+                                    setState(() => _selectedCategory1 = v),
+                                validator: (v) =>
+                                    v == null ? 'Pilih kategori utama' : null,
+                                style: const TextStyle(color: Colors.black),
+                              ),
+                            ),
+                            SizedBox(width: 10.w),
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                decoration: _inputDecoration('Sub Kategori'),
+                                value: _selectedCategory2,
+                                items: _categoriesSub
+                                    .map((c) =>
+                                        DropdownMenuItem(value: c, child: Text(c)))
+                                    .toList(),
+                                onChanged: (v) =>
+                                    setState(() => _selectedCategory2 = v),
+                                validator: (v) =>
+                                    v == null ? 'Pilih sub kategori' : null,
+                                style: const TextStyle(color: Colors.black),
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        SizedBox(height: 24.h),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Opsi Pembelian:',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, color: Colors.black),
+                            ),
+                            TextButton.icon(
+                              onPressed: () {
                                 setState(() {
-                                  item['logo'] = _getLogoFromUrl(v,
-                                      brand: _selectedBrand);
-                                });
-                              },
-                            ),
-                          ),
-                          SizedBox(width: 10.w),
-                          Expanded(
-                            child: TextFormField(
-                              controller: priceController,
-                              decoration: _inputDecoration('Harga'),
-                              keyboardType: TextInputType.number,
-                              style: const TextStyle(color: Colors.black),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle,
-                                color: Colors.red),
-                            onPressed: () {
-                              setState(() {
-                                linkController.dispose();
-                                priceController.dispose();
-                                _purchaseOptions.removeAt(index);
-                                if (_purchaseOptions.isEmpty) {
                                   _purchaseOptions.add({
                                     'link': TextEditingController(),
                                     'price': TextEditingController(),
                                     'logo': '',
                                   });
-                                }
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                  SizedBox(height: 32.h),
+                                });
+                              },
+                              icon: const Icon(Icons.add),
+                              label: const Text('Tambah'),
+                            ),
+                          ],
+                        ),
+                        ..._purchaseOptions.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final item = entry.value;
+                          final linkController = item['link'] as TextEditingController;
+                          final priceController = item['price'] as TextEditingController;
+                          final logo = item['logo'] as String?;
 
-                  ElevatedButton(
-                    onPressed: _saveProduct,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: EdgeInsets.symmetric(
-                          vertical: 16.h, horizontal: 40.w),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                    ),
-                    child: Text(
-                      isEdit ? 'Simpan Perubahan' : 'Upload Produk',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: 12.h),
+                            child: Row(
+                              children: [
+                                if (logo != null && logo.isNotEmpty)
+                                  Padding(
+                                    padding: EdgeInsets.only(right: 8.w),
+                                    child: Image.asset(logo,
+                                        width: 32.w,
+                                        height: 32.w,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Icon(Icons.store, 
+                                              size: 32.sp, 
+                                              color: Colors.grey);
+                                        }),
+                                  ),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: linkController,
+                                    decoration: _inputDecoration('Link ${index + 1}'),
+                                    style: const TextStyle(color: Colors.black),
+                                    onChanged: (v) {
+                                      setState(() {
+                                        item['logo'] = _getLogoFromUrl(v,
+                                            brand: _selectedBrand);
+                                      });
+                                    },
+                                  ),
+                                ),
+                                SizedBox(width: 10.w),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: priceController,
+                                    decoration: _inputDecoration('Harga'),
+                                    keyboardType: TextInputType.number,
+                                    style: const TextStyle(color: Colors.black),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.remove_circle,
+                                      color: Colors.red),
+                                  onPressed: () {
+                                    setState(() {
+                                      linkController.dispose();
+                                      priceController.dispose();
+                                      _purchaseOptions.removeAt(index);
+                                      if (_purchaseOptions.isEmpty) {
+                                        _purchaseOptions.add({
+                                          'link': TextEditingController(),
+                                          'price': TextEditingController(),
+                                          'logo': '',
+                                        });
+                                      }
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        SizedBox(height: 32.h),
+
+                        ElevatedButton(
+                          onPressed: _saveProduct,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: EdgeInsets.symmetric(
+                                vertical: 16.h, horizontal: 40.w),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                          ),
+                          child: Text(
+                            isEdit ? 'Simpan Perubahan' : 'Upload Produk',
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 40.h),
+                      ],
                     ),
                   ),
-                  SizedBox(height: 40.h),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }
