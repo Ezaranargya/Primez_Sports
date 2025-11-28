@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/pages/product/product_detail_page.dart';
+import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/utils/formatter.dart';
 import 'package:my_app/pages/product/widgets/product_image.dart'; 
 
@@ -78,7 +79,7 @@ class NewsProductCard extends StatelessWidget {
                       Formatter.formatPrice(product.price),
                       style: TextStyle(
                         fontSize: 13.sp,
-                        color: Colors.redAccent,
+                        color: Colors.grey[500],
                         fontWeight: FontWeight.w600,
                         fontFamily: 'Poppins',
                       ),

@@ -458,18 +458,48 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
                 ProductInfo(product: product, showDescription: false),
                 SizedBox(height: 24.h),
                 if (product.description.isNotEmpty) ...[
-                  Text(
-                    product.description,
-                    textAlign: TextAlign.justify,
-                    style: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      height: 1.3,
-                      letterSpacing: 0,
-                      color: Colors.grey.shade700,
+                  Container(
+                    padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 18.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Deskripsi Produk",
+                          style: GoogleFonts.poppins(
+                            fontSize: 17.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        SizedBox(height: 14.h),
+
+                        Text(
+                          product.description.trim(),
+                          textAlign: TextAlign.start,
+                          textWidthBasis: TextWidthBasis.parent,
+                          style: GoogleFonts.inter(
+                            fontSize: 14.2.sp,
+                            height: 1.75,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(height: 24.h),
+                  SizedBox(height: 26.h),
                 ],
+
                 if (product.purchaseOptions.isNotEmpty)
                   PurchaseOptionsList(options: product.purchaseOptions)
                 else

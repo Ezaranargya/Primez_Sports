@@ -117,7 +117,7 @@ class _NewProductCard extends StatelessWidget {
               Formatter.formatPrice(product.price),
               style: TextStyle(
                 fontSize: 13.sp,
-                color: AppColors.primary,
+                color: Colors.grey[500],
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Poppins',
               ),

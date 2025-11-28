@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/admin/product/product_detail_page.dart';
+import 'package:my_app/theme/app_colors.dart';
 
 class ProductItem extends StatelessWidget {
   final Product product;
@@ -126,7 +127,7 @@ class ProductItem extends StatelessWidget {
                     Text(
                       "Rp${_formatPrice(product.price)}",
                       style: TextStyle(
-                        color: const Color(0xFFE53E3E),
+                        color: AppColors.backgroundColor,
                         fontSize: 12.sp,
                         fontWeight: FontWeight.bold,
                       ),

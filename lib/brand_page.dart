@@ -220,7 +220,7 @@ class _ProductCard extends StatelessWidget {
             Expanded(
               flex: 3,
               child: Padding(
-                padding: EdgeInsets.all(10.w),
+                padding: EdgeInsets.all(14.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -236,12 +236,14 @@ class _ProductCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+
+                    SizedBox(height: 4.h),
                     Text(
                       Formatter.formatPrice(product.price),
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                        color: Colors.grey[500],
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

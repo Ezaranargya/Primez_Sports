@@ -20,16 +20,13 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Primez Sports - Your Sports Companion">
 
-  <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Primez Sports">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <!-- Prevent Caching - PENTING untuk auto-update -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -38,22 +35,37 @@
   <link rel="manifest" href="manifest.json">
 
   <style>
-    /* Loading indicator */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #ffffff;
+    }
+    
     .loading {
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       height: 100vh;
       background-color: #ffffff;
     }
+    
     .spinner {
       width: 50px;
       height: 50px;
       border: 5px solid #f3f3f3;
-      border-top: 5px solid #3498db;
+      border-top: 5px solid #E53E3E;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
+    
+    .loading-text {
+      margin-top: 20px;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      color: #333;
+    }
+    
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -61,28 +73,26 @@
   </style>
 </head>
 <body>
-  <!-- Loading indicator -->
-  <div class="loading">
+  <div id="loading-indicator" class="loading">
     <div class="spinner"></div>
+    <div class="loading-text">Loading Primez Sports...</div>
   </div>
 
-  <script>
-    // The value below is injected by flutter build, do not touch.
-    var serviceWorkerVersion = null;
-  </script>
-  
-  <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
 
   <script>
     window.addEventListener('load', function(ev) {
-      // Download main.dart.js
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
+      var loadingIndicator = document.querySelector('#loading-indicator');
+      
+      _flutter.loader.load({
+        serviceWorkerSettings: {
+          serviceWorkerVersion: "{{flutter_service_worker_version}}",
         },
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
+            if (loadingIndicator) {
+              loadingIndicator.style.display = 'none';
+            }
             appRunner.runApp();
           });
         }
@@ -90,53 +100,46 @@
     });
   </script>
 
-  <!-- Auto-reload on new version -->
   <script>
-    // Check for updates every 30 seconds
-    let lastVersion = localStorage.getItem('app_version');
-    let updateCheckInterval = null;
+    var lastVersion = localStorage.getItem('app_version');
+    var updateCheckInterval = null;
 
     function checkForUpdates() {
       fetch('/build-info.txt?t=' + Date.now())
-        .then(response => response.text())
-        .then(newVersion => {
+        .then(function(response) {
+          return response.text();
+        })
+        .then(function(newVersion) {
           if (lastVersion && lastVersion !== newVersion) {
-            // New version detected
-            console.log('New version available!');
+            console.log('🎉 New version available!');
             
-            // Show update notification
             if (confirm('🎉 Versi baru tersedia!\n\nKlik OK untuk update sekarang.')) {
               localStorage.setItem('app_version', newVersion);
-              // Force reload from server
               window.location.reload(true);
             }
           } else if (!lastVersion) {
-            // First time loading
             localStorage.setItem('app_version', newVersion);
             lastVersion = newVersion;
           }
         })
-        .catch(err => {
+        .catch(function(err) {
           console.log('Version check failed:', err);
         });
     }
 
-    // Service Worker registration with update detection
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
+      window.addEventListener('load', function() {
         navigator.serviceWorker.register('/flutter_service_worker.js?v=' + Date.now())
-          .then((registration) => {
-            console.log('Service Worker registered');
+          .then(function(registration) {
+            console.log('✅ Service Worker registered');
             
-            // Check for updates on service worker
-            registration.addEventListener('updatefound', () => {
-              const newWorker = registration.installing;
+            registration.addEventListener('updatefound', function() {
+              var newWorker = registration.installing;
               
-              newWorker.addEventListener('statechange', () => {
+              newWorker.addEventListener('statechange', function() {
                 if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                  console.log('New service worker activated!');
+                  console.log('🔄 New service worker activated!');
                   
-                  // Notify user about update
                   if (confirm('🔄 Update tersedia!\n\nRefresh untuk mendapatkan fitur terbaru?')) {
                     window.location.reload(true);
                   }
@@ -144,38 +147,34 @@
               });
             });
 
-            // Start checking for updates every 30 seconds
             updateCheckInterval = setInterval(checkForUpdates, 30000);
             
-            // Also check immediately
             checkForUpdates();
           })
-          .catch((error) => {
-            console.log('Service Worker registration failed:', error);
+          .catch(function(error) {
+            console.log('❌ Service Worker registration failed:', error);
           });
       });
     } else {
-      // If service worker not supported, still check for updates
+      console.log('⚠️ Service Worker not supported');
       updateCheckInterval = setInterval(checkForUpdates, 30000);
       checkForUpdates();
     }
 
-    // Check for updates when page becomes visible again
-    document.addEventListener('visibilitychange', () => {
+    document.addEventListener('visibilitychange', function() {
       if (!document.hidden) {
+        console.log('👀 Page visible, checking for updates...');
         checkForUpdates();
       }
     });
 
-    // Cleanup on page unload
-    window.addEventListener('beforeunload', () => {
+    window.addEventListener('beforeunload', function() {
       if (updateCheckInterval) {
         clearInterval(updateCheckInterval);
       }
     });
   </script>
 
-  <!-- Firebase Configuration (Optional - jika pakai Firebase) -->
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
   

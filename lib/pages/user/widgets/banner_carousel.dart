@@ -256,10 +256,9 @@ class _BannerCarouselState extends State<BannerCarousel> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  // Asumsi product.formattedPrice tersedia
                                   product.formattedPrice, 
                                   style: TextStyle(
-                                    color: AppColors.primary,
+                                    color: AppColors.backgroundColor,
                                     fontSize: 18.sp,
                                     fontWeight: FontWeight.bold,
                                     shadows: [

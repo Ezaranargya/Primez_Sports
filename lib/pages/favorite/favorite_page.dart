@@ -189,7 +189,7 @@ class _UserFavoritesPageState extends State<UserFavoritesPage> {
                                 Formatter.formatPrice(product.price),
                                 style: TextStyle(
                                   fontSize: 15.sp,
-                                  color: const Color(0xFFE53E3E),
+                                  color: Colors.grey[500],
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),

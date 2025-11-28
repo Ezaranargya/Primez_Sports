@@ -342,7 +342,7 @@ class AdminCommunityChatPage extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                        color: AppColors.backgroundColor,
                       ),
                     ),
                   ],
@@ -437,7 +437,7 @@ class AdminCommunityChatPage extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
+                                color: AppColors.backgroundColor,
                               ),
                             ),
                         ],

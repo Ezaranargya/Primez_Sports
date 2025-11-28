@@ -143,9 +143,9 @@ Future<void> main() async {
   );
 
   await Supabase.initialize(
-  url: 'https://qxdnrmhceadpmppcrouc.supabase.co',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4ZG5ybWhjZWFkcG1wcGNyb3VjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mzk4NzQ4NSwiZXhwIjoyMDc5NTYzNDg1fQ.N5UDGd8DAt7tFzx5OZ8p0avAr1bMOwWCWzJQMFpJGow',
-);
+    url: 'https://qxdnrmhceadpmppcrouc.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4ZG5ybWhjZWFkcG1wcGNyb3VjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mzk4NzQ4NSwiZXhwIjoyMDc5NTYzNDg1fQ.N5UDGd8DAt7tFzx5OZ8p0avAr1bMOwWCWzJQMFpJGow',
+  );
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
@@ -199,93 +199,71 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
   @override
   void initState() {
     super.initState();
+    _router = _createRouter();
     _appLinks = AppLinks();
     _setupFirebaseMessaging();
-    _router = _createRouter();
-    _checkInitialLink();
+    _initDeepLinks();
   }
 
-  Future<void> _checkInitialLink() async {
-    try {
-      final uri = await _appLinks.getInitialLink();
-      if (uri != null) {
-        debugPrint('🔗 Initial Deep Link Detected: $uri');
-        final location = _parseDeepLink(uri);
-        if (location != null) {
-          debugPrint('🔗 Parsed Initial Location: $location');
+  Future<void> _initDeepLinks() async {
+    debugPrint('🔗 Initializing deep links...');
 
-          final user = FirebaseAuth.instance.currentUser;
-          if (user != null) {
-            debugPrint('✅ User logged in, navigating immediately');
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (mounted) {
-                _router.go(location);
-              }
-            });
-          } else {
-            debugPrint('⏳ User not logged in, saving pending deep link');
-            _pendingDeepLinkLocation = location;
-          }
-        }
+    try {
+      final initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) {
+        debugPrint('🔗 Initial link detected: $initialUri');
+        _handleDeepLink(initialUri);
       }
     } catch (e) {
       debugPrint('❌ Error getting initial link: $e');
     }
 
-    _appLinks.uriLinkStream.listen((uri) {
-      debugPrint('🔗 Deep Link Stream: $uri');
-      final location = _parseDeepLink(uri);
-      if (location != null && mounted) {
-        debugPrint('🔗 Navigating to: $location');
-
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          _router.go(location);
-        } else {
-          _pendingDeepLinkLocation = location;
-          _router.go('/login');
-        }
-      }
-    });
+    _appLinks.uriLinkStream.listen(
+      (Uri uri) {
+        debugPrint('🔗 Deep link stream: $uri');
+        _handleDeepLink(uri);
+      },
+      onError: (err) {
+        debugPrint('❌ Deep link error: $err');
+      },
+    );
   }
 
-  String? _parseDeepLink(Uri uri) {
-    debugPrint('🔗 Parsing Deep Link:');
+  void _handleDeepLink(Uri uri) {
+    debugPrint('════════════════════════════════════');
+    debugPrint('🔗 DEEP LINK RECEIVED');
+    debugPrint('   Full URI: ${uri.toString()}');
     debugPrint('   Scheme: ${uri.scheme}');
     debugPrint('   Host: ${uri.host}');
     debugPrint('   Path: ${uri.path}');
     debugPrint('   Segments: ${uri.pathSegments}');
     debugPrint('   Query: ${uri.queryParameters}');
+    debugPrint('════════════════════════════════════');
 
     String? productId;
 
     if (uri.queryParameters.containsKey('link')) {
       final deepLink = Uri.parse(uri.queryParameters['link']!);
       debugPrint('🔗 Extracted Firebase Dynamic Link: $deepLink');
-
-      if (deepLink.pathSegments.length >= 2) {
-        if (deepLink.pathSegments[0] == 'product' || deepLink.pathSegments[0] == 'products') {
-          productId = deepLink.pathSegments[1];
+      
+      if (deepLink.pathSegments.length >= 2 &&
+          (deepLink.pathSegments[0] == 'product' || deepLink.pathSegments[0] == 'products')) {
+        productId = deepLink.pathSegments[1];
+      }
+    }
+    else if (uri.scheme == 'primezsports') {
+      if (uri.pathSegments.isNotEmpty &&
+          (uri.pathSegments[0] == 'product' || uri.pathSegments[0] == 'products')) {
+        if (uri.pathSegments.length > 1) {
+          productId = uri.pathSegments[1];
         }
       }
-    } else if (uri.scheme == 'primezsports') {
-      if (uri.host == 'products' || uri.host == 'product') {
-        if (uri.pathSegments.isNotEmpty) {
-          productId = uri.pathSegments[0];
-        }
-      } else if (uri.pathSegments.isNotEmpty) {
-        if (uri.pathSegments[0] == 'products' || uri.pathSegments[0] == 'product') {
-          if (uri.pathSegments.length > 1) {
-            productId = uri.pathSegments[1];
-          }
-        }
-      }
-    } else if (uri.scheme == 'https') {
-      if (uri.pathSegments.isNotEmpty) {
-        if (uri.pathSegments[0] == 'product' || uri.pathSegments[0] == 'products') {
-          if (uri.pathSegments.length > 1) {
-            productId = uri.pathSegments[1];
-          }
+    }
+    else if (uri.scheme == 'https' || uri.scheme == 'http') {
+      if (uri.pathSegments.isNotEmpty &&
+          (uri.pathSegments[0] == 'product' || uri.pathSegments[0] == 'products')) {
+        if (uri.pathSegments.length > 1) {
+          productId = uri.pathSegments[1];
         }
       }
     }
@@ -296,11 +274,33 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
 
     if (productId != null && productId.isNotEmpty) {
       debugPrint('✅ Product ID found: $productId');
-      return '/product/$productId';
+      _navigateToProduct(productId);
+    } else {
+      debugPrint('❌ No product ID found in deep link');
     }
+  }
 
-    debugPrint('❌ No product ID found in deep link');
-    return null;
+  void _navigateToProduct(String productId) {
+    final user = FirebaseAuth.instance.currentUser;
+    
+    if (user == null) {
+      debugPrint('⏳ User not logged in, saving pending deep link');
+      _pendingDeepLinkLocation = '/product/$productId';
+      
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          _router.go('/login');
+        }
+      });
+    } else {
+      debugPrint('✅ User logged in, navigating to product: $productId');
+      
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          _router.go('/product/$productId');
+        }
+      });
+    }
   }
 
   void _setupFirebaseMessaging() async {
@@ -407,7 +407,8 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
         debugPrint('🔀 Redirect check for: $currentLocation');
 
         if (_pendingDeepLinkLocation != null) {
-          if (!currentLocation.startsWith('/product')) {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null && !currentLocation.startsWith('/product')) {
             debugPrint('🔗 Processing pending deep link: $_pendingDeepLinkLocation');
             final location = _pendingDeepLinkLocation;
             _pendingDeepLinkLocation = null;
@@ -437,7 +438,7 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
         final isGoingToAdminHome = currentLocation == '/admin-home';
 
         if (isLoggedIn && (isGoingToUserHome || isGoingToAdminHome)) {
-          debugPrint('✅ Already on correct home page, no redirect needed');
+          debugPrint('✅ Already on correct home page');
           return null;
         }
 
@@ -450,10 +451,10 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
           final role = await _getUserRole(user.uid);
 
           if (role == 'admin') {
-            debugPrint('🔀 Redirecting logged-in admin to /admin-home');
+            debugPrint('🔀 Redirecting admin to /admin-home');
             return '/admin-home';
           } else {
-            debugPrint('🔀 Redirecting logged-in user to /user-home');
+            debugPrint('🔀 Redirecting user to /user-home');
             return '/user-home';
           }
         }
@@ -485,13 +486,6 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
         GoRoute(
           path: '/user-home',
           builder: (context, state) {
-            if (_pendingDeepLinkLocation != null) {
-              final location = _pendingDeepLinkLocation;
-              _pendingDeepLinkLocation = null;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                context.go(location!);
-              });
-            }
             Future.microtask(() {
               if (FirebaseAuth.instance.currentUser != null) {
                 Provider.of<FavoriteProvider>(context, listen: false).loadFavorites();
@@ -503,16 +497,7 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
 
         GoRoute(
           path: '/admin-home',
-          builder: (context, state) {
-            if (_pendingDeepLinkLocation != null) {
-              final location = _pendingDeepLinkLocation;
-              _pendingDeepLinkLocation = null;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                context.go(location!);
-              });
-            }
-            return const AdminHomePage();
-          },
+          builder: (context, state) => const AdminHomePage(),
         ),
 
         GoRoute(
@@ -547,19 +532,9 @@ class _PrimezSportsAppState extends State<PrimezSportsApp> {
 
         GoRoute(
           path: '/products/:id',
-          builder: (context, state) {
+          redirect: (context, state) {
             final productId = state.pathParameters['id']!;
-            debugPrint('📱 Building ProductDetailLoader for: $productId');
-            return ProductDetailLoader(productId: productId);
-          },
-        ),
-
-        GoRoute(
-          path: '/product-detail',
-          builder: (context, state) {
-            final productId = state.uri.queryParameters['id'] ?? '';
-            debugPrint('📱 Building ProductDetailLoader for: $productId');
-            return ProductDetailLoader(productId: productId);
+            return '/product/$productId';
           },
         ),
       ],
@@ -809,7 +784,7 @@ class ProductDetailLoader extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => context.go('/'),
+                  onPressed: () => context.go('/user-home'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,

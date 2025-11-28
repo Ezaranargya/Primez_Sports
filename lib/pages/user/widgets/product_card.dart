@@ -74,7 +74,7 @@ class ProductCard extends StatelessWidget {
                     Formatter.formatPrice(product.price),
                     style: TextStyle(
                       fontSize: isHorizontal ? 16.sp : 14.sp,
-                      color: AppColors.primary,
+                      color: Colors.grey[500],
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Poppins',
                     ),
@@ -167,7 +167,7 @@ class CompactProductCard extends StatelessWidget {
                       Formatter.formatPrice(product.price),
                       style: TextStyle(
                         fontSize: 14.sp,
-                        color: AppColors.primary,
+                        color: Colors.grey[500],
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Poppins',
                       ),
@@ -278,7 +278,7 @@ class LargeProductCard extends StatelessWidget {
                     Formatter.formatPrice(product.price),
                     style: TextStyle(
                       fontSize: 18.sp,
-                      color: AppColors.primary,
+                      color: Colors.grey[500],
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Poppins',
                     ),

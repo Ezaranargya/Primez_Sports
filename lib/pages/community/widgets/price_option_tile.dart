@@ -40,7 +40,7 @@ class PriceOptionTile extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16.sp,
-                color: AppColors.primary,
+                color: AppColors.backgroundColor,
               ),
             ),
 

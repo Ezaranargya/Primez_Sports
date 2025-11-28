@@ -35,13 +35,6 @@ class _AdminProductPageState extends State<AdminProductPage> {
               ),
             ),
             centerTitle: true,
-            actions: [
-              IconButton(
-                icon: Icon(Icons.cloud_upload, color: Colors.white),
-                onPressed: _migrateToSupabase,
-                tooltip: 'Migrate to Supabase',
-              ),
-            ],
           ),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           floatingActionButton: Padding(
@@ -161,7 +154,7 @@ class _AdminProductPageState extends State<AdminProductPage> {
                               p.formattedPrice,
                               style: TextStyle(
                                 fontSize: 13.sp,
-                                color: AppColors.primary,
+                                color: Colors.grey[500],
                                 fontWeight: FontWeight.bold,
                               ),
                             ),

@@ -136,7 +136,7 @@ class FavoriteItemCard extends StatelessWidget {
                         Text(
                           Formatter.formatPrice(product!.price),
                           style: TextStyle(
-                            color: AppColors.primary,
+                            color: Colors.grey[500],
                             fontSize: 15.sp,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Poppins',

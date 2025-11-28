@@ -140,7 +140,7 @@ class _PurchaseOptionsListState extends State<PurchaseOptionsList> {
                                     style: TextStyle(
                                       fontSize: 15.sp,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
+                                      color: Colors.grey[500],
                                     ),
                                   ),
                                 ),

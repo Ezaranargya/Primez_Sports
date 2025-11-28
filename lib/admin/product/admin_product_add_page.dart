@@ -244,14 +244,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       return;
     }
 
-    final supabaseUser = Supabase.instance.client.auth.currentUser;
-    if (supabaseUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Supabase user not authenticated')),
-      );
-      return;
-    }
-
     setState(() {
       _isUploading = true;
     });
@@ -269,9 +261,9 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
 
         finalImageUrl = await _storageService.uploadImage(
           file: _imageFile!,
-          bucket: 'product-images',
+          bucket: 'Primez_Sports',
           folder: 'main',
-          userId: supabaseUser.id,
+          userId: user.uid,
         );
 
         if (finalImageUrl == null) {
@@ -290,9 +282,9 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
 
         finalBannerUrl = await _storageService.uploadImage(
           file: _bannerFile!,
-          bucket: 'product-images',
+          bucket: 'Primez_Sports',
           folder: 'banners',
-          userId: supabaseUser.id,
+          userId: user.uid,
         );
 
         if (finalBannerUrl == null) {
@@ -761,23 +753,46 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                         SizedBox(height: 32.h),
 
                         ElevatedButton(
-                          onPressed: _saveProduct,
+                          onPressed: _isUploading ? null : _saveProduct,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: _isUploading ? Colors.grey : AppColors.primary,
                             padding: EdgeInsets.symmetric(
                                 vertical: 16.h, horizontal: 40.w),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                           ),
-                          child: Text(
-                            isEdit ? 'Simpan Perubahan' : 'Upload Produk',
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                          child: _isUploading
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
+                                      height: 20.h,
+                                      width: 20.w,
+                                      child: const CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12.w),
+                                    Text(
+                                      'Menyimpan...',
+                                      style: TextStyle(
+                                        fontSize: 16.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  isEdit ? 'Simpan Perubahan' : 'Upload Produk',
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                         SizedBox(height: 40.h),
                       ],
