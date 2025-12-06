@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:my_app/models/product_model.dart';
-import 'package:my_app/pages/community/widgets/product_info_card.dart';
 
 class AllProductsPage extends StatefulWidget {
   const AllProductsPage({super.key});
@@ -47,15 +46,6 @@ class _AllProductsPageState extends State<AllProductsPage> {
         centerTitle: true,
         backgroundColor: Colors.redAccent,
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              padding: EdgeInsets.only(bottom: 20.h),
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                return ProductInfoCard(product: products[index]);
-              },
-            ),
     );
   }
 }

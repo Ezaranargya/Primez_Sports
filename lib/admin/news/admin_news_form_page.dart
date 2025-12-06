@@ -373,30 +373,33 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
             ),
             SizedBox(height: 12.h),
             if (_mainImageFile != null || _existingMainImageUrl != null)
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12.r),
-                    child: _mainImageFile != null
-                        ? Image.file(_mainImageFile!, height: 200.h, width: double.infinity, fit: BoxFit.cover)
-                        : Image.network(_existingMainImageUrl!, height: 200.h, width: double.infinity, fit: BoxFit.cover),
-                  ),
+                Stack(
+                  children: [
+                    InkWell(
+                      onTap: () => _pickImage(isMainImage: true),    
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12.r),
+                        child: _mainImageFile != null
+                            ? Image.file(_mainImageFile!, height: 200.h, width: double.infinity, fit: BoxFit.cover)
+                            : Image.network(_existingMainImageUrl!, height: 200.h, width: double.infinity, fit: BoxFit.cover),
+                      ),
+                    ),
                   Positioned(
-                    top: 8.h,
-                    right: 8.w,
-                    child: IconButton(
-                      onPressed: () => setState(() {
-                        _mainImageFile = null;
-                        _existingMainImageUrl = null;
-                        _mainImageChanged = true;
-                      }),
-                      icon: const Icon(Icons.close),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
+                    bottom: 8.h,
+                    left: 12.w,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: const Text(
+                        'Tap untuk mengubah gambar',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     ),
                   ),
+
                 ],
               )
             else

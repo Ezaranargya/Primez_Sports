@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class CommunityPost {
   final String id;
   final String brand;
-  final String content;
+  final String content;        // ✅ Ini HARGA UTAMA (string)
   final String description;
   final DateTime createdAt;
   final String? imageUrl1;  
@@ -13,6 +13,13 @@ class CommunityPost {
   final String username;
   final String userEmail;
   final String? userPhotoUrl;
+  
+  // Field tambahan
+  final String? title;         // ✅ Judul produk
+  final double? mainProductPrice; // ✅ Parsed dari 'content'
+  final String? mainCategory;
+  final String? subCategory;
+  final List<PurchaseOption>? purchaseOptions;
 
   CommunityPost({
     required this.id,
@@ -26,14 +33,12 @@ class CommunityPost {
     required this.username,
     required this.userEmail,
     this.userPhotoUrl,
-  }) {
-    // ✅ TAMBAHKAN DEBUG DI CONSTRUCTOR
-    debugPrint('✨ CommunityPost Created:');
-    debugPrint('   ID: $id');
-    debugPrint('   Username: $username');
-    debugPrint('   imageUrl1: ${imageUrl1 == null ? "NULL" : "${imageUrl1!.length} chars"}');
-    debugPrint('   userPhotoUrl: ${userPhotoUrl == null ? "NULL" : "${userPhotoUrl!.length} chars"}');
-  }
+    this.title,
+    this.mainProductPrice,
+    this.mainCategory,
+    this.subCategory,
+    this.purchaseOptions,
+  });
 
   Map<String, dynamic> toMap() {
     return {
@@ -47,44 +52,29 @@ class CommunityPost {
       'username': username,
       'userEmail': userEmail,
       'userPhotoUrl': userPhotoUrl,
+      'title': title,
+      'mainCategory': mainCategory,
+      'subCategory': subCategory,
+      'purchaseOptions': purchaseOptions?.map((option) => option.toMap()).toList(),
     };
   }
 
   factory CommunityPost.fromMap(Map<String, dynamic> map, String id) {
-    print('🔄 CREATING CommunityPost FROM MAP:');
-    print('   📍 ID: $id');
+    debugPrint('🔄 CREATING CommunityPost FROM MAP: $id');
     
-    final brand = map['brand'];
-    final username = map['username'];
-    final userId = map['userId'];
-    final userEmail = map['userEmail'];
-    final imageUrl1 = map['imageUrl1']; // ✅ Post image
-    final userPhotoUrl = map['userPhotoUrl']; // ✅ User profile photo
+    final brand = map['brand'] ?? '';
+    final username = map['username'] ?? map['userName'] ?? '';
+    final userId = map['userId'] ?? '';
+    final userEmail = map['userEmail'] ?? '';
+    final imageUrl1 = map['imageUrl1'];
+    final userPhotoUrl = map['userPhotoUrl'] ?? map['photoURL'];
+    final title = map['title'];
+    final content = map['content'] ?? ''; // ✅ Ini HARGA (string)
+    final mainCategory = map['mainCategory'];
+    final subCategory = map['subCategory'];
+    final description = map['description'] ?? '';
     
-    print('   🏷️ Brand: $brand (type: ${brand.runtimeType})');
-    print('   👤 Username: $username (type: ${username?.runtimeType})');
-    print('   🆔 UserId: $userId (type: ${userId.runtimeType})');
-    print('   📧 UserEmail: $userEmail (type: ${userEmail.runtimeType})');
-    
-    // ✅ PENTING: Log panjang string untuk debugging
-    if (imageUrl1 != null) {
-      final imageStr = imageUrl1.toString();
-      print('   🖼️ ImageUrl1: ${imageStr.substring(0, imageStr.length > 50 ? 50 : imageStr.length)}... (length: ${imageStr.length})');
-    } else {
-      print('   🖼️ ImageUrl1: NULL');
-    }
-    
-    if (userPhotoUrl != null) {
-      final photoStr = userPhotoUrl;
-      print('   👤 UserPhotoUrl: ${photoStr.substring(0, photoStr.length > 50 ? 50 : photoStr.length)}... (length: ${photoStr.length})');
-    } else {
-      print('   👤 UserPhotoUrl: NULL or EMPTY');
-    }
-    
-    print('   📝 Content: ${map['content']}');
-    print('   📋 Description: ${map['description']}');
-    
-    // ✅ Parse username dengan multiple fallback
+    // Parse username dengan multiple fallback
     String parsedUsername = 'User';
     
     if (username != null && username.toString().isNotEmpty && username.toString() != 'null') {
@@ -92,117 +82,156 @@ class CommunityPost {
     } else if (userEmail != null && userEmail.toString().isNotEmpty) {
       parsedUsername = userEmail.toString().split('@')[0];
     } else if (userId != null) {
-      parsedUsername = 'User${userId.toString().substring(0, 6)}';
+      parsedUsername = 'User${userId.toString().substring(0, userId.toString().length > 6 ? 6 : userId.toString().length)}';
     }
     
-    print('   ✅ Final Username: "$parsedUsername"');
-    
-    // ✅ Parse imageUrl1 (IMPORTANT FIX)
+    // Parse imageUrl1
     String? parsedImageUrl;
     if (imageUrl1 != null) {
       final imageStr = imageUrl1.toString();
       if (imageStr.isNotEmpty && imageStr != 'null') {
         parsedImageUrl = imageStr;
-        print('   ✅ ImageUrl1 parsed: ${parsedImageUrl.length} characters');
-      } else {
-        print('   ⚠️ ImageUrl1 is empty or null string');
       }
     }
     
-    // ✅ Parse userPhotoUrl
+    // Parse userPhotoUrl
     String? parsedPhotoUrl;
     if (userPhotoUrl != null) {
       final photoStr = userPhotoUrl.toString();
       if (photoStr.isNotEmpty && photoStr != 'null') {
         parsedPhotoUrl = photoStr;
-        print('   ✅ UserPhotoUrl parsed: ${parsedPhotoUrl.length} characters');
       }
+    }
+    
+    // ✅ FIX: Parse mainProductPrice dari field 'content'
+    double? parsedMainProductPrice;
+    if (content != null) {
+      final contentStr = content.toString().trim();
+      if (contentStr.isNotEmpty && contentStr != 'null') {
+        // Hapus format Rp, titik, koma
+        final cleanPrice = contentStr
+            .replaceAll(RegExp(r'Rp'), '')
+            .replaceAll(RegExp(r'\.'), '')
+            .replaceAll(RegExp(r','), '')
+            .replaceAll(RegExp(r'\s'), '')
+            .trim();
+        
+        parsedMainProductPrice = double.tryParse(cleanPrice);
+      }
+    }
+    
+    // Parse purchaseOptions
+    List<PurchaseOption>? parsedPurchaseOptions;
+    if (map['purchaseOptions'] is List) {
+      parsedPurchaseOptions = (map['purchaseOptions'] as List)
+          .map((option) => PurchaseOption.fromMap(option as Map<String, dynamic>))
+          .toList();
     }
     
     return CommunityPost(
       id: id,
       brand: _parseString(brand, 'Brand'),
-      content: _parseString(map['content'], 'Content'),
-      description: _parseString(map['description'], 'Description'),
+      content: _parseString(content, 'Content'), // ✅ String harga
+      description: _parseString(description, 'Description'),
       createdAt: _parseTimestamp(map['createdAt']),
-      imageUrl1: parsedImageUrl, // ✅ Use parsed value
+      imageUrl1: parsedImageUrl,
       links: _parseLinks(map) ?? [],
       userId: _parseString(userId, 'UserId'),
       username: parsedUsername,
       userEmail: _parseString(userEmail, 'UserEmail'),
-      userPhotoUrl: parsedPhotoUrl, // ✅ Use parsed value
+      userPhotoUrl: parsedPhotoUrl,
+      title: _parseNullableString(title, 'Title'),
+      mainProductPrice: parsedMainProductPrice, // ✅ Parsed dari content
+      mainCategory: _parseNullableString(mainCategory, 'MainCategory'),
+      subCategory: _parseNullableString(subCategory, 'SubCategory'),
+      purchaseOptions: parsedPurchaseOptions,
     );
   }
 
   static String _parseString(dynamic value, String fieldName) {
-    if (value == null) {
-      print('   ⚠️ $fieldName is NULL, using default');
-      return 'Unknown';
-    }
-    
-    final result = value.toString();
-    print('   ✅ $fieldName parsed: "$result"');
-    return result;
+    if (value == null) return '';
+    return value.toString();
   }
 
   static String? _parseNullableString(dynamic value, String fieldName) {
-    if (value == null) {
-      print('   ⚠️ $fieldName is NULL');
-      return null;
-    }
-    
+    if (value == null) return null;
     final result = value.toString();
-    if (result.isEmpty || result == 'null') {
-      print('   ⚠️ $fieldName is EMPTY or "null"');
-      return null;
-    }
-    
-    print('   ✅ $fieldName parsed: "${result.substring(0, result.length > 30 ? 30 : result.length)}..."');
+    if (result.isEmpty || result == 'null') return null;
     return result;
   }
 
   static DateTime _parseTimestamp(dynamic timestamp) {
-    if (timestamp == null) {
-      print('   ⚠️ Timestamp is NULL, using current time');
-      return DateTime.now();
-    }
-    
-    if (timestamp is Timestamp) {
-      final date = timestamp.toDate();
-      print('   ✅ Timestamp parsed: $date');
-      return date;
-    }
-    
-    print('   ⚠️ Unknown timestamp type: ${timestamp.runtimeType}, using current time');
+    if (timestamp == null) return DateTime.now();
+    if (timestamp is Timestamp) return timestamp.toDate();
     return DateTime.now();
   }
 
-  static List<PostLink> _parseLinks(Map<String, dynamic> map) {
+  static List<PostLink>? _parseLinks(Map<String, dynamic> map) {
     try {
       if (map['links'] is List) {
         final links = (map['links'] as List)
             .map((link) => PostLink.fromMap(link as Map<String, dynamic>))
             .toList();
-        print('   ✅ Links parsed: ${links.length} items');
         return links;
       }
-      print('   ⚠️ No links found or invalid format');
       return [];
     } catch (e) {
-      print('   ❌ Error parsing links: $e');
+      debugPrint('❌ Error parsing links: $e');
       return [];
     }
   }
 }
 
+class PurchaseOption {
+  final String platform;
+  final String url;
+  final String? logoUrl;
+  final double? price;
+
+  PurchaseOption({
+    required this.platform,
+    required this.url,
+    this.logoUrl,
+    this.price,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'platform': platform,
+      'url': url,
+      'logoUrl': logoUrl,
+      'price': price,
+    };
+  }
+
+  factory PurchaseOption.fromMap(Map<String, dynamic> map) {
+    return PurchaseOption(
+      platform: map['platform'] ?? '',
+      url: map['url'] ?? '',
+      logoUrl: map['logoUrl'],
+      price: (map['price'] is num) 
+          ? (map['price'] as num).toDouble() 
+          : double.tryParse(map['price']?.toString() ?? ''),
+    );
+  }
+
+  String get formattedPrice {
+    if (price == null) return '';
+    return 'Rp ${price!.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    )}';
+  }
+}
+
 class PostLink {
-  final String logoUrl1; 
+  final String logoUrl; // ✅ Perbaikan: gunakan logoUrl konsisten
   final double price;
   final String store;
   final String url;
 
   PostLink({
-    required this.logoUrl1,
+    required this.logoUrl,
     required this.price,
     required this.store,
     required this.url,
@@ -210,7 +239,7 @@ class PostLink {
 
   Map<String, dynamic> toMap() {
     return {
-      'logoUrl1': logoUrl1,  
+      'logoUrl': logoUrl,  // ✅ Perbaikan: gunakan logoUrl konsisten
       'price': price,
       'store': store,
       'url': url,
@@ -219,7 +248,7 @@ class PostLink {
 
   factory PostLink.fromMap(Map<String, dynamic> map) {
     return PostLink(
-      logoUrl1: map['logoUrl1'] ?? map['logoUrl'] ?? '',  
+      logoUrl: map['logoUrl'] ?? map['logoUrl1'] ?? '',  // ✅ Perbaikan: handle both fields
       price: (map['price'] is num) 
           ? (map['price'] as num).toDouble() 
           : double.tryParse(map['price']?.toString() ?? '0') ?? 0,

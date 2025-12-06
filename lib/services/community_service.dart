@@ -38,15 +38,11 @@ class CommunityService {
         if (email.isNotEmpty) {
           username = email.split('@')[0];
         } else {
-          username = 'User${user.uid.substring(0, 6)}';
+          username = 'User${user.uid.substring(0, user.uid.length > 6 ? 6 : user.uid.length)}';
         }
       }
       
-      debugPrint('✅ User Info Retrieved:');
-      debugPrint('   Username: "$username"');
-      debugPrint('   Email: "$email"');
-      debugPrint('   UserID: "${user.uid}"');
-      debugPrint('   PhotoUrl: "${photoUrl.isEmpty ? "EMPTY" : photoUrl}"');
+      debugPrint('✅ User Info Retrieved: $username');
       
       return {
         'userId': user.uid,
@@ -57,7 +53,7 @@ class CommunityService {
     } catch (e) {
       debugPrint('❌ Error getting user info: $e');
       
-      String fallbackUsername = user.displayName ?? user.email?.split('@')[0] ?? 'User${user.uid.substring(0, 6)}';
+      String fallbackUsername = user.displayName ?? user.email?.split('@')[0] ?? 'User${user.uid.substring(0, user.uid.length > 6 ? 6 : user.uid.length)}';
       
       return {
         'userId': user.uid,
@@ -103,6 +99,9 @@ class CommunityService {
     required String brand,
     required String content,
     required String description,
+    String? title,
+    String? mainCategory,
+    String? subCategory,
     File? imageFile,
     List<PostLink> links = const [],
   }) async {
@@ -132,8 +131,11 @@ class CommunityService {
 
     final postData = {
       'brand': brand,
-      'content': content,
-      'description': description,
+      'title': title ?? '',                    
+      'content': content,                      
+      'description': description,           
+      'mainCategory': mainCategory ?? '',
+      'subCategory': subCategory ?? '',
       'createdAt': FieldValue.serverTimestamp(),
       'imageUrl1': imageUrl,
       'links': links.map((link) => link.toMap()).toList(),
@@ -143,20 +145,29 @@ class CommunityService {
       'userPhotoUrl': photoUrl,
     };
     
-    debugPrint('📝 POST DATA BEFORE SAVE:');
+    debugPrint('📝 Creating post with data:');
     debugPrint('   Brand: ${postData['brand']}');
+    debugPrint('   Title: ${postData['title']}');
+    debugPrint('   Content (Price): ${postData['content']}'); 
+    debugPrint('   Description: ${postData['description']}');
+    debugPrint('   MainCategory: ${postData['mainCategory']}');
+    debugPrint('   SubCategory: ${postData['subCategory']}');
     debugPrint('   Username: ${postData['username']}');
     debugPrint('   ImageUrl1: ${imageUrl ?? "No image"}');
+    debugPrint('   Links Count: ${links.length}');
 
     await _firestore.collection('posts').add(postData);
 
-    debugPrint('✅ Post created successfully');
+    debugPrint('✅ Post created successfully in Firestore');
   }
 
   Future<void> createAdminPost({
     required String brand,
     required String content,
     required String description,
+    String? title,
+    String? mainCategory,
+    String? subCategory,
     File? imageFile,
     List<PostLink> links = const [],
   }) async {
@@ -173,8 +184,11 @@ class CommunityService {
 
       await _firestore.collection('posts').add({
         'brand': brand,
+        'title': title ?? content,
         'content': content,
         'description': description,
+        'mainCategory': mainCategory ?? '',
+        'subCategory': subCategory ?? '',
         'createdAt': FieldValue.serverTimestamp(),
         'imageUrl1': imageUrl,
         'links': links.map((link) => link.toMap()).toList(),
@@ -193,8 +207,11 @@ class CommunityService {
 
   Future<void> updatePost({
     required String postId,
+    String? title,
     String? content,
     String? description,
+    String? mainCategory,
+    String? subCategory,
     File? newImageFile,
     String? existingImageUrl,
     List<PostLink>? links,
@@ -218,8 +235,11 @@ class CommunityService {
     }
 
     final updateData = <String, dynamic>{};
+    if (title != null) updateData['title'] = title;
     if (content != null) updateData['content'] = content;
     if (description != null) updateData['description'] = description;
+    if (mainCategory != null) updateData['mainCategory'] = mainCategory;
+    if (subCategory != null) updateData['subCategory'] = subCategory;
     if (links != null) updateData['links'] = links.map((link) => link.toMap()).toList();
     
     String? finalImageUrl = existingImageUrl;
@@ -246,6 +266,12 @@ class CommunityService {
     
     updateData['imageUrl1'] = finalImageUrl;
     updateData['updatedAt'] = FieldValue.serverTimestamp();
+
+    debugPrint('📝 UPDATE DATA:');
+    debugPrint('   Title: ${updateData['title']}');
+    debugPrint('   Content: ${updateData['content']}');
+    debugPrint('   MainCategory: ${updateData['mainCategory']}');
+    debugPrint('   SubCategory: ${updateData['subCategory']}');
 
     await _firestore.collection('posts').doc(postId).update(updateData);
     debugPrint('✅ Post updated: $postId');
@@ -303,6 +329,7 @@ class CommunityService {
           posts.add(post);
         } catch (e, stackTrace) {
           debugPrint('❌ ERROR parsing post ${doc.id}: $e');
+          debugPrint(stackTrace.toString());
         }
       }
       

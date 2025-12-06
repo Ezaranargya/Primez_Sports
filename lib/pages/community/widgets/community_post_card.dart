@@ -45,6 +45,15 @@ class CommunityPostCard extends StatelessWidget {
     }
   }
 
+  String _formatPrice(double price) {
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    return formatter.format(price);
+  }
+
   Future<void> _launchUrl(String urlString) async {
     try {
       final Uri url = Uri.parse(urlString);
@@ -85,7 +94,7 @@ class CommunityPostCard extends StatelessWidget {
                     photoUrl: post.userPhotoUrl,
                     userId: post.userId,
                     username: post.username,
-                    bio: bio,
+                    bio: '',
                     size: 40,
                   ),
                   SizedBox(width: 12.w),
@@ -159,6 +168,22 @@ class CommunityPostCard extends StatelessWidget {
               ),
 
               SizedBox(height: 12.h),
+
+              // Judul
+              if (post.title != null && post.title!.isNotEmpty) ...[
+                Text(
+                  post.title!,
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                    height: 1.3,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+              ],
+
+              // Gambar
               if (post.imageUrl1 != null && post.imageUrl1!.isNotEmpty) ...[
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8.r),
@@ -167,6 +192,95 @@ class CommunityPostCard extends StatelessWidget {
                 SizedBox(height: 12.h),
               ],
 
+              // Harga Produk Utama
+              if (post.mainProductPrice != null && post.mainProductPrice! > 0) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.attach_money, size: 18.sp, color: Colors.green.shade700),
+                      SizedBox(width: 6.w),
+                      Text(
+                        _formatPrice(post.mainProductPrice!),
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 12.h),
+              ],
+
+              // Kategori Utama dan Sub Kategori
+              if ((post.mainCategory != null && post.mainCategory!.isNotEmpty) ||
+                  (post.subCategory != null && post.subCategory!.isNotEmpty)) ...[
+                Wrap(
+                  spacing: 8.w,
+                  runSpacing: 8.h,
+                  children: [
+                    if (post.mainCategory != null && post.mainCategory!.isNotEmpty)
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.shade50,
+                          borderRadius: BorderRadius.circular(20.r),
+                          border: Border.all(color: Colors.purple.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.category, size: 14.sp, color: Colors.purple.shade700),
+                            SizedBox(width: 6.w),
+                            Text(
+                              post.mainCategory!,
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.purple.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (post.subCategory != null && post.subCategory!.isNotEmpty)
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(20.r),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.label, size: 14.sp, color: Colors.orange.shade700),
+                            SizedBox(width: 6.w),
+                            Text(
+                              post.subCategory!,
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+              ],
+
+              // Content
               if (post.content.isNotEmpty) ...[
                 Text(
                   post.content,
@@ -180,6 +294,7 @@ class CommunityPostCard extends StatelessWidget {
                 SizedBox(height: 8.h),
               ],
 
+              // Description
               if (post.description.isNotEmpty)
                 ReadMoreText(
                   applyWrapFix(post.description),
@@ -204,6 +319,113 @@ class CommunityPostCard extends StatelessWidget {
                   ),
                 ),
 
+              // Opsi Pembelian dengan Logo URL
+              if (post.purchaseOptions != null && post.purchaseOptions!.isNotEmpty) ...[
+                SizedBox(height: 12.h),
+                Text(
+                  'Opsi Pembelian:',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                ...post.purchaseOptions!.map((option) => Padding(
+                      padding: EdgeInsets.only(bottom: 8.h),
+                      child: InkWell(
+                        onTap: () => _launchUrl(option.url),
+                        child: Container(
+                          padding: EdgeInsets.all(12.w),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8.r),
+                            border: Border.all(
+                              color: Colors.blue.shade200,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              // Logo Platform
+                              if (option.logoUrl != null && option.logoUrl!.isNotEmpty)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4.r),
+                                  child: CachedNetworkImage(
+                                    imageUrl: option.logoUrl!,
+                                    width: 32.w,
+                                    height: 32.w,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => Container(
+                                      width: 32.w,
+                                      height: 32.w,
+                                      color: Colors.grey.shade300,
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 16.w,
+                                          height: 16.w,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    errorWidget: (context, url, error) => Container(
+                                      width: 32.w,
+                                      height: 32.w,
+                                      color: Colors.grey.shade300,
+                                      child: Icon(Icons.store, size: 16.sp, color: Colors.grey),
+                                    ),
+                                  ),
+                                )
+                              else
+                                Container(
+                                  width: 32.w,
+                                  height: 32.w,
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade100,
+                                    borderRadius: BorderRadius.circular(4.r),
+                                  ),
+                                  child: Icon(Icons.store, size: 20.sp, color: Colors.blue),
+                                ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      option.platform,
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.blue.shade900,
+                                      ),
+                                    ),
+                                    if (option.price != null && option.price! > 0) ...[
+                                      SizedBox(height: 2.h),
+                                      Text(
+                                        _formatPrice(option.price!),
+                                        style: TextStyle(
+                                          fontSize: 13.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.green.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              Icon(Icons.open_in_new, size: 16.sp, color: Colors.blue),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )),
+              ],
+
+              // Links
               if (post.links.isNotEmpty) ...[
                 SizedBox(height: 12.h),
                 ...post.links.map((link) => Padding(
@@ -246,6 +468,7 @@ class CommunityPostCard extends StatelessWidget {
                     )),
               ],
 
+              // Brand
               SizedBox(height: 12.h),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),

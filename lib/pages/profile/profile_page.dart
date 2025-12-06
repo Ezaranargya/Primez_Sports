@@ -10,7 +10,9 @@ import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/widgets/user_avatar.dart';
 
 class UserProfilePage extends StatefulWidget {
-  const UserProfilePage({super.key});
+  final String? userId; 
+
+  const UserProfilePage({super.key, this.userId});
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
@@ -19,6 +21,15 @@ class UserProfilePage extends StatefulWidget {
 class _UserProfilePageState extends State<UserProfilePage> {
   bool _isLoggingOut = false;
   bool _isMigrating = false;
+
+  String get _currentUserId {
+    return widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+  }
+
+  bool get _isOwnProfile {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    return currentUser != null && widget.userId == null;
+  }
 
   Future<void> _migrateToSupabase() async {
     if (_isMigrating) return;
@@ -146,37 +157,49 @@ class _UserProfilePageState extends State<UserProfilePage> {
         child: AlertDialog(
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(20.r),
           ),
           title: Row(
             children: [
-              const Icon(Icons.logout, color: Colors.red),
-              const SizedBox(width: 10),
-              const Text("Logout"),
+              Icon(Icons.logout, color: Colors.red, size: 24.sp),
+              SizedBox(width: 10.w),
+              Text(
+                "Logout",
+                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+              ),
             ],
           ),
-          content: const Text("Apakah Anda yakin ingin keluar?"),
+          content: Text(
+            "Apakah Anda yakin ingin keluar?",
+            style: TextStyle(fontSize: 14.sp),
+          ),
           actions: [
             TextButton(
               style: TextButton.styleFrom(
                 foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.r)
-                )
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
               ),
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text("Batal"),
+              child: Text(
+                "Batal",
+                style: TextStyle(fontSize: 14.sp),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.backgroundColor,
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.r)
-                )
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
               ),
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text("Ya, Keluar"),
+              child: Text(
+                "Ya, Keluar",
+                style: TextStyle(fontSize: 14.sp),
+              ),
             ),
           ],
         ),
@@ -205,7 +228,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
       setState(() => _isLoggingOut = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error saat logout: ${e.toString()}")),
+        SnackBar(
+          content: Text("Error saat logout: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -236,46 +262,51 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      return const Center(
-        child: Text("Sesi pengguna tidak valid. Silakan login kembali.")
+    if (!_isOwnProfile && _currentUserId.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          title: const Text("Profile"),
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(16.w),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 48.sp, color: Colors.red),
+                SizedBox(height: 16.h),
+                Text(
+                  "User tidak ditemukan",
+                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  "Profile yang Anda cari tidak tersedia",
+                  style: TextStyle(fontSize: 14.sp, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: Text(_isOwnProfile ? "Profile" : "Profile"),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        centerTitle: true,
+        elevation: 0,
+      ),
       body: Column(
         children: [
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + 20.h,
-              bottom: 20.h,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                "Profile",
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-
           Expanded(
             child: SingleChildScrollView(
               child: Column(
@@ -283,7 +314,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   StreamBuilder<DocumentSnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('users')
-                        .doc(user.uid)
+                        .doc(_currentUserId)
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -295,49 +326,52 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         return _errorCard("Gagal memuat data: ${snapshot.error.toString()}");
                       }
 
-                      if (!snapshot.hasData || snapshot.data?.data() == null) {
+                      if (!snapshot.hasData || !snapshot.data!.exists) {
                         return _emptyUserCard();
                       }
 
                       final userData = snapshot.data!.data() as Map<String, dynamic>;
-                      final username = userData['username'] ?? user.displayName ?? 'User';
+                      final username = userData['username'] ?? 'User';
                       final profile = userData['profile'] ?? '';
                       final photoUrl = userData['photoUrl'] ?? '';
                       final bio = userData['bio'] ?? '';
 
                       return _profileCard(
-                        userId: user.uid,
+                        userId: _currentUserId,
                         username: username,
                         profile: profile,
                         photoUrl: photoUrl,
                         bio: bio,
+                        isOwnProfile: _isOwnProfile,
                       );
                     },
                   ),
 
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    child: Column(
-                      children: [
-                        SizedBox(height: 12.h),
-                        
-                        _buildMenuItem(
-                          Icons.help_outline,
-                          "FAQ",
-                          _handleFaqTap,
-                        ),
-                        SizedBox(height: 12.h),
-                        
-                        _buildMenuItem(
-                          Icons.logout,
-                          "Logout",
-                          _isLoggingOut ? () {} : _handleLogout,
-                          isDestructive: true,
-                          isLoading: _isLoggingOut,
-                        ),
-                      ],
+                  if (_isOwnProfile) ...[
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: Column(
+                        children: [
+                          SizedBox(height: 12.h),
+                          
+                          _buildMenuItem(
+                            Icons.help_outline,
+                            "FAQ",
+                            _handleFaqTap,
+                          ),
+                          SizedBox(height: 12.h),
+                          
+                          _buildMenuItem(
+                            Icons.logout,
+                            "Logout",
+                            _isLoggingOut ? () {} : _handleLogout,
+                            isDestructive: true,
+                            isLoading: _isLoggingOut,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
 
                   SizedBox(height: 100.h),
                 ],
@@ -354,8 +388,17 @@ class _UserProfilePageState extends State<UserProfilePage> {
       margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
       padding: EdgeInsets.all(20.w),
       decoration: _cardDecoration(),
-      child: const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+      child: Center(
+        child: Column(
+          children: [
+            CircularProgressIndicator(color: AppColors.primary),
+            SizedBox(height: 16.h),
+            Text(
+              "Memuat data profile...",
+              style: TextStyle(fontSize: 14.sp, color: Colors.grey),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -365,20 +408,45 @@ class _UserProfilePageState extends State<UserProfilePage> {
       margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
       padding: EdgeInsets.all(20.w),
       decoration: _cardDecoration(),
-      child: Text(
-        "Error: $message",
-        style: const TextStyle(color: Colors.red),
+      child: Column(
+        children: [
+          Icon(Icons.error_outline, size: 48.sp, color: Colors.red),
+          SizedBox(height: 16.h),
+          Text(
+            "Gagal memuat profile",
+            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            message,
+            style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 
   Widget _emptyUserCard() {
-    final user = FirebaseAuth.instance.currentUser;
     return Container(
       margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
       padding: EdgeInsets.all(20.w),
       decoration: _cardDecoration(),
-      child: Text("Data user tidak ditemukan. UID: ${user?.uid}"),
+      child: Column(
+        children: [
+          Icon(Icons.person_off, size: 48.sp, color: Colors.grey),
+          SizedBox(height: 16.h),
+          Text(
+            "User tidak ditemukan",
+            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            "Data profile tidak tersedia",
+            style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+          ),
+        ],
+      ),
     );
   }
 
@@ -388,7 +456,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       borderRadius: BorderRadius.circular(12.r),
       boxShadow: [
         BoxShadow(
-          color: Colors.grey[350]!,
+          color: Colors.grey.withOpacity(0.1),
           blurRadius: 8,
           offset: const Offset(0, 2),
         ),
@@ -402,6 +470,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     required String profile,
     required String photoUrl,
     required String bio,
+    required bool isOwnProfile,
   }) {
     return Container(
       margin: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
@@ -450,29 +519,33 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     style: TextStyle(
                       fontSize: 13.sp,
                       color: Colors.grey[700],
-                      ),
-                  )
-                ]
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
           
-          TextButton(
-            onPressed: _handleEditProfile,
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.grey[100],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
+          if (isOwnProfile)
+            TextButton(
+              onPressed: _handleEditProfile,
+              style: TextButton.styleFrom(
+                backgroundColor: AppColors.primary.withOpacity(0.1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+              ),
+              child: Text(
+                "Edit",
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
               ),
             ),
-            child: Text(
-              "Edit",
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -484,7 +557,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
     VoidCallback onTap, {
     bool isDestructive = false,
     bool isLoading = false,
-    Color? iconColor,
   }) {
     return InkWell(
       onTap: isLoading ? null : onTap,
@@ -497,7 +569,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
             Icon(
               icon,
               size: 24.sp,
-              color: iconColor ?? (isDestructive ? AppColors.primary : Colors.black87),
+              color: isDestructive ? Colors.red : AppColors.primary,
             ),
             SizedBox(width: 16.w),
             Expanded(
@@ -505,8 +577,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 title,
                 style: TextStyle(
                   fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: isDestructive ? AppColors.primary : Colors.black87,
+                  fontWeight: FontWeight.w500,
+                  color: isDestructive ? Colors.red : Colors.black87,
                 ),
               ),
             ),
@@ -517,7 +589,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    iconColor ?? AppColors.primary
+                    isDestructive ? Colors.red : AppColors.primary,
                   ),
                 ),
               )

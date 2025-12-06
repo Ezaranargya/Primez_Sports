@@ -18,10 +18,16 @@ class _EditProductScreenState extends State<EditProductScreen> {
   bool _isLoading = false;
   bool _dataReady = false;
   bool _imageChanged = false;
+  bool _bannerChanged = false; 
 
   File? _imageFile;
   Uint8List? _imageBytes;
   String? _existingImageUrl;
+  
+  File? _bannerFile;
+  Uint8List? _bannerBytes;
+  String? _existingBannerUrl;
+  
   String? _selectedKategori;
   String? _selectedSubKategori;
 
@@ -129,10 +135,14 @@ class _EditProductScreenState extends State<EditProductScreen> {
         }).toList();
 
         _existingImageUrl = data['imageUrl']?.toString();
+        _existingBannerUrl = data['bannerUrl']?.toString(); // ⭐ TAMBAHAN
         _isLoading = false;
         _dataReady = true;
       });
+      
+      debugPrint('✅ Product loaded - Banner URL: $_existingBannerUrl');
     } catch (e) {
+      debugPrint('❌ Error loading product: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -171,9 +181,49 @@ class _EditProductScreenState extends State<EditProductScreen> {
           _imageChanged = true;
         });
       }
+      
+      debugPrint('✅ Main image selected');
     } catch (e) {
+      debugPrint('❌ Error picking image: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal pilih gambar: $e')),
+      );
+    }
+  }
+
+  // ⭐ TAMBAHAN: Function untuk pick banner
+  Future<void> _pickBannerImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return;
+
+      if (kIsWeb) {
+        final bytes = await pickedFile.readAsBytes();
+        setState(() {
+          _bannerBytes = bytes;
+          _bannerFile = null;
+          _bannerChanged = true;
+        });
+      } else {
+        setState(() {
+          _bannerFile = File(pickedFile.path);
+          _bannerBytes = null;
+          _bannerChanged = true;
+        });
+      }
+      
+      debugPrint('✅ Banner image selected');
+    } catch (e) {
+      debugPrint('❌ Error picking banner: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal pilih banner: $e')),
       );
     }
   }
@@ -216,6 +266,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
         imageBytes: _imageBytes,
         imageFileName: '$productName.jpg',
         existingImageUrl: _imageChanged ? null : _existingImageUrl,
+        bannerFile: _bannerFile,
+        bannerBytes: _bannerBytes,
+        bannerFileName: '${productName}_banner.jpg',
+        existingBannerUrl: _bannerChanged ? null : _existingBannerUrl,
       );
 
       if (!mounted) return;
@@ -237,7 +291,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 _selectedSubKategori ?? ""
               ],
             );
-            print('✅ Notifikasi produk baru berhasil dikirim ke semua user');
+            debugPrint('✅ Notifikasi produk baru berhasil dikirim');
           } else {
             await notificationService.sendGlobalNotification(
               title: "📢 Update Produk",
@@ -247,10 +301,10 @@ class _EditProductScreenState extends State<EditProductScreen> {
               type: "product",
               productId: widget.productId ?? "",
             );
-            print('✅ Notifikasi update produk berhasil dibuat');
+            debugPrint('✅ Notifikasi update produk berhasil dibuat');
           }
         } catch (notifError) {
-          print('⚠️ Produk berhasil disimpan, tapi notifikasi gagal: $notifError');
+          debugPrint('⚠️ Produk berhasil disimpan, tapi notifikasi gagal: $notifError');
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -274,7 +328,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
         );
       }
     } catch (e) {
-      print('❌ Error saat menyimpan produk: $e');
+      debugPrint('❌ Error saat menyimpan produk: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -314,6 +368,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Main Image
                   GestureDetector(
                     onTap: _pickImage,
                     child: Container(
@@ -329,14 +384,46 @@ class _EditProductScreenState extends State<EditProductScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   ElevatedButton.icon(
                     onPressed: _pickImage,
                     icon: const Icon(Icons.image),
                     label: Text(_imageFile != null || _imageBytes != null
-                        ? 'Ganti Gambar'
-                        : 'Pilih Gambar'),
+                        ? 'Ganti Gambar Utama'
+                        : 'Pilih Gambar Utama'),
                   ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // ⭐ TAMBAHAN: Banner Image Section
+                  GestureDetector(
+                    onTap: _pickBannerImage,
+                    child: Container(
+                      height: 140,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade400),
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey[100],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: _buildBannerPreview(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: _pickBannerImage,
+                    icon: const Icon(Icons.panorama),
+                    label: Text(_bannerFile != null || _bannerBytes != null
+                        ? 'Ganti Banner'
+                        : 'Pilih Banner Produk'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  
                   const SizedBox(height: 24),
 
                   _buildTextField(
@@ -422,21 +509,66 @@ class _EditProductScreenState extends State<EditProductScreen> {
             ),
           );
         },
-        errorBuilder: (_, __, ___) => _buildPlaceholder(),
+        errorBuilder: (_, __, ___) => _buildPlaceholder('gambar'),
       );
     }
 
-    return _buildPlaceholder();
+    return _buildPlaceholder('gambar');
   }
 
-  Widget _buildPlaceholder() {
+  // ⭐ TAMBAHAN: Banner preview widget
+  Widget _buildBannerPreview() {
+    if (_bannerBytes != null) {
+      return Image.memory(
+        _bannerBytes!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+      );
+    }
+
+    if (_bannerFile != null) {
+      return Image.file(
+        _bannerFile!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+      );
+    }
+
+    if (_existingBannerUrl != null && _existingBannerUrl!.isNotEmpty) {
+      return Image.network(
+        _existingBannerUrl!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => _buildPlaceholder('banner'),
+      );
+    }
+
+    return _buildPlaceholder('banner');
+  }
+
+  Widget _buildPlaceholder(String type) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.add_photo_alternate, size: 64, color: Colors.grey[400]),
+        Icon(
+          type == 'banner' ? Icons.panorama : Icons.add_photo_alternate,
+          size: type == 'banner' ? 48 : 64,
+          color: Colors.grey[400],
+        ),
         const SizedBox(height: 8),
         Text(
-          'Tap untuk pilih gambar',
+          'Tap untuk pilih $type',
           style: TextStyle(color: Colors.grey[600]),
         ),
       ],

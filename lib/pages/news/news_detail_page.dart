@@ -302,14 +302,15 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
             Padding(
               padding: EdgeInsets.symmetric(vertical: 4.h),
               child: Text(
-                block.value,
-                textAlign: TextAlign.justify,
+                block.value.trim(),
+                textAlign: TextAlign.start,
+                textWidthBasis: TextWidthBasis.parent,
                 style: GoogleFonts.inter(
                   fontSize: 15.sp,
-                  height: 1.7,
-                  letterSpacing: 0.3,
-                  wordSpacing: 1,
-                  color: Colors.black87,
+                  height: 1.75,
+                  letterSpacing: 0.2,
+                  wordSpacing: 0,
+                  color: Colors.grey.shade800,
                 ),
               ),
             ),

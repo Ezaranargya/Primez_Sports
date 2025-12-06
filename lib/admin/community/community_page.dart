@@ -175,9 +175,9 @@ class _AdminCommunityPageState extends State<AdminCommunityPage> {
               padding: EdgeInsets.all(16.w),
               margin: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: AppColors.secondary,
                 borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(color: Colors.red.shade200),
+                border: Border.all(color: AppColors.secondary),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:my_app/theme/app_colors.dart';
@@ -18,7 +19,7 @@ class BrandLinkValidator {
   };
 
   static bool isValidBrandUrl(String url, String brand) {
-    if (url.isEmpty) return true; // Allow empty
+    if (url.isEmpty) return true;
     try {
       final uri = Uri.parse(url.toLowerCase());
       final allowedDomains = brandDomains[brand] ?? [];
@@ -40,12 +41,12 @@ class BrandLinkValidator {
   }
 }
 
-class CreatePostPage extends StatefulWidget {
+class UserCreatePostPage extends StatefulWidget {
   final String brand;
   final String? postId;
   final Map<String, dynamic>? initialData;
 
-  const CreatePostPage({
+  const UserCreatePostPage({
     super.key,
     required this.brand,
     this.postId,
@@ -53,10 +54,10 @@ class CreatePostPage extends StatefulWidget {
   });
 
   @override
-  State<CreatePostPage> createState() => _CreatePostPageState();
+  State<UserCreatePostPage> createState() => _UserCreatePostPageState();
 }
 
-class _CreatePostPageState extends State<CreatePostPage> {
+class _UserCreatePostPageState extends State<UserCreatePostPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
@@ -106,15 +107,43 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _subCategory = data['subCategory']?.toString();
 
     final links = data['links'] as List<dynamic>? ?? [];
-    for (var link in links) {
+    debugPrint('📦 Total links to load: ${links.length}');
+    
+    for (var i = 0; i < links.length; i++) {
+      final link = links[i];
       final linkMap = Map<String, dynamic>.from(link as Map);
+      
+      debugPrint('🔍 Link $i data: $linkMap');
+      
+      // Simpan ke purchase options
       _purchaseOptions.add(linkMap);
       
-      _urlControllers.add(TextEditingController(text: linkMap['url']?.toString() ?? ''));
-      _priceControllers.add(TextEditingController(text: linkMap['price']?.toString() ?? ''));
+      // Controller untuk URL
+      final url = linkMap['url']?.toString() ?? '';
+      _urlControllers.add(TextEditingController(text: url));
+      
+      // Controller untuk Price dengan berbagai kemungkinan
+      final priceValue = linkMap['price'];
+      String priceText = '';
+      
+      if (priceValue != null) {
+        if (priceValue is int) {
+          priceText = priceValue.toString();
+        } else if (priceValue is double) {
+          priceText = priceValue.toInt().toString();
+        } else if (priceValue is String) {
+          priceText = priceValue.replaceAll(RegExp(r'[^0-9]'), '');
+        }
+      }
+      
+      debugPrint('💰 Price $i: original=$priceValue, type=${priceValue.runtimeType}, final=$priceText');
+      
+      _priceControllers.add(TextEditingController(text: priceText));
     }
     
-    debugPrint('✅ Loaded existing post data');
+    debugPrint('✅ Loaded ${_purchaseOptions.length} purchase options');
+    debugPrint('✅ URL controllers: ${_urlControllers.length}');
+    debugPrint('✅ Price controllers: ${_priceControllers.length}');
   }
 
   @override
@@ -210,18 +239,21 @@ class _CreatePostPageState extends State<CreatePostPage> {
     
     if (value.isNotEmpty) {
       final storeInfo = _detectStoreFromUrl(value);
-      setState(() {
-        _purchaseOptions[index]['store'] = storeInfo['store']!;
-        _purchaseOptions[index]['logoUrl'] = storeInfo['logoUrl']!;
-      });
+      _purchaseOptions[index]['store'] = storeInfo['store']!;
+      _purchaseOptions[index]['logoUrl'] = storeInfo['logoUrl']!;
+      
+      // Hanya rebuild jika ada perubahan logo
+      if (storeInfo['logoUrl']!.isNotEmpty) {
+        setState(() {});
+      }
     }
   }
 
   void _updatePurchaseOptionPrice(int index, String value) {
-    _purchaseOptions[index]['price'] = int.tryParse(value) ?? 0;
+    final parsedValue = int.tryParse(value.trim());
+    _purchaseOptions[index]['price'] = parsedValue ?? 0;
   }
 
-  // ✅ VALIDASI LINK SEBELUM SAVE
   bool _validatePurchaseLinks() {
     for (int i = 0; i < _urlControllers.length; i++) {
       final url = _urlControllers[i].text.trim();
@@ -245,7 +277,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
       return;
     }
 
-    // ✅ VALIDASI LINK BRAND
     if (!_validatePurchaseLinks()) {
       return;
     }
@@ -342,13 +373,21 @@ class _CreatePostPageState extends State<CreatePostPage> {
         communityId = newCommunity.id;
       }
 
+      // ✅ PERBAIKAN: Pastikan semua data dari controller tersimpan
+      final finalLinks = List<Map<String, dynamic>>.from(_purchaseOptions);
+      for (int i = 0; i < finalLinks.length; i++) {
+        finalLinks[i]['url'] = _urlControllers[i].text.trim();
+        finalLinks[i]['price'] = int.tryParse(_priceControllers[i].text.trim()) ?? 0;
+        debugPrint('💾 Saving link $i: url=${finalLinks[i]['url']}, price=${finalLinks[i]['price']}');
+      }
+
       final postData = {
         'brand': widget.brand,
         'title': _titleController.text.trim(),
         'content': _contentController.text.trim(),
         'description': _descriptionController.text.trim(),
         'imageUrl1': finalImageUrl,
-        'links': _purchaseOptions,
+        'links': finalLinks,
         'mainCategory': _mainCategory,
         'subCategory': _subCategory,
         'communityId': communityId,
@@ -365,6 +404,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
             .add(postData);
         debugPrint('✅ Post created: ${postRef.id}');
       } else {
+        final existingDoc = await FirebaseFirestore.instance
+          .collection('posts')
+          .doc(widget.postId)
+          .get();
+
+        postData['createdAt'] = existingDoc['createdAt'];
+
         await FirebaseFirestore.instance
             .collection('posts')
             .doc(widget.postId)
@@ -408,9 +454,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back,color: AppColors.secondary),
+          icon: Icon(Icons.arrow_back, color: AppColors.secondary),
           onPressed: () => Navigator.pop(context),
-          ),
+        ),
         title: Text(
           widget.postId == null ? "Upload Produk" : "Edit Posting",
           style: TextStyle(fontSize: 18.sp, color: AppColors.secondary),
@@ -490,8 +536,23 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         ),
                         filled: true,
                         fillColor: Colors.white,
+                        prefixText: 'Rp ',
                       ),
                       keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Harga tidak boleh kosong';
+                        }
+                        // Bersihkan karakter non-angka sebelum validasi
+                        final cleanValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+                        if (cleanValue.isEmpty || int.tryParse(cleanValue) == null) {
+                          return 'Harga harus berupa angka';
+                        }
+                        return null;
+                      },
                     ),
                     SizedBox(height: 16.h),
 
@@ -545,13 +606,12 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         TextButton.icon(
                           onPressed: _addPurchaseOption,
                           icon: const Icon(Icons.add, color: AppColors.primary),
-                          label: Text('Tambah',style: TextStyle(color: AppColors.primary)),
+                          label: Text('Tambah', style: TextStyle(color: AppColors.primary)),
                         ),
                       ],
                     ),
                     SizedBox(height: 8.h),
 
-                    // ✅ INFO BOX
                     Container(
                       padding: EdgeInsets.all(12.w),
                       margin: EdgeInsets.only(bottom: 12.h),
@@ -654,6 +714,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
       final option = _purchaseOptions[index];
       final hasLogo = option['logoUrl']?.toString().isNotEmpty ?? false;
       
+      // Debug: print harga saat render
+      debugPrint('🔍 Rendering option $index: price = ${option['price']}, controller = ${_priceControllers[index].text}');
+      
       return Container(
         margin: EdgeInsets.only(bottom: 12.h),
         padding: EdgeInsets.all(12.w),
@@ -701,7 +764,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
               children: [
                 Expanded(
                   flex: 2,
-                  child: TextField(
+                  child: TextFormField(
                     controller: _urlControllers[index],
                     decoration: InputDecoration(
                       labelText: 'Link ${index + 1}',
@@ -715,25 +778,31 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 SizedBox(width: 8.w),
                 Expanded(
                   child: TextFormField(
-                  controller: _priceControllers[index],
-                  decoration: const InputDecoration(
-                    labelText: 'Harga',
-                    border: OutlineInputBorder(),
-                    prefixText: 'Rp ',
+                    controller: _priceControllers[index],
+                    decoration: const InputDecoration(
+                      labelText: 'Harga',
+                      border: OutlineInputBorder(),
+                      prefixText: 'Rp ',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Harga tidak boleh kosong';
+                      }
+                      // Bersihkan karakter non-angka sebelum validasi
+                      final cleanValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+                      if (cleanValue.isEmpty || int.tryParse(cleanValue) == null) {
+                        return 'Harga harus berupa angka';
+                      }
+                      return null;
+                    },
+                    onChanged: (value) {
+                      _updatePurchaseOptionPrice(index, value);
+                    },
                   ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Harga tidak boleh kosong';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Harga harus berupa angka';
-                    }
-                    return null;
-                  },
-                  onChanged: (value) => _updatePurchaseOptionPrice(index, value),
-                ),
-
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),

@@ -468,12 +468,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
-                  Text('Mengupload gambar ke Supabase...'),
-                  SizedBox(height: 8),
-                  Text(
-                    'Mohon tunggu',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
                 ],
               ),
             )

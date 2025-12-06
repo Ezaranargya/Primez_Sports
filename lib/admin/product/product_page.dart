@@ -212,12 +212,17 @@ class _AdminProductPageState extends State<AdminProductPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppColors.secondary,
         title: const Text('Hapus Produk'),
         content: Text('Yakin ingin menghapus "${product.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: Text(
+              'Batal',
+            style: TextStyle(color: Colors.black,
+            ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),

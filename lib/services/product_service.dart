@@ -19,10 +19,10 @@ class ProductService {
   CollectionReference<Map<String, dynamic>> get _productRef =>
       _firestore.collection(_collection);
 
-  Future<String> uploadImage(File file, String fileName) async {
+  Future<String> uploadImage(File file, String fileName, {String folder = 'products'}) async {
     try {
       final supabase = Supabase.instance.client;
-      final path = 'products/$fileName';
+      final path = '$folder/$fileName';
 
       final bytes = await file.readAsBytes();
 
@@ -36,6 +36,25 @@ class ProductService {
       return publicUrl;
     } catch (e) {
       print("❌ Gagal upload di supabase: $e");
+      rethrow;
+    }
+  }
+
+  Future<String> uploadImageFromBytes(Uint8List bytes, String fileName, {String folder = 'products'}) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final path = '$folder/$fileName';
+
+      await supabase.storage
+          .from('product-images')
+          .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
+
+      final publicUrl =
+          supabase.storage.from('product-images').getPublicUrl(path);
+
+      return publicUrl;
+    } catch (e) {
+      print("❌ Gagal upload bytes di supabase: $e");
       rethrow;
     }
   }
@@ -93,9 +112,10 @@ class ProductService {
 
       final contentId = DateTime.now().millisecondsSinceEpoch.toString().substring(6);
 
+      // ✅ PERBAIKAN: Gunakan 'logoUrl' yang konsisten
       final links = product.purchaseOptions.map((option) {
         return PostLink(
-          logoUrl1: option.logoUrl,
+          logoUrl: option.logoUrl, // ✅ PERBAIKAN: Diubah dari 'logoUrl1'
           price: option.price,
           store: option.storeName,
           url: option.link,
@@ -170,8 +190,12 @@ class ProductService {
     String? imageUrl,
     File? imageFile,
     Uint8List? imageBytes, 
-    String? imageFileName, 
-    String? existingImageUrl, 
+    String? imageFileName,
+    String? existingImageUrl,
+    File? bannerFile,
+    Uint8List? bannerBytes,
+    String? bannerFileName,
+    String? existingBannerUrl,
     Product? product,
   }) async {
     try {
@@ -182,11 +206,24 @@ class ProductService {
                         '${name ?? 'product'}_${DateTime.now().millisecondsSinceEpoch}.jpg';
         
         if (imageFile != null) {
-          finalImageUrl = await uploadImage(imageFile, fileName);
+          finalImageUrl = await uploadImage(imageFile, fileName, folder: 'main');
         } else if (imageBytes != null) {
-          final tempFile = File(fileName);
-          await tempFile.writeAsBytes(imageBytes!);
-          finalImageUrl = await uploadImage(tempFile, fileName);
+          finalImageUrl = await uploadImageFromBytes(imageBytes, fileName, folder: 'main');
+        }
+      }
+
+      String? finalBannerUrl = existingBannerUrl;
+      
+      if (bannerFile != null || bannerBytes != null) {
+        final fileName = bannerFileName ?? 
+                        '${name ?? 'product'}_banner_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        
+        if (bannerFile != null) {
+          finalBannerUrl = await uploadImage(bannerFile, fileName, folder: 'banners');
+          print('✅ Banner uploaded from file: $finalBannerUrl');
+        } else if (bannerBytes != null) {
+          finalBannerUrl = await uploadImageFromBytes(bannerBytes, fileName, folder: 'banners');
+          print('✅ Banner uploaded from bytes: $finalBannerUrl');
         }
       }
 
@@ -200,6 +237,7 @@ class ProductService {
               'categories': categories ?? [],
               'purchaseOptions': purchaseOptions ?? [],
               'imageUrl': finalImageUrl ?? '',
+              'bannerUrl': finalBannerUrl ?? '',
               'userId': FirebaseAuth.instance.currentUser?.uid ?? '',
             };
 
@@ -211,6 +249,7 @@ class ProductService {
         'categories': data['categories'],
         'purchaseOptions': data['purchaseOptions'],
         'imageUrl': finalImageUrl ?? data['imageUrl'],
+        'bannerUrl': finalBannerUrl ?? data['bannerUrl'] ?? '',
         'userId': data['userId'],
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -218,8 +257,10 @@ class ProductService {
       if (productId == null || productId.isEmpty) {
         parsed['createdAt'] = FieldValue.serverTimestamp();
         await _productRef.add(parsed);
+        print('✅ Produk baru berhasil ditambahkan');
       } else {
         await _productRef.doc(productId).set(parsed, SetOptions(merge: true));
+        print('✅ Produk berhasil diupdate');
       }
 
       return true;
@@ -302,7 +343,6 @@ class ProductService {
           .toList();
     });
   }
-  
   
   Stream<Product?> getProductById(String id) {
     return _productRef.doc(id).snapshots().map((snapshot) {

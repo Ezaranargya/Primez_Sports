@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/admin/community/create_post_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:my_app/admin/community/community_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:my_app/pages/profile/profile_page.dart';
 
 class AdminCommunityChatPage extends StatelessWidget {
   final String brand;
@@ -179,20 +182,17 @@ class AdminCommunityChatPage extends StatelessWidget {
       padding: EdgeInsets.only(top: 10.h),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10.r),
-        child: Image.network(
-          imageUrl1,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl1,
           fit: BoxFit.cover,
           height: 180.h,
           width: double.infinity,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              height: 180.h,
-              color: Colors.grey[200],
-              child: const Center(child: CircularProgressIndicator()),
-            );
-          },
-          errorBuilder: (_, __, ___) => Container(
+          placeholder: (context, url) => Container(
+            height: 180.h,
+            color: Colors.grey[200],
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+          errorWidget: (_, __, ___) => Container(
             height: 180.h,
             color: Colors.grey[200],
             child: Column(
@@ -226,10 +226,28 @@ class AdminCommunityChatPage extends StatelessWidget {
     final mainCategory = data['mainCategory']?.toString() ?? '';
     final subCategory = data['subCategory']?.toString() ?? '';
     final communityId = data['communityId']?.toString();
+    final userId = data['userId']?.toString() ?? '';
+    final username = data['username']?.toString() ?? 
+                     data['userName']?.toString() ??
+                     data['name']?.toString() ??
+                     data['displayName']?.toString() ??
+                     '';
+    final userPhotoUrl = data['userPhotoUrl']?.toString() ??
+                         data['photoURL']?.toString();
 
     final createdAt = data['createdAt'] is Timestamp
         ? (data['createdAt'] as Timestamp).toDate()
         : null;
+
+        print('========== DEBUG POST DATA ==========');
+        print('Post ID: $postId');
+        print('data[username]: ${data['username']}');
+        print('data[userName]: ${data['userName']}');
+        print('data[name]: ${data['name']}');
+        print('data[displayName]: ${data['displayName']}');
+        print('Final username: "$username"');
+        print('Is username empty: ${username.isEmpty}');
+        print('=====================================');
 
     return Container(
       padding: EdgeInsets.all(12.w),
@@ -247,24 +265,74 @@ class AdminCommunityChatPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header dengan User Avatar dan Info - CLICKABLE
           Row(
             children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(4.r),
+              // User Avatar - Clickable
+              GestureDetector(
+                onTap: () {
+                  if (userId.isEmpty) {
+                    _showGuestProfileBottomSheet(context, username, userPhotoUrl);
+                  } else {
+                    _navigateToUserProfile(context, userId);
+                  }
+                },
+                child: CircleAvatar(
+                  radius: 20.r,
+                  backgroundColor: Colors.grey.shade200,
+                  backgroundImage: userPhotoUrl != null && userPhotoUrl.isNotEmpty
+                      ? NetworkImage(userPhotoUrl)
+                      : null,
+                  child: userPhotoUrl == null || userPhotoUrl.isEmpty
+                      ? Icon(Icons.person, size: 20.sp, color: Colors.grey.shade600)
+                      : null,
                 ),
-                child: Text(
-                  "Admin $brand",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12.sp,
-                    color: Colors.white,
+              ),
+              SizedBox(width: 10.w),
+              // Username dan Badge - Clickable
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    if (userId.isEmpty) {
+                      _showGuestProfileBottomSheet(context, username, userPhotoUrl);
+                    } else {
+                      _navigateToUserProfile(context, userId);
+                    }
+                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            username.isEmpty ? 'User' : username,
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            size: 12.sp,
+                            color: Colors.grey.shade400,
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        createdAt != null ? _formatTimeAgo(createdAt) : 'Baru saja',
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const Spacer(),
+              // Action Buttons
               IconButton(
                 icon: Icon(Icons.edit, size: 20.sp, color: Colors.blue),
                 onPressed: () {
@@ -287,9 +355,13 @@ class AdminCommunityChatPage extends StatelessWidget {
             ],
           ),
 
+          SizedBox(height: 12.h),
+          Divider(height: 1, color: Colors.grey.shade300),
+          SizedBox(height: 12.h),
+
           if (title.isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 8.h),
+              padding: EdgeInsets.only(bottom: 8.h),
               child: Text(
                 title,
                 style: TextStyle(
@@ -302,21 +374,21 @@ class AdminCommunityChatPage extends StatelessWidget {
 
           if (mainCategory.isNotEmpty || subCategory.isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 6.h),
+              padding: EdgeInsets.only(bottom: 8.h),
               child: Wrap(
                 spacing: 6.w,
                 children: [
                   if (mainCategory.isNotEmpty)
                     Chip(
                       label: Text(mainCategory),
-                      backgroundColor: Colors.blue[50],
-                      labelStyle: TextStyle(fontSize: 11.sp, color: Colors.blue[700]),
+                      backgroundColor: Colors.purple[50],
+                      labelStyle: TextStyle(fontSize: 11.sp, color: Colors.purple[700]),
                     ),
                   if (subCategory.isNotEmpty)
                     Chip(
                       label: Text(subCategory),
-                      backgroundColor: Colors.green[50],
-                      labelStyle: TextStyle(fontSize: 11.sp, color: Colors.green[700]),
+                      backgroundColor: Colors.orange[50],
+                      labelStyle: TextStyle(fontSize: 11.sp, color: Colors.orange[700]),
                     ),
                 ],
               ),
@@ -330,8 +402,9 @@ class AdminCommunityChatPage extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: Colors.green[50],
                   borderRadius: BorderRadius.circular(6.r),
+                  border: Border.all(color: Colors.green[200]!),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -342,7 +415,7 @@ class AdminCommunityChatPage extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.backgroundColor,
+                        color: Colors.green[700],
                       ),
                     ),
                   ],
@@ -376,83 +449,171 @@ class AdminCommunityChatPage extends StatelessWidget {
   }
 
   Widget _buildLinks(BuildContext context, List<dynamic> linksList) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(height: 12.h),
-        Text(
-          "Opsi pembelian:",
-          style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
-        ),
-        ...linksList.map((linkData) {
-          final linkMap = linkData as Map<String, dynamic>? ?? {};
-          final url = linkMap['url']?.toString() ?? '';
-          final store = linkMap['store']?.toString() ?? '';
-          final price = linkMap['price'];
-          String logoUrl = linkMap['logoUrl']?.toString() ?? '';
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SizedBox(height: 12.h),
+      Row(
+        children: [
+          SizedBox(width: 6.w),
+          Text(
+            "Opsi pembelian:",
+            style: TextStyle(
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+      ...linksList.map((linkData) {
+        final linkMap = linkData as Map<String, dynamic>? ?? {};
+        final url = linkMap['url']?.toString() ?? '';
+        final store = linkMap['store']?.toString() ?? '';
+        final price = linkMap['price'];
 
-          if (url.isEmpty) return const SizedBox.shrink();
+        if (url.isEmpty) return const SizedBox.shrink();
 
-          return Padding(
-            padding: EdgeInsets.only(top: 8.h),
-            child: GestureDetector(
-              onTap: () async {
-                final uri = Uri.tryParse(url);
-                if (uri != null && await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
-              child: Container(
-                padding: EdgeInsets.all(10.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Row(
-                  children: [
-                    if (logoUrl.isNotEmpty)
-                      Container(
-                        width: 40.w,
-                        height: 40.w,
-                        margin: EdgeInsets.only(right: 10.w),
-                        child: Image.asset(
-                          logoUrl,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => Icon(Icons.store, size: 24.sp),
-                        ),
+        // Debug print untuk melihat data store
+        debugPrint('========== DEBUG STORE DATA ==========');
+        debugPrint('Store name: "$store"');
+        debugPrint('Store toLowerCase: "${store.toLowerCase()}"');
+        debugPrint('=====================================');
+
+        // Determine button color and logo asset based on store
+        Color buttonColor = Colors.grey;
+        String logoAsset = ''; // Ubah dari nullable ke empty string
+        
+        final storeLower = store.toLowerCase();
+        if (storeLower.contains('shopee')) {
+          buttonColor = Colors.orange;
+          logoAsset = 'assets/logo_shopee.png';
+          debugPrint('✅ Detected: Shopee');
+        } else if (storeLower.contains('tokopedia')) {
+          buttonColor = Colors.green;
+          logoAsset = 'assets/logo_tokopedia.png';
+          debugPrint('✅ Detected: Tokopedia');
+          } else if (storeLower.contains('blibli')) {
+          logoAsset = 'assets/logo_blibli.jpg';
+          debugPrint('✅ Detected: Tokopedia');
+          } else if (storeLower.contains('nike')) {
+          logoAsset = 'assets/logo_nike.png';
+          debugPrint('✅ Detected: Nike');
+          } else if (storeLower.contains('adidas')) {
+          logoAsset = 'assets/logo_adidas.png';
+          debugPrint('✅ Detected: Adidas');
+          } else if (storeLower.contains('jordan')) {
+          logoAsset = 'assets/logo_jordan.png';
+          debugPrint('✅ Detected: Jordan');
+          } else if (storeLower.contains('puma')) {
+          logoAsset = 'assets/logo_puma.png';
+          debugPrint('✅ Detected: Puma');
+          } else if (storeLower.contains('mizuno')) {
+          logoAsset = 'assets/logo_mizuno.png';
+          debugPrint('✅ Detected: Mizuno');
+        } else {
+          debugPrint('⚠️ Store tidak terdeteksi, menggunakan icon default');
+        }
+
+        return Padding(
+          padding: EdgeInsets.only(top: 8.h),
+          child: GestureDetector(
+            onTap: () async {
+              final uri = Uri.tryParse(url);
+              if (uri != null && await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: Container(
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Row(
+                children: [
+                  // Store icon/logo - MENGGUNAKAN IMAGE ASSET
+                  if (logoAsset.isNotEmpty)
+                    Container(
+                      width: 40.w,
+                      height: 40.w,
+                      padding: EdgeInsets.all(4.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8.r),
                       ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (store.isNotEmpty && store != 'Other')
-                            Text(
-                              store,
-                              style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
-                            ),
-                          if (price != null && price > 0)
-                            Text(
-                              "Rp ${_formatPrice(price)}",
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.backgroundColor,
-                              ),
-                            ),
-                        ],
+                      child: Image.asset(
+                        logoAsset,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          debugPrint('❌ Error loading asset: $logoAsset');
+                          debugPrint('Error: $error');
+                          return Icon(Icons.store, size: 24.sp, color: buttonColor);
+                        },
+                      ),
+                    )
+                  else
+                    Container(
+                      width: 40.w,
+                      height: 40.w,
+                      padding: EdgeInsets.all(8.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Icon(
+                        Icons.store,
+                        size: 24.sp,
+                        color: buttonColor,
                       ),
                     ),
-                    Icon(Icons.arrow_forward_ios, size: 16.sp, color: Colors.grey),
-                  ],
-                ),
+                  SizedBox(width: 12.w),
+                  
+                  // Store name and price
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (store.isNotEmpty && store != 'Other')
+                          Text(
+                            store,
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        SizedBox(height: 4.h),
+                        if (price != null && price > 0)
+                          Text(
+                            "Rp ${_formatPrice(price)}",
+                            style: TextStyle(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Buy button arrow
+                  Icon(
+                    Icons.arrow_forward,
+                    size: 20.sp,
+                    color: buttonColor,
+                  ),
+                ],
               ),
             ),
-          );
-        }).toList(),
-      ],
-    );
-  }
+          ),
+        );
+      }).toList(),
+    ],
+  );
+}
 
   void _showDeleteDialog(BuildContext context, String postId, String? communityId) {
     showDialog(
@@ -499,6 +660,322 @@ class AdminCommunityChatPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _showGuestProfileBottomSheet(BuildContext context, String username, String? userPhotoUrl) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.45,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20.r),
+            topRight: Radius.circular(20.r),
+          ),
+        ),
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          children: [
+            Container(
+              width: 40.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+            SizedBox(height: 20.h),
+            // Avatar
+            ClipOval(
+              child: userPhotoUrl != null && userPhotoUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: userPhotoUrl,
+                      width: 100.w,
+                      height: 100.w,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        width: 100.w,
+                        height: 100.w,
+                        color: Colors.grey.shade200,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        width: 100.w,
+                        height: 100.w,
+                        color: Colors.grey.shade200,
+                        child: Icon(Icons.person, size: 50.sp, color: Colors.grey.shade600),
+                      ),
+                    )
+                  : Container(
+                      width: 100.w,
+                      height: 100.w,
+                      color: Colors.grey.shade200,
+                      child: Icon(Icons.person, size: 50.sp, color: Colors.grey.shade600),
+                    ),
+            ),
+            SizedBox(height: 16.h),
+            Text(
+              username.isEmpty ? 'User' : username,
+              style: TextStyle(
+                fontSize: 20.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Member Community',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Colors.grey[600],
+              ),
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                ),
+                child: Text(
+                  'Tutup',
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 10.h),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToUserProfile(BuildContext context, String userId) {
+    // Validasi userId lebih ketat
+    if (userId.isEmpty || userId == 'null' || userId == 'undefined') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Data pengguna tidak tersedia untuk ditampilkan'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // Fetch user data dan tampilkan bottom sheet profile
+    _showUserProfileBottomSheet(context, userId);
+  }
+
+  void _showUserProfileBottomSheet(BuildContext context, String userId) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.4,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20.r),
+                  topRight: Radius.circular(20.r),
+                ),
+              ),
+              child: const Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          String username = 'User';
+          String? userPhotoUrl;
+          String? bio;
+
+          if (snapshot.hasData && snapshot.data!.exists) {
+            final userData = snapshot.data!.data() as Map<String, dynamic>?;
+            username = userData?['username'] ?? userData?['name'] ?? 'User';
+            userPhotoUrl = userData?['photoURL'] ?? userData?['userPhotoUrl'];
+            bio = userData?['bio'] ?? userData?['description'];
+          }
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.5,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20.r),
+                topRight: Radius.circular(20.r),
+              ),
+            ),
+            padding: EdgeInsets.all(20.w),
+            child: Column(
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                // Avatar dengan CachedNetworkImage
+                ClipOval(
+                  child: userPhotoUrl != null && userPhotoUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: userPhotoUrl,
+                          width: 100.w,
+                          height: 100.w,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            width: 100.w,
+                            height: 100.w,
+                            color: Colors.grey.shade200,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            width: 100.w,
+                            height: 100.w,
+                            color: Colors.grey.shade200,
+                            child: Icon(Icons.person, size: 50.sp, color: Colors.grey.shade600),
+                          ),
+                        )
+                      : Container(
+                          width: 100.w,
+                          height: 100.w,
+                          color: Colors.grey.shade200,
+                          child: Icon(Icons.person, size: 50.sp, color: Colors.grey.shade600),
+                        ),
+                ),
+                SizedBox(height: 16.h),
+                Text(
+                  username,
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                if (bio != null && bio.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.w),
+                    child: Text(
+                      bio,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.grey[600],
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  )
+                else
+                  Text(
+                    'Member Community',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                const Spacer(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                        ),
+                        child: Text(
+                          'Tutup',
+                          style: TextStyle(
+                            color: Colors.grey.shade700,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          // Navigasi ke halaman profile lengkap
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => UserProfilePage(userId: userId),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                        ),
+                        child: Text(
+                          'Lihat Profile',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10.h),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _formatTimeAgo(DateTime time) {
+    final now = DateTime.now();
+    final diff = now.difference(time);
+
+    if (diff.inMinutes < 1) return "Baru saja";
+    if (diff.inMinutes < 60) return "${diff.inMinutes} menit yang lalu";
+    if (diff.inHours < 24) return "${diff.inHours} jam yang lalu";
+    if (diff.inDays < 7) return "${diff.inDays} hari yang lalu";
+
+    return DateFormat('dd MMM yyyy').format(time);
   }
 
   String _formatPrice(dynamic price) {

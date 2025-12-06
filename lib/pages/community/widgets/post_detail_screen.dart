@@ -6,6 +6,7 @@ import 'package:my_app/services/community_service.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:my_app/pages/profile/profile_page.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final CommunityPost post;
@@ -26,15 +27,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint('📄 PostDetail opened for post: ${widget.post.id}');
-    debugPrint('   Brand: ${widget.post.brand}');
-    debugPrint('   Username: ${widget.post.username}');
-    debugPrint('   Has image: ${widget.post.imageUrl1 != null && widget.post.imageUrl1!.isNotEmpty}');
+    try {
+      debugPrint('📄 PostDetail opened for post: ${widget.post.id}');
+      debugPrint('   Brand: ${widget.post.brand ?? "null"}');
+      debugPrint('   Username: ${widget.post.username}');
+      debugPrint('   Has image: ${widget.post.imageUrl1 != null && widget.post.imageUrl1!.isNotEmpty}');
+    } catch (e) {
+      debugPrint('❌ Error in initState: $e');
+    }
   }
 
   String formatRupiah(num price) {
     final formatter = NumberFormat('#,##0', 'de_DE');
-    return 'Rp${formatter.format(price)}';
+    return 'Rp ${formatter.format(price)}';
   }
 
   String _formatTimestamp(DateTime dateTime) {
@@ -52,6 +57,99 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     } else {
       return DateFormat('dd MMM yyyy', 'id_ID').format(dateTime);
     }
+  }
+
+  void _navigateToUserProfile(String userId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserProfilePage(userId: userId),
+      ),
+    );
+  }
+
+  void _showUserProfileDialog(String username, String? userPhotoUrl, String userId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 40.r,
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage: userPhotoUrl != null && userPhotoUrl.isNotEmpty
+                  ? NetworkImage(userPhotoUrl)
+                  : null,
+              child: userPhotoUrl == null || userPhotoUrl.isEmpty
+                  ? Icon(Icons.person, size: 32.sp, color: Colors.grey.shade600)
+                  : null,
+            ),
+            SizedBox(height: 16.h),
+            
+            Text(
+              username,
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    child: Text(
+                      'Tutup',
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _navigateToUserProfile(userId);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                    ),
+                    child: Text(
+                      'Lihat Profile',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _sendComment() async {
@@ -189,90 +287,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 
-  void _showUserProfileDialog(String username, String? userPhotoUrl) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.r),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircleAvatar(
-            radius: 40.r,
-            backgroundColor: Colors.grey.shade200,
-            backgroundImage: userPhotoUrl != null && userPhotoUrl.isNotEmpty
-                ? NetworkImage(userPhotoUrl)
-                : null,
-            child: userPhotoUrl == null || userPhotoUrl.isEmpty
-                ? Icon(Icons.person, size: 32.sp, color: Colors.grey.shade600)
-                : null,
-          ),
-          SizedBox(height: 16.h),
-          
-          Text(
-            username,
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    side: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  child: Text(
-                    'Tutup',
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 14.sp,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                  ),
-                  child: Text(
-                    'Lihat Profile',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
   Widget _buildImage(String imagePath) {
     debugPrint('┌─────────────────────────────────────────────────────────────');
     debugPrint('│ 🖼️ POST DETAIL - BUILDING IMAGE');
@@ -348,6 +362,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Header dengan User Info
                   Padding(
                     padding: EdgeInsets.all(16.w),
                     child: Row(
@@ -355,7 +370,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         InkWell(
                           onTap: () => _showUserProfileDialog(
                             widget.post.username, 
-                            widget.post.userPhotoUrl
+                            widget.post.userPhotoUrl,
+                            widget.post.userId
                           ),
                           borderRadius: BorderRadius.circular(20.r),
                           child: CircleAvatar(
@@ -377,7 +393,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           child: InkWell(
                             onTap: () => _showUserProfileDialog(
                               widget.post.username, 
-                              widget.post.userPhotoUrl
+                              widget.post.userPhotoUrl,
+                              widget.post.userId
                             ),
                             borderRadius: BorderRadius.circular(8.r),
                             child: Column(
@@ -403,62 +420,159 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             ),
                           ),
                         ),
-                        
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            widget.post.brand,
-                            style: TextStyle(
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
 
-                  if (widget.post.imageUrl1 != null && widget.post.imageUrl1!.isNotEmpty)
-                    _buildImage(widget.post.imageUrl1!),
-
-                  if (widget.post.description.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.all(16.w),
-                      child: Text(
-                        widget.post.description,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          height: 1.5,
-                          color: Colors.black87,
-                        ),
+                  // Judul Produk
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    child: Text(
+                      widget.post.title ?? '',
+                      style: TextStyle(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
                     ),
+                  ),
+                  SizedBox(height: 12.h),
 
+                  // Kategori Badges
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    child: Wrap(
+                      spacing: 8.w,
+                      runSpacing: 8.h,
+                      children: [
+                        if (widget.post.mainCategory != null && widget.post.mainCategory!.isNotEmpty)
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade50,
+                              borderRadius: BorderRadius.circular(16.r),
+                              border: Border.all(color: Colors.purple.shade200),
+                            ),
+                            child: Text(
+                              widget.post.mainCategory!,
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.purple.shade700,
+                              ),
+                            ),
+                          ),
+                        if (widget.post.subCategory != null && widget.post.subCategory!.isNotEmpty)
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(16.r),
+                              border: Border.all(color: Colors.orange.shade200),
+                            ),
+                            child: Text(
+                              widget.post.subCategory!,
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+
+                  // Gambar Produk
+                  if (widget.post.imageUrl1 != null && widget.post.imageUrl1!.isNotEmpty)
+                    _buildImage(widget.post.imageUrl1!),
+                  SizedBox(height: 16.h),
+
+                  // Harga Produk Utama
+                  if (widget.post.content.isNotEmpty)
+                    Container(
+                      margin: EdgeInsets.symmetric(horizontal: 16.w),
+                      padding: EdgeInsets.all(16.w),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(color: Colors.green.shade200, width: 2),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Harga:',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            formatRupiah(int.tryParse(widget.post.content) ?? 0),
+                            style: TextStyle(
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  SizedBox(height: 16.h),
+
+                  // Deskripsi Produk
+                  if (widget.post.description != null && widget.post.description!.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Deskripsi',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            widget.post.description!,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              height: 1.5,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  SizedBox(height: 16.h),
+
+                  // Opsi Pembelian
                   if (widget.post.links.isNotEmpty)
                     Container(
                       margin: EdgeInsets.symmetric(horizontal: 16.w),
-                      padding: EdgeInsets.all(12.w),
+                      padding: EdgeInsets.all(16.w),
                       decoration: BoxDecoration(
-                        color: Colors.red.shade50,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(color: Colors.red.shade100),
+                        border: Border.all(color: Colors.grey.shade300),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.shopping_cart, size: 16.sp, color: Colors.red),
-                              SizedBox(width: 6.w),
+                              Icon(Icons.shopping_cart, size: 18.sp, color: AppColors.primary),
+                              SizedBox(width: 8.w),
                               Text(
-                                'Opsi Pembelian',
+                                '${widget.post.links.length} opsi pembelian',
                                 style: TextStyle(
-                                  fontSize: 13.sp,
+                                  fontSize: 14.sp,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.black87,
                                 ),
@@ -471,8 +585,28 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       ),
                     ),
 
-                  Divider(height: 32.h, thickness: 1),
+                  // Timestamp Posting
+                  Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Row(
+                      children: [
+                        Icon(Icons.access_time, size: 14.sp, color: Colors.grey.shade500),
+                        SizedBox(width: 6.w),
+                        Text(
+                          'Diposting: ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(widget.post.createdAt)}',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Divider(height: 1, thickness: 1, color: Colors.grey.shade300),
+                  SizedBox(height: 16.h),
                   
+                  // Section Komentar
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.w),
                     child: Row(
@@ -577,6 +711,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ),
           ),
 
+          // Input Komentar
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             decoration: BoxDecoration(
@@ -663,16 +798,23 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 16.r,
-              backgroundColor: Colors.grey.shade200,
-              backgroundImage: comment.userPhotoUrl != null && 
-                               comment.userPhotoUrl!.isNotEmpty
-                  ? NetworkImage(comment.userPhotoUrl!)
-                  : null,
-              child: comment.userPhotoUrl == null || comment.userPhotoUrl!.isEmpty
-                  ? Icon(Icons.person, size: 16.sp, color: Colors.grey.shade600)
-                  : null,
+            InkWell(
+              onTap: () => _showUserProfileDialog(
+                comment.username,
+                comment.userPhotoUrl,
+                comment.userId,
+              ),
+              child: CircleAvatar(
+                radius: 16.r,
+                backgroundColor: Colors.grey.shade200,
+                backgroundImage: comment.userPhotoUrl != null && 
+                                 comment.userPhotoUrl!.isNotEmpty
+                    ? NetworkImage(comment.userPhotoUrl!)
+                    : null,
+                child: comment.userPhotoUrl == null || comment.userPhotoUrl!.isEmpty
+                    ? Icon(Icons.person, size: 16.sp, color: Colors.grey.shade600)
+                    : null,
+              ),
             ),
             SizedBox(width: 12.w),
             Expanded(
@@ -686,12 +828,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           spacing: 8.w,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Text(
-                              comment.username,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13.sp,
-                                color: Colors.black87,
+                            InkWell(
+                              onTap: () => _showUserProfileDialog(
+                                comment.username,
+                                comment.userPhotoUrl,
+                                comment.userId,
+                              ),
+                              child: Text(
+                                comment.username,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13.sp,
+                                  color: Colors.black87,
+                                ),
                               ),
                             ),
                             Text(
@@ -747,23 +896,38 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Widget _buildPurchaseLink(PostLink link) {
     Color buttonColor = Colors.red;
-    if (link.store.toLowerCase().contains('lazada')) {
+    // Safe null check for link.store
+    final store = link.store ?? '';
+    if (store.toLowerCase().contains('lazada')) {
       buttonColor = Colors.blue;
-    } else if (link.store.toLowerCase().contains('shopee')) {
+    } else if (store.toLowerCase().contains('shopee')) {
       buttonColor = Colors.orange;
-    } else if (link.store.toLowerCase().contains('tokopedia')) {
+    } else if (store.toLowerCase().contains('tokopedia')) {
       buttonColor = Colors.green;
     }
 
     return Padding(
       padding: EdgeInsets.only(bottom: 8.h),
       child: InkWell(
-        onTap: () => _launchURL(link.url),
+        onTap: () {
+          // Safe null check for URL
+          final url = link.url ?? '';
+          if (url.isNotEmpty) {
+            _launchURL(url);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Link pembelian tidak tersedia'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
         borderRadius: BorderRadius.circular(8.r),
         child: Container(
           padding: EdgeInsets.all(12.w),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(8.r),
             border: Border.all(color: Colors.grey[300]!),
           ),
@@ -776,39 +940,48 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     Text(
                       formatRupiah(link.price),
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    if (link.store.isNotEmpty)
-                      Text(
-                        link.store,
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: Colors.grey[600],
+                    // Safe null check for store display
+                    if (store.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(top: 4.h),
+                        child: Text(
+                          store,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: Colors.grey[600],
+                          ),
                         ),
                       ),
                   ],
                 ),
               ),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                 decoration: BoxDecoration(
                   color: buttonColor,
-                  borderRadius: BorderRadius.circular(6.r),
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
-                child: Text(
-                  'Beli',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Beli',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(width: 4.w),
+                    Icon(Icons.arrow_forward, size: 16.sp, color: Colors.white),
+                  ],
                 ),
               ),
-              SizedBox(width: 8.w),
-              Icon(Icons.arrow_forward_ios, size: 14.sp, color: Colors.grey.shade400),
             ],
           ),
         ),

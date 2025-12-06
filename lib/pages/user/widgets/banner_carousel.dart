@@ -36,8 +36,6 @@ class BannerCarousel extends StatefulWidget {
 class _BannerCarouselState extends State<BannerCarousel> {
   late PageController _pageController;
   int _currentPage = 0;
-  // Menghapus: final Map<int, Uint8List> _imageCache = {};
-  // Menghapus: bool _isInitialized = false; // Sekarang dihitung langsung di build
 
   static const int _infiniteMultiplier = 10000;
   int get _initialPage =>
@@ -51,20 +49,10 @@ class _BannerCarouselState extends State<BannerCarousel> {
       viewportFraction: 0.9,
     );
 
-    // Menghapus: _preloadImages();
-
     if (widget.autoPlay && widget.banners.isNotEmpty) {
       Future.delayed(widget.autoPlayInterval, _autoSlide);
     }
   }
-
-  @override
-  void didUpdateWidget(BannerCarousel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Menghapus: if (oldWidget.banners != widget.banners) { _imageCache.clear(); _preloadImages(); }
-  }
-
-  // Menghapus: Future<void> _preloadImages() async { ... }
 
   void _autoSlide() {
     if (!mounted || widget.banners.isEmpty) return;
@@ -85,13 +73,16 @@ class _BannerCarouselState extends State<BannerCarousel> {
   @override
   void dispose() {
     _pageController.dispose();
-    // Menghapus: _imageCache.clear();
     super.dispose();
   }
 
   Widget _buildBannerImage(Product product) {
-    // Memastikan kita menggunakan URL yang valid.
-    final imageUrl = product.imageUrl; 
+    String? imageUrl = product.bannerUrl;
+    
+    if (imageUrl == null || imageUrl.isEmpty) {
+      imageUrl = product.imageUrl;
+      debugPrint('⚠️ Product ${product.name} tidak punya bannerUrl, menggunakan imageUrl');
+    }
     
     if (imageUrl != null && imageUrl.isNotEmpty) {
       return Image.network(
@@ -114,7 +105,10 @@ class _BannerCarouselState extends State<BannerCarousel> {
             ),
           );
         },
-        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('❌ Error loading banner for ${product.name}: $error');
+          return _buildPlaceholder();
+        },
       );
     }
 
@@ -161,8 +155,6 @@ class _BannerCarouselState extends State<BannerCarousel> {
       );
     }
 
-    // Menghapus kondisi _isInitialized karena kita menggunakan Image.network
-
     return Column(
       children: [
         SizedBox(
@@ -204,13 +196,13 @@ class _BannerCarouselState extends State<BannerCarousel> {
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(widget.borderRadius.r),
+                      borderRadius: BorderRadius.circular(widget.borderRadius.r),
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
                           Container(color: Colors.grey[200]),
-                          _buildBannerImage(product), // Memanggil tanpa index
+                          
+                          _buildBannerImage(product),
                           
                           Container(
                             decoration: BoxDecoration(
@@ -269,6 +261,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
                                     ],
                                   ),
                                 ),
+                                
                                 Container(
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 20.w,
