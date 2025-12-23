@@ -29,12 +29,13 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
-            minifyEnabled = true
+            isMinifyEnabled = true  // ← PERHATIKAN: isMinifyEnabled (bukan minifyEnabled)
+            isShrinkResources = true  // ← Opsional
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
