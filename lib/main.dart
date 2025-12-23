@@ -143,7 +143,7 @@ Future<void> main() async {
   );
 
   await Supabase.initialize(
-    url: 'https://qxdnrmhceadpmppcrouc.supabase.co',
+    url: 'https://primez-sports.ezaranargyadeanry.workers.dev',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4ZG5ybWhjZWFkcG1wcGNyb3VjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mzk4NzQ4NSwiZXhwIjoyMDc5NTYzNDg1fQ.N5UDGd8DAt7tFzx5OZ8p0avAr1bMOwWCWzJQMFpJGow',
   );
 

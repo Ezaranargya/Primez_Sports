@@ -131,37 +131,64 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
               backgroundColor: Colors.white,
               expandedHeight: 300.h,
               pinned: true,
-              leading: IconButton(
-                icon: const Icon(Iconsax.arrow_left, color: Colors.black),
-                onPressed: () {
-                  Navigator.pop(context, hasMarkedAsRead);
-                },
-              ),
-              flexibleSpace: FlexibleSpaceBar(
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ProductImage(
-                      image: widget.news.imageUrl1,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      borderRadius: BorderRadius.zero,
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.7),
-                          ],
-                        ),
-                      ),
+              leading: Container(
+                margin: EdgeInsets.all(8.r),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
+                child: IconButton(
+                  icon: const Icon(Iconsax.arrow_left, color: Colors.black),
+                  onPressed: () {
+                    Navigator.pop(context, hasMarkedAsRead);
+                  },
+                ),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Hero(
+                  tag: 'news_image_${widget.news.id}',
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Fixed image with proper BoxFit
+                      ProductImage(
+                        image: widget.news.imageUrl1,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover, // Pastikan gambar memenuhi area tanpa terpotong
+                        borderRadius: BorderRadius.zero,
+                      ),
+                      // Gradient overlay
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          height: 150.h,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.7),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Menghilangkan collapseMode untuk mencegah zoom berlebihan
+                collapseMode: CollapseMode.parallax,
               ),
             ),
             SliverToBoxAdapter(
@@ -220,12 +247,13 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                       if (widget.news.subtitle.isNotEmpty)
                         Text(
                           widget.news.subtitle,
-                          textAlign: TextAlign.justify,
+                          textAlign: TextAlign.start,
+                          textWidthBasis: TextWidthBasis.parent,
                           style: GoogleFonts.inter(
                             fontSize: 15.sp,
-                            color: Colors.black87,
-                            height: 1.35,
-                            letterSpacing: -1,
+                            color: Colors.grey.shade800,
+                            height: 1.75,
+                            letterSpacing: 0.2,
                             wordSpacing: 0,
                           ),
                         ),
@@ -317,12 +345,15 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
 
           if (block.type == 'image' && block.value.isNotEmpty) ...[
             SizedBox(height: 12.h),
-            ProductImage(
-              image: block.value,
-              width: double.infinity,
-              height: 200.h,
-              fit: BoxFit.cover,
+            ClipRRect(
               borderRadius: BorderRadius.circular(12.r),
+              child: ProductImage(
+                image: block.value,
+                width: double.infinity,
+                height: 250.h, // Tinggi yang lebih konsisten
+                fit: BoxFit.cover, // Memastikan gambar tidak terpotong
+                borderRadius: BorderRadius.zero, // BorderRadius sudah ditangani oleh ClipRRect
+              ),
             ),
             if (block.caption != null && block.caption!.isNotEmpty) ...[
               SizedBox(height: 8.h),

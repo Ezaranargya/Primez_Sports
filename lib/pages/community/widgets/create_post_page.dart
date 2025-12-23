@@ -10,24 +10,38 @@ import 'package:my_app/services/supabase_storage_service.dart';
 
 class BrandLinkValidator {
   static final Map<String, List<String>> brandDomains = {
-    'Nike': ['nike.com', 'nike.co.id', 'tokopedia.com/nike', 'shopee.co.id/nike', 'blibli.com/nike'],
-    'Adidas': ['adidas.com', 'adidas.co.id', 'tokopedia.com/adidas', 'shopee.co.id/adidas', 'blibli.com/adidas'],
-    'Puma': ['puma.com', 'tokopedia.com/puma', 'shopee.co.id/puma', 'blibli.com/puma'],
-    'Under Armour': ['underarmour.com', 'under-armour.com', 'tokopedia.com/underarmour', 'tokopedia.com/under-armour', 'shopee.co.id/underarmour', 'blibli.com/underarmour'],
-    'Jordan': ['jordan.com', 'nike.com/jordan', 'tokopedia.com/jordan', 'shopee.co.id/jordan', 'blibli.com/jordan'],
-    'Mizuno': ['mizuno.com', 'mizuno.co.id', 'tokopedia.com/mizuno', 'shopee.co.id/mizuno', 'blibli.com/mizuno'],
+    'Nike': ['nike.com', 'nike.co.id', 'tokopedia.com/nike', 'shopee.co.id/nike', 'blibli.com/nike', 'prosoccer.com', 'mzsports.com.ph'],
+    'Adidas': ['adidas.com', 'adidas.co.id', 'tokopedia.com/adidas', 'shopee.co.id/adidas', 'blibli.com/adidas', 'prosoccer.com', 'mzsports.com.ph'],
+    'Puma': ['puma.com', 'tokopedia.com/puma', 'shopee.co.id/puma', 'blibli.com/puma', 'prosoccer.com', 'mzsports.com.ph'],
+    'Under Armour': ['underarmour.com', 'under-armour.com', 'tokopedia.com/underarmour', 'tokopedia.com/under-armour', 'shopee.co.id/underarmour', 'blibli.com/underarmour', 'prosoccer.com', 'mzsports.com.ph'],
+    'Jordan': ['jordan.com', 'nike.com/jordan', 'tokopedia.com/jordan', 'shopee.co.id/jordan', 'blibli.com/jordan', 'prosoccer.com', 'mzsports.com.ph'],
+    'Mizuno': ['mizuno.com', 'mizuno.co.id', 'tokopedia.com/mizuno', 'shopee.co.id/mizuno', 'blibli.com/mizuno', 'prosoccer.com', 'mzsports.com.ph'],
   };
 
   static bool isValidBrandUrl(String url, String brand) {
     if (url.isEmpty) return true;
     try {
       final uri = Uri.parse(url.toLowerCase());
+      final host = uri.host.toLowerCase();
+      final fullUrl = uri.toString().toLowerCase();
+      
       final allowedDomains = brandDomains[brand] ?? [];
+      
       for (final domain in allowedDomains) {
-        if (uri.toString().contains(domain.toLowerCase().replaceAll(' ', ''))) {
+        final cleanDomain = domain.toLowerCase().replaceAll(' ', '').replaceAll('-', '');
+        final cleanHost = host.replaceAll(' ', '').replaceAll('-', '');
+        final cleanUrl = fullUrl.replaceAll(' ', '').replaceAll('-', '');
+        
+        if (cleanHost.contains(cleanDomain.split('/')[0]) || 
+            cleanDomain.split('/')[0].contains(cleanHost)) {
+          return true;
+        }
+        
+        if (cleanUrl.contains(cleanDomain)) {
           return true;
         }
       }
+      
       return false;
     } catch (e) {
       return false;
@@ -76,18 +90,6 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
   String? _mainCategory;
   String? _subCategory;
 
-  final Map<String, Map<String, String>> _storeLogos = {
-    'tokopedia': {'name': 'Tokopedia', 'logo': 'assets/logo_tokopedia.png'},
-    'shopee': {'name': 'Shopee', 'logo': 'assets/logo_shopee.png'},
-    'blibli': {'name': 'Blibli', 'logo': 'assets/logo_blibli.jpg'},
-    'underarmour': {'name': 'Under Armour Official', 'logo': 'assets/logo_under_armour.png'},
-    'jordan': {'name': 'Jordan Official', 'logo': 'assets/logo_jordan.png'},
-    'puma': {'name': 'Puma Official', 'logo': 'assets/logo_puma.png'},
-    'mizuno': {'name': 'Mizuno Official', 'logo': 'assets/logo_mizuno.png'},
-    'nike': {'name': 'Nike Official', 'logo': 'assets/logo_nike.png'},
-    'adidas': {'name': 'Adidas Official', 'logo': 'assets/logo_adidas.png'},
-  };
-
   @override
   void initState() {
     super.initState();
@@ -107,22 +109,16 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
     _subCategory = data['subCategory']?.toString();
 
     final links = data['links'] as List<dynamic>? ?? [];
-    debugPrint('📦 Total links to load: ${links.length}');
     
     for (var i = 0; i < links.length; i++) {
       final link = links[i];
       final linkMap = Map<String, dynamic>.from(link as Map);
       
-      debugPrint('🔍 Link $i data: $linkMap');
-      
-      // Simpan ke purchase options
       _purchaseOptions.add(linkMap);
       
-      // Controller untuk URL
       final url = linkMap['url']?.toString() ?? '';
       _urlControllers.add(TextEditingController(text: url));
       
-      // Controller untuk Price dengan berbagai kemungkinan
       final priceValue = linkMap['price'];
       String priceText = '';
       
@@ -136,14 +132,8 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
         }
       }
       
-      debugPrint('💰 Price $i: original=$priceValue, type=${priceValue.runtimeType}, final=$priceText');
-      
       _priceControllers.add(TextEditingController(text: priceText));
     }
-    
-    debugPrint('✅ Loaded ${_purchaseOptions.length} purchase options');
-    debugPrint('✅ URL controllers: ${_urlControllers.length}');
-    debugPrint('✅ Price controllers: ${_priceControllers.length}');
   }
 
   @override
@@ -165,16 +155,110 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
   Map<String, String> _detectStoreFromUrl(String url) {
     final lowerUrl = url.toLowerCase();
     
-    for (var entry in _storeLogos.entries) {
-      final cleanKey = entry.key.replaceAll(' ', '').replaceAll('-', '');
-      final cleanUrl = lowerUrl.replaceAll(' ', '').replaceAll('-', '').replaceAll('.', '');
-      
-      if (cleanUrl.contains(cleanKey)) {
+    // ✅ PERBAIKAN: Untuk prosoccer & mzsports, tampilkan brand name & logo
+    if (lowerUrl.contains('prosoccer.com') || lowerUrl.contains('mzsports.com')) {
+      // Deteksi brand dari path/product name di URL
+      if (lowerUrl.contains('adidas') || lowerUrl.contains('/products/adidas')) {
         return {
-          'store': entry.value['name']!,
-          'logoUrl': entry.value['logo']!,
+          'store': 'Adidas Official',
+          'logoUrl': 'assets/logo_adidas.png',
+        };
+      } else if (lowerUrl.contains('nike') || lowerUrl.contains('/products/nike')) {
+        return {
+          'store': 'Nike Official',
+          'logoUrl': 'assets/logo_nike.png',
+        };
+      } else if (lowerUrl.contains('puma') || lowerUrl.contains('/products/puma')) {
+        return {
+          'store': 'Puma Official',
+          'logoUrl': 'assets/logo_puma.png',
+        };
+      } else if (lowerUrl.contains('mizuno') || lowerUrl.contains('/products/mizuno')) {
+        return {
+          'store': 'Mizuno Official',
+          'logoUrl': 'assets/logo_mizuno.png',
+        };
+      } else if (lowerUrl.contains('jordan') || lowerUrl.contains('/products/jordan')) {
+        return {
+          'store': 'Jordan Official',
+          'logoUrl': 'assets/logo_jordan.png',
+        };
+      } else if (lowerUrl.contains('under') && lowerUrl.contains('armour')) {
+        return {
+          'store': 'Under Armour Official',
+          'logoUrl': 'assets/logo_under_armour.png',
+        };
+      } else {
+        // Fallback: jika tidak ada brand terdeteksi dari URL
+        return {
+          'store': 'Official Store',
+          'logoUrl': '',
         };
       }
+    }
+    
+    // Deteksi Under Armour (dengan spasi)
+    if (lowerUrl.contains('underarmour.com') || lowerUrl.contains('under-armour.com')) {
+      return {
+        'store': 'Under Armour Official',
+        'logoUrl': 'assets/logo_under_armour.png',
+      };
+    }
+    
+    if (lowerUrl.contains('nike.com')) {
+      return {
+        'store': 'Nike Official',
+        'logoUrl': 'assets/logo_nike.png',
+      };
+    }
+    
+    if (lowerUrl.contains('adidas.com')) {
+      return {
+        'store': 'Adidas Official',
+        'logoUrl': 'assets/logo_adidas.png',
+      };
+    }
+    
+    if (lowerUrl.contains('jordan.com')) {
+      return {
+        'store': 'Jordan Official',
+        'logoUrl': 'assets/logo_jordan.png',
+      };
+    }
+    
+    if (lowerUrl.contains('puma.com')) {
+      return {
+        'store': 'Puma Official',
+        'logoUrl': 'assets/logo_puma.png',
+      };
+    }
+    
+    if (lowerUrl.contains('mizuno.com')) {
+      return {
+        'store': 'Mizuno Official',
+        'logoUrl': 'assets/logo_mizuno.png',
+      };
+    }
+    
+    if (lowerUrl.contains('tokopedia.com')) {
+      return {
+        'store': 'Tokopedia',
+        'logoUrl': 'assets/logo_tokopedia.png',
+      };
+    }
+    
+    if (lowerUrl.contains('shopee.co.id') || lowerUrl.contains('shopee.com')) {
+      return {
+        'store': 'Shopee',
+        'logoUrl': 'assets/logo_shopee.png',
+      };
+    }
+    
+    if (lowerUrl.contains('blibli.com')) {
+      return {
+        'store': 'Blibli',
+        'logoUrl': 'assets/logo_blibli.jpg',
+      };
     }
     
     return {'store': 'Other', 'logoUrl': ''};
@@ -182,6 +266,7 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
 
   Future<void> _pickImage() async {
     try {
+      debugPrint('🎯 Starting image picker...');
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
         source: ImageSource.gallery,
@@ -191,12 +276,42 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
       );
 
       if (pickedFile != null) {
+        debugPrint('📥 Image picked: ${pickedFile.path}');
+        
+        // Copy file ke app directory untuk mencegah PathNotFoundException
+        final appDir = Directory.systemTemp;
+        final fileName = 'post_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final savedImage = File('${appDir.path}/$fileName');
+        
+        debugPrint('📋 Copying to: ${savedImage.path}');
+        
+        // Copy file dari picker ke lokasi persistent
+        final bytes = await File(pickedFile.path).readAsBytes();
+        await savedImage.writeAsBytes(bytes);
+        
+        final fileExists = await savedImage.exists();
+        final fileSize = await savedImage.length();
+        
+        debugPrint('✅ File copied - exists: $fileExists, size: $fileSize bytes');
+        
         setState(() {
-          _imageFile = File(pickedFile.path);
+          _imageFile = savedImage;
           _imageChanged = true;
         });
         
-        debugPrint('📸 Image selected: ${pickedFile.path}');
+        debugPrint('✅ State updated - _imageFile: ${_imageFile?.path}, _imageChanged: $_imageChanged');
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Gambar berhasil dipilih'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+      } else {
+        debugPrint('❌ No image selected');
       }
     } catch (e) {
       debugPrint('❌ Error picking image: $e');
@@ -242,7 +357,6 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
       _purchaseOptions[index]['store'] = storeInfo['store']!;
       _purchaseOptions[index]['logoUrl'] = storeInfo['logoUrl']!;
       
-      // Hanya rebuild jika ada perubahan logo
       if (storeInfo['logoUrl']!.isNotEmpty) {
         setState(() {});
       }
@@ -277,6 +391,21 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
       return;
     }
 
+    // VALIDASI GAMBAR WAJIB
+    final hasNewImage = _imageFile != null;
+    final hasExistingImage = _existingImageUrl != null && _existingImageUrl!.isNotEmpty;
+    
+    if (!hasNewImage && !hasExistingImage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Silakan pilih gambar produk terlebih dahulu'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     if (!_validatePurchaseLinks()) {
       return;
     }
@@ -297,20 +426,79 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
     try {
       String? finalImageUrl = _existingImageUrl;
 
-      if (_imageFile != null && _imageChanged) {
+      // Upload gambar baru jika ada
+      if (hasNewImage) {
         debugPrint('📤 Uploading new image to Supabase...');
         
-        finalImageUrl = await _storageService.uploadPostImage(
-          file: _imageFile!,
-          userId: currentUser.uid,
-        );
-        
-        if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
-          await _storageService.deletePostImage(_existingImageUrl!);
-          debugPrint('🗑️ Old image deleted');
+        // Validasi file exists sebelum upload
+        if (!await _imageFile!.exists()) {
+          debugPrint('❌ Image file does not exist: ${_imageFile!.path}');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('❌ File gambar tidak ditemukan, silakan pilih ulang'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          setState(() => _isLoading = false);
+          return;
         }
         
-        debugPrint('✅ Image uploaded: $finalImageUrl');
+        try {
+          final fileSize = await _imageFile!.length();
+          debugPrint('📂 File exists, size: $fileSize bytes');
+          
+          finalImageUrl = await _storageService.uploadPostImage(
+            file: _imageFile!,
+            userId: currentUser.uid,
+          );
+          
+          if (finalImageUrl == null || finalImageUrl.isEmpty) {
+            throw Exception('Upload returned null or empty URL');
+          }
+          
+          debugPrint('✅ Image uploaded successfully: $finalImageUrl');
+          
+          // Hapus gambar lama jika ada
+          if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
+            try {
+              await _storageService.deletePostImage(_existingImageUrl!);
+              debugPrint('🗑️ Old image deleted');
+            } catch (e) {
+              debugPrint('⚠️ Failed to delete old image: $e');
+            }
+          }
+        } catch (e) {
+          debugPrint('❌ Image upload failed: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('❌ Gagal upload gambar: $e'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+          setState(() => _isLoading = false);
+          return;
+        }
+      }
+
+      // Final check - pastikan ada URL gambar
+      if (finalImageUrl == null || finalImageUrl.isEmpty) {
+        debugPrint('❌ No image URL available after upload attempt');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('❌ Gambar belum tersedia, silakan pilih gambar'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        setState(() => _isLoading = false);
+        return;
       }
 
       String username = 'User';
@@ -333,15 +521,11 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
           userPhotoUrl = userData?['photoURL'] ?? 
                         userData?['userPhotoUrl'] ?? 
                         currentUser.photoURL;
-          
-          debugPrint('✅ User data loaded: $username');
         } else {
           username = currentUser.displayName ?? 
                     currentUser.email?.split('@')[0] ?? 
                     'User';
           userPhotoUrl = currentUser.photoURL;
-          
-          debugPrint('⚠️ User doc not found, using Auth data: $username');
         }
       } catch (e) {
         debugPrint('⚠️ Error fetching user data: $e');
@@ -373,12 +557,10 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
         communityId = newCommunity.id;
       }
 
-      // ✅ PERBAIKAN: Pastikan semua data dari controller tersimpan
       final finalLinks = List<Map<String, dynamic>>.from(_purchaseOptions);
       for (int i = 0; i < finalLinks.length; i++) {
         finalLinks[i]['url'] = _urlControllers[i].text.trim();
         finalLinks[i]['price'] = int.tryParse(_priceControllers[i].text.trim()) ?? 0;
-        debugPrint('💾 Saving link $i: url=${finalLinks[i]['url']}, price=${finalLinks[i]['price']}');
       }
 
       final postData = {
@@ -399,10 +581,7 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
 
       if (widget.postId == null) {
         postData['createdAt'] = FieldValue.serverTimestamp();
-        final postRef = await FirebaseFirestore.instance
-            .collection('posts')
-            .add(postData);
-        debugPrint('✅ Post created: ${postRef.id}');
+        await FirebaseFirestore.instance.collection('posts').add(postData);
       } else {
         final existingDoc = await FirebaseFirestore.instance
           .collection('posts')
@@ -415,7 +594,6 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
             .collection('posts')
             .doc(widget.postId)
             .update(postData);
-        debugPrint('✅ Post updated: ${widget.postId}');
       }
 
       if (mounted) {
@@ -427,9 +605,10 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
                   : '✅ Produk berhasil diupdate',
             ),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
           ),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
     } catch (e) {
       debugPrint('❌ Error saving post: $e');
@@ -438,6 +617,7 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
           SnackBar(
             content: Text('❌ Gagal menyimpan: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -480,7 +660,12 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
                         decoration: BoxDecoration(
                           color: Colors.grey[200],
                           borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(color: Colors.grey[400]!),
+                          border: Border.all(
+                            color: (_imageFile == null && _existingImageUrl == null) 
+                                ? Colors.red 
+                                : Colors.grey[400]!,
+                            width: (_imageFile == null && _existingImageUrl == null) ? 2 : 1,
+                          ),
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12.r),
@@ -546,7 +731,6 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
                         if (value == null || value.trim().isEmpty) {
                           return 'Harga tidak boleh kosong';
                         }
-                        // Bersihkan karakter non-angka sebelum validasi
                         final cleanValue = value.replaceAll(RegExp(r'[^0-9]'), '');
                         if (cleanValue.isEmpty || int.tryParse(cleanValue) == null) {
                           return 'Harga harus berupa angka';
@@ -680,18 +864,103 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
 
   Widget _buildImagePreview() {
     if (_imageFile != null) {
-      return Image.file(_imageFile!, fit: BoxFit.cover);
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.file(
+            _imageFile!, 
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildImagePlaceholder();
+            },
+          ),
+          Positioned(
+            bottom: 8.h,
+            right: 8.w,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(6.r),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.edit, color: Colors.white, size: 14),
+                  SizedBox(width: 4.w),
+                  const Text(
+                    'Tap untuk ubah',
+                    style: TextStyle(color: Colors.white, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
     }
     
     if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
-      return Image.network(
-        _existingImageUrl!,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return const Center(child: CircularProgressIndicator());
-        },
-        errorBuilder: (_, __, ___) => _buildImagePlaceholder(),
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            _existingImageUrl!,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.broken_image, size: 60.sp, color: Colors.red[300]),
+                    SizedBox(height: 8.h),
+                    Text(
+                      'Gagal memuat gambar',
+                      style: TextStyle(fontSize: 12.sp, color: Colors.red),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      'Tap untuk pilih gambar baru',
+                      style: TextStyle(fontSize: 10.sp, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          Positioned(
+            bottom: 8.h,
+            right: 8.w,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(6.r),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.edit, color: Colors.white, size: 14),
+                  SizedBox(width: 4.w),
+                  const Text(
+                    'Tap untuk ubah',
+                    style: TextStyle(color: Colors.white, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       );
     }
     
@@ -704,7 +973,30 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
       children: [
         Icon(Icons.add_photo_alternate, size: 60.sp, color: Colors.grey[600]),
         SizedBox(height: 8.h),
-        Text('Pilih Foto Produk', style: TextStyle(fontSize: 14.sp)),
+        Text(
+          'Pilih Foto Produk',
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: Colors.grey[700],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        SizedBox(height: 4.h),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+          decoration: BoxDecoration(
+            color: Colors.red[50],
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: Text(
+            'WAJIB',
+            style: TextStyle(
+              fontSize: 11.sp,
+              color: Colors.red[700],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -713,9 +1005,6 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
     return List.generate(_purchaseOptions.length, (index) {
       final option = _purchaseOptions[index];
       final hasLogo = option['logoUrl']?.toString().isNotEmpty ?? false;
-      
-      // Debug: print harga saat render
-      debugPrint('🔍 Rendering option $index: price = ${option['price']}, controller = ${_priceControllers[index].text}');
       
       return Container(
         margin: EdgeInsets.only(bottom: 12.h),
@@ -788,17 +1077,6 @@ class _UserCreatePostPageState extends State<UserCreatePostPage> {
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
                     ],
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Harga tidak boleh kosong';
-                      }
-                      // Bersihkan karakter non-angka sebelum validasi
-                      final cleanValue = value.replaceAll(RegExp(r'[^0-9]'), '');
-                      if (cleanValue.isEmpty || int.tryParse(cleanValue) == null) {
-                        return 'Harga harus berupa angka';
-                      }
-                      return null;
-                    },
                     onChanged: (value) {
                       _updatePurchaseOptionPrice(index, value);
                     },

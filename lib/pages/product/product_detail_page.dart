@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart'; 
+import 'package:url_launcher/url_launcher.dart';
 import 'package:my_app/models/product_model.dart';
 import 'package:my_app/providers/favorite_provider.dart';
 import 'package:my_app/providers/widgets/favorite_button.dart';
@@ -68,20 +69,24 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
     );
   }
 
+  // ✅ Share hanya dengan custom scheme (langsung ke APK)
   void _shareProduct(Product product) {
-    final deepLink = 'https://primez-sportz-2025.web.app/product/${product.id}';
+    // Gunakan HTTPS link yang sudah ter-setup dengan App Links
+    final appLink = 'https://primez-sportz-2025.web.app/product/${product.id}';
     
     Share.share(
       'Cek produk ini di Primez Sports!\n\n'
       '${product.name}\n'
       'Harga: ${Formatter.formatPrice(product.price)}\n\n'
-      '🔗 Buka di sini: $deepLink',
+      '🔗 Buka di sini: $appLink',
       subject: 'Produk Primez Sports',
     );
   }
 
+  // ✅ Show share options - hanya HTTPS link
   void _showShareOptions(BuildContext context, Product product) {
-    final deepLink = 'https://primez-sportz-2025.web.app/product/${product.id}';
+    // HTTPS link (akan auto-open app karena App Links sudah approved)
+    final appLink = 'https://primez-sportz-2025.web.app/product/${product.id}';
     
     showModalBottomSheet(
       context: context,
@@ -114,6 +119,8 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
               ],
             ),
             SizedBox(height: 16.h),
+            
+            // App Link Section
             Container(
               padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
@@ -129,7 +136,7 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
                       Icon(Icons.link, color: Colors.blue.shade700, size: 18.sp),
                       SizedBox(width: 8.w),
                       Text(
-                        'Deep Link',
+                        'Link Produk',
                         style: GoogleFonts.inter(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
@@ -146,7 +153,7 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
                       borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: SelectableText(
-                      deepLink,
+                      appLink,
                       style: GoogleFonts.robotoMono(
                         fontSize: 12.sp,
                         color: Colors.blue.shade900,
@@ -158,12 +165,14 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
             ),
             
             SizedBox(height: 16.h),
+            
+            // Action Buttons
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      Clipboard.setData(ClipboardData(text: deepLink));
+                      Clipboard.setData(ClipboardData(text: appLink));
                       Navigator.pop(context);
                       _showSnackBar('Link berhasil disalin!');
                     },
@@ -202,22 +211,26 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
             ),
             
             SizedBox(height: 8.h),
+            
+            // Info Banner
             Container(
               padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Colors.green.shade50,
                 borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(color: Colors.green.shade200),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, size: 16.sp, color: Colors.grey.shade600),
+                  Icon(Icons.check_circle, size: 16.sp, color: Colors.green.shade700),
                   SizedBox(width: 8.w),
                   Expanded(
                     child: Text(
-                      'Link ini hanya berfungsi jika aplikasi sudah ter-install',
+                      'Link ini akan otomatis membuka aplikasi jika sudah terinstall',
                       style: GoogleFonts.inter(
-                        fontSize: 12.sp,
-                        color: Colors.grey.shade600,
+                        fontSize: 11.sp,
+                        color: Colors.green.shade700,
                       ),
                     ),
                   ),
@@ -230,6 +243,86 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
         ),
       ),
     );
+  }
+
+  // ✅ URL LAUNCHER (untuk purchase options)
+  Future<void> _launchURL(String url) async {
+    if (url.isEmpty) {
+      _showSnackBar('Link tidak tersedia');
+      return;
+    }
+
+    try {
+      String cleanUrl = url.trim();
+      
+      debugPrint('🔗 Launching URL: $cleanUrl');
+      
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        cleanUrl = 'https://$cleanUrl';
+      }
+
+      final uri = Uri.parse(cleanUrl);
+      
+      if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+        throw Exception('URL tidak valid');
+      }
+
+      bool launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched) {
+        launched = await launchUrl(
+          uri,
+          mode: LaunchMode.platformDefault,
+        );
+      }
+
+      if (!launched) {
+        throw Exception('Tidak dapat membuka link');
+      }
+
+      debugPrint('✅ URL launched successfully');
+
+    } catch (e) {
+      debugPrint('❌ Error launching URL: $e');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tidak bisa membuka link',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  'Pastikan browser atau aplikasi tersedia',
+                  style: GoogleFonts.inter(fontSize: 12.sp),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Salin Link',
+              textColor: Colors.white,
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: url));
+                _showSnackBar('Link berhasil disalin!');
+              },
+            ),
+          ),
+        );
+      }
+    }
   }
 
   List<Widget> _buildAppBarActions(Product product) {
@@ -262,9 +355,12 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
   }
 
   void _handleBackButton(BuildContext context) {
+    // ✅ Cek apakah bisa pop dulu
     if (context.canPop()) {
+      // Jika bisa pop (ada halaman sebelumnya), pop normal
       context.pop();
     } else {
+      // Jika tidak bisa pop (datang dari deep link), arahkan ke home
       context.go('/user-home');
     }
   }
@@ -346,182 +442,195 @@ class _UserProductDetailPageState extends State<UserProductDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Product?>(
-      stream: _productService.getProductById(widget.product.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+    // ✅ Wrap dengan WillPopScope untuk handle back button
+    return WillPopScope(
+      onWillPop: () async {
+        // Cek apakah bisa pop (ada halaman sebelumnya di stack)
+        if (context.canPop()) {
+          // Jika bisa pop, biarkan pop normal
+          return true;
+        } else {
+          // Jika tidak bisa pop (datang dari deep link), arahkan ke home
+          context.go('/user-home');
+          return false;
+        }
+      },
+      child: StreamBuilder<Product?>(
+        stream: _productService.getProductById(widget.product.id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Scaffold(
+              backgroundColor: Colors.white,
+              appBar: AppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => _handleBackButton(context),
+                ),
+                title: const Text('Memuat...'),
+                backgroundColor: const Color(0xFFE53E3E),
+                foregroundColor: Colors.white,
+              ),
+              body: const Center(
+                child: CircularProgressIndicator(color: Color(0xFFE53E3E)),
+              ),
+            );
+          }
+          if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+            return Scaffold(
+              appBar: AppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => _handleBackButton(context),
+                ),
+                title: Text(
+                  snapshot.hasError ? 'Error' : 'Produk Tidak Ditemukan',
+                ),
+                backgroundColor: const Color(0xFFE53E3E),
+                foregroundColor: Colors.white,
+              ),
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      snapshot.hasError
+                          ? Icons.error_outline
+                          : Icons.shopping_bag_outlined,
+                      size: 64.sp,
+                      color: snapshot.hasError ? Colors.red : Colors.grey.shade400,
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      snapshot.hasError
+                          ? 'Terjadi kesalahan'
+                          : 'Produk tidak ditemukan',
+                      style: snapshot.hasError
+                          ? GoogleFonts.poppins(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.w600,
+                              )
+                          : GoogleFonts.poppins(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                              ),
+                    ),
+                    if (snapshot.hasError)
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 32.w),
+                        child: Text(
+                          '${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 14.sp,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final product = snapshot.data!;
+
           return Scaffold(
             backgroundColor: Colors.white,
             appBar: AppBar(
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => _handleBackButton(context),
-              ),
-              title: const Text('Memuat...'),
-              backgroundColor: const Color(0xFFE53E3E),
-              foregroundColor: Colors.white,
-            ),
-            body: const Center(
-              child: CircularProgressIndicator(color: Color(0xFFE53E3E)),
-            ),
-          );
-        }
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
-          return Scaffold(
-            appBar: AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => _handleBackButton(context),
+                tooltip: 'Kembali',
               ),
               title: Text(
-                snapshot.hasError ? 'Error' : 'Produk Tidak Ditemukan',
+                product.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               backgroundColor: const Color(0xFFE53E3E),
               foregroundColor: Colors.white,
+              elevation: 0,
+              actions: _buildAppBarActions(product),
             ),
-            body: Center(
+            body: SingleChildScrollView(
+              padding: EdgeInsets.all(16.w),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    snapshot.hasError
-                        ? Icons.error_outline
-                        : Icons.shopping_bag_outlined,
-                    size: 64.sp,
-                    color: snapshot.hasError ? Colors.red : Colors.grey.shade400,
-                  ),
+                  _buildProductImage(product),
                   SizedBox(height: 16.h),
-                  Text(
-                    snapshot.hasError
-                        ? 'Terjadi kesalahan'
-                        : 'Produk tidak ditemukan',
-                    style: snapshot.hasError
-                        ? GoogleFonts.poppins(
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w600,
-                            )
-                        : GoogleFonts.poppins(
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade700,
-                            ),
-                  ),
-                  if (snapshot.hasError)
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 32.w),
-                      child: Text(
-                        '${snapshot.error}',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 14.sp,
-                          color: Colors.grey.shade600,
-                        ),
+                  ProductInfo(product: product, showDescription: false),
+                  SizedBox(height: 24.h),
+                  if (product.description.isNotEmpty) ...[
+                    Container(
+                      padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 18.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Deskripsi Produk",
+                            style: GoogleFonts.poppins(
+                              fontSize: 17.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          SizedBox(height: 14.h),
+                          Text(
+                            product.description.trim(),
+                            textAlign: TextAlign.start,
+                            textWidthBasis: TextWidthBasis.parent,
+                            style: GoogleFonts.inter(
+                              fontSize: 14.2.sp,
+                              height: 1.75,
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 26.h),
+                  ],
+
+                  if (product.purchaseOptions.isNotEmpty)
+                    PurchaseOptionsList(options: product.purchaseOptions)
+                  else
+                    _buildEmptyPurchaseOptions(),
+                  SizedBox(height: 24.h),
+                  if (!widget.showFavoriteInAppBar)
+                    Consumer<FavoriteProvider>(
+                      builder: (context, favoriteProvider, _) {
+                        final isFavorite = favoriteProvider.isFavorite(product.id);
+                        return ActionButtons(
+                          isFavorite: isFavorite,
+                          isLoadingFavorite: _isLoadingFavorite,
+                          onFavoriteTap: () => _toggleFavorite(context),
+                          onShareTap: () => _showShareOptions(context, product),
+                        );
+                      },
                     ),
                 ],
               ),
             ),
           );
-        }
-
-        final product = snapshot.data!;
-
-        return Scaffold(
-          backgroundColor: Colors.white,
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => _handleBackButton(context),
-              tooltip: 'Kembali',
-            ),
-            title: Text(
-              product.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.poppins(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            backgroundColor: const Color(0xFFE53E3E),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            actions: _buildAppBarActions(product),
-          ),
-          body: SingleChildScrollView(
-            padding: EdgeInsets.all(16.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildProductImage(product),
-                SizedBox(height: 16.h),
-                ProductInfo(product: product, showDescription: false),
-                SizedBox(height: 24.h),
-                if (product.description.isNotEmpty) ...[
-                  Container(
-                    padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 18.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Deskripsi Produk",
-                          style: GoogleFonts.poppins(
-                            fontSize: 17.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        SizedBox(height: 14.h),
-
-                        Text(
-                          product.description.trim(),
-                          textAlign: TextAlign.start,
-                          textWidthBasis: TextWidthBasis.parent,
-                          style: GoogleFonts.inter(
-                            fontSize: 14.2.sp,
-                            height: 1.75,
-                            color: Colors.grey.shade800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 26.h),
-                ],
-
-                if (product.purchaseOptions.isNotEmpty)
-                  PurchaseOptionsList(options: product.purchaseOptions)
-                else
-                  _buildEmptyPurchaseOptions(),
-                SizedBox(height: 24.h),
-                if (!widget.showFavoriteInAppBar)
-                  Consumer<FavoriteProvider>(
-                    builder: (context, favoriteProvider, _) {
-                      final isFavorite = favoriteProvider.isFavorite(product.id);
-                      return ActionButtons(
-                        isFavorite: isFavorite,
-                        isLoadingFavorite: _isLoadingFavorite,
-                        onFavoriteTap: () => _toggleFavorite(context),
-                        onShareTap: () => _showShareOptions(context, product),
-                      );
-                    },
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
+        },
+      ),
     );
   }
 }

@@ -18,12 +18,12 @@ class SupabaseStorageService {
       
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = '${userId}_$timestamp.jpg';
-      final path = '$folder/$fileName';
+      final filePath = '$folder/$fileName';
 
       await _supabase.storage
           .from(bucket)
           .upload(
-            path,
+            filePath,
             file,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
@@ -33,7 +33,7 @@ class SupabaseStorageService {
 
       final publicUrl = _supabase.storage
           .from(bucket)
-          .getPublicUrl(path);
+          .getPublicUrl(filePath);
 
       debugPrint('✅ Image uploaded: $publicUrl');
       return publicUrl;
@@ -48,12 +48,12 @@ class SupabaseStorageService {
       debugPrint('📤 Uploading image to Supabase...');
       
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final path = 'products/${fileName}_$timestamp.jpg';
+      final filePath = 'products/${fileName}_$timestamp.jpg';
 
       await _supabase.storage
           .from(bucketName)
           .upload(
-            path,
+            filePath,
             file,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
@@ -63,7 +63,7 @@ class SupabaseStorageService {
 
       final publicUrl = _supabase.storage
           .from(bucketName)
-          .getPublicUrl(path);
+          .getPublicUrl(filePath);
 
       debugPrint('✅ Image uploaded: $publicUrl');
       return publicUrl;
@@ -82,12 +82,12 @@ class SupabaseStorageService {
       
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = '${userId}_$timestamp.jpg';
-      final path = 'community_posts/$fileName';
+      final filePath = 'community_posts/$fileName';
 
       await _supabase.storage
           .from(bucketName)
           .upload(
-            path,
+            filePath,
             file,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
@@ -97,7 +97,7 @@ class SupabaseStorageService {
 
       final publicUrl = _supabase.storage
           .from(bucketName)
-          .getPublicUrl(path);
+          .getPublicUrl(filePath);
 
       debugPrint('✅ Post image uploaded: $publicUrl');
       return publicUrl;
@@ -112,12 +112,12 @@ class SupabaseStorageService {
       debugPrint('📤 Uploading product image to Supabase...');
       
       final fileName = '${productId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final path = 'products/$fileName';
+      final filePath = 'products/$fileName';
 
       await _supabase.storage
           .from(bucketName)
           .upload(
-            path,
+            filePath,
             imageFile,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
@@ -127,7 +127,7 @@ class SupabaseStorageService {
 
       final publicUrl = _supabase.storage
           .from(bucketName)
-          .getPublicUrl(path);
+          .getPublicUrl(filePath);
 
       debugPrint('✅ Image uploaded: $publicUrl');
       return publicUrl;
@@ -142,12 +142,12 @@ class SupabaseStorageService {
       debugPrint('📤 Uploading product image bytes to Supabase...');
       
       final fileName = '${productId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final path = 'products/$fileName';
+      final filePath = 'products/$fileName';
 
       await _supabase.storage
           .from(bucketName)
           .uploadBinary(
-            path,
+            filePath,
             bytes,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
@@ -157,7 +157,7 @@ class SupabaseStorageService {
 
       final publicUrl = _supabase.storage
           .from(bucketName)
-          .getPublicUrl(path);
+          .getPublicUrl(filePath);
 
       debugPrint('✅ Image uploaded: $publicUrl');
       return publicUrl;
@@ -172,12 +172,12 @@ class SupabaseStorageService {
       debugPrint('📤 Uploading community post image to Supabase...');
       
       final fileName = '${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final path = 'community_posts/$fileName';
+      final filePath = 'community_posts/$fileName';
 
       await _supabase.storage
           .from(bucketName)
           .upload(
-            path,
+            filePath,
             imageFile,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
@@ -187,7 +187,7 @@ class SupabaseStorageService {
 
       final publicUrl = _supabase.storage
           .from(bucketName)
-          .getPublicUrl(path);
+          .getPublicUrl(filePath);
 
       debugPrint('✅ Community post image uploaded: $publicUrl');
       return publicUrl;
@@ -202,12 +202,12 @@ class SupabaseStorageService {
       debugPrint('📤 Uploading news image to Supabase...');
       
       final fileName = 'news_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final path = 'news/$fileName';
+      final filePath = 'news/$fileName';
 
       await _supabase.storage
           .from(bucketName)
           .upload(
-            path,
+            filePath,
             imageFile,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
@@ -217,7 +217,7 @@ class SupabaseStorageService {
 
       final publicUrl = _supabase.storage
           .from(bucketName)
-          .getPublicUrl(path);
+          .getPublicUrl(filePath);
 
       debugPrint('✅ News image uploaded: $publicUrl');
       return publicUrl;
@@ -227,32 +227,83 @@ class SupabaseStorageService {
     }
   }
 
+  /// Upload profile image - SIMPLIFIED VERSION
+  /// File sudah permanent dari _pickImage() jadi tidak perlu copy lagi
   Future<String?> uploadProfileImage(File imageFile, String userId) async {
     try {
       debugPrint('📤 Uploading profile image to Supabase...');
-      
-      final fileName = 'profile_${userId}.jpg';
-      final path = 'profiles/$fileName';
+      debugPrint('   File path: ${imageFile.path}');
+      debugPrint('   User ID: $userId');
 
+      // Verifikasi file ada
+      if (!await imageFile.exists()) {
+        throw FileSystemException(
+          'File tidak ditemukan',
+          imageFile.path,
+        );
+      }
+      
+      final fileSize = await imageFile.length();
+      debugPrint('   File size: $fileSize bytes');
+
+      // Baca file sebagai bytes
+      final Uint8List fileBytes = await imageFile.readAsBytes();
+      debugPrint('📦 File read as bytes: ${fileBytes.length} bytes');
+
+      // Generate path untuk Supabase Storage
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'profile_${userId}_$timestamp.jpg';
+      final storagePath = 'profiles/$fileName';
+      
+      debugPrint('📤 Uploading to Supabase: $storagePath');
+
+      // Upload ke Supabase
       await _supabase.storage
           .from(bucketName)
-          .upload(
-            path,
-            imageFile,
+          .uploadBinary(
+            storagePath,
+            fileBytes,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
               upsert: true,
+              cacheControl: '3600',
             ),
           );
 
-      final publicUrl = _supabase.storage
-          .from(bucketName)
-          .getPublicUrl(path);
+      debugPrint('✅ Upload successful');
 
-      debugPrint('✅ Profile image uploaded: $publicUrl');
+      // Get public URL
+      final String publicUrl = _supabase.storage
+          .from(bucketName)
+          .getPublicUrl(storagePath);
+
+      debugPrint('🔗 Public URL: $publicUrl');
+
+      // Hapus file temporary setelah upload berhasil
+      try {
+        await imageFile.delete();
+        debugPrint('🗑️ Temporary file deleted');
+      } catch (e) {
+        debugPrint('⚠️ Could not delete temp file: $e');
+      }
+
       return publicUrl;
+
+    } on StorageException catch (e) {
+      debugPrint('❌ Supabase Storage error: ${e.message}');
+      debugPrint('   Status code: ${e.statusCode}');
+      return null;
+    } on SocketException catch (e) {
+      debugPrint('❌ Network error: $e');
+      throw Exception('Tidak ada koneksi internet. Mohon cek WiFi/data seluler Anda.');
+    } on FileSystemException catch (e) {
+      debugPrint('❌ File system error: $e');
+      throw Exception('Gagal mengakses file. Coba pilih gambar lagi.');
+    } on PathNotFoundException catch (e) {
+      debugPrint('❌ File not found: $e');
+      throw Exception('File gambar tidak ditemukan. Coba pilih gambar lagi.');
     } catch (e) {
-      debugPrint('❌ Error uploading profile image: $e');
+      debugPrint('❌ Unexpected error: $e');
       return null;
     }
   }
@@ -262,12 +313,12 @@ class SupabaseStorageService {
       debugPrint('📤 Uploading profile image bytes to Supabase...');
       
       final fileName = 'profile_${userId}.jpg';
-      final path = 'profiles/$fileName';
+      final filePath = 'profiles/$fileName';
 
       await _supabase.storage
           .from(bucketName)
           .uploadBinary(
-            path,
+            filePath,
             bytes,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
@@ -277,7 +328,7 @@ class SupabaseStorageService {
 
       final publicUrl = _supabase.storage
           .from(bucketName)
-          .getPublicUrl(path);
+          .getPublicUrl(filePath);
 
       debugPrint('✅ Profile image uploaded: $publicUrl');
       return publicUrl;
@@ -301,13 +352,13 @@ class SupabaseStorageService {
       debugPrint('📤 Uploading user photo to Supabase...');
       
       final name = 'profile_$userId';
-      final path = 'profiles/$name.jpg';
+      final filePath = 'profiles/$name.jpg';
 
       if (file != null) {
         await _supabase.storage
             .from(bucketName)
             .upload(
-              path,
+              filePath,
               file,
               fileOptions: const FileOptions(
                 contentType: 'image/jpeg',
@@ -318,7 +369,7 @@ class SupabaseStorageService {
         await _supabase.storage
             .from(bucketName)
             .uploadBinary(
-              path,
+              filePath,
               bytes,
               fileOptions: const FileOptions(
                 contentType: 'image/jpeg',
@@ -329,7 +380,7 @@ class SupabaseStorageService {
 
       final publicUrl = _supabase.storage
           .from(bucketName)
-          .getPublicUrl(path);
+          .getPublicUrl(filePath);
 
       debugPrint('✅ User photo uploaded: $publicUrl');
       return publicUrl;
@@ -359,13 +410,13 @@ class SupabaseStorageService {
 
   Future<void> deleteUserPhoto(String userId) async {
     try {
-      final path = 'profiles/profile_$userId.jpg';
+      final filePath = 'profiles/profile_$userId.jpg';
       
       await _supabase.storage
           .from(bucketName)
-          .remove([path]);
+          .remove([filePath]);
 
-      debugPrint('✅ User photo deleted: $path');
+      debugPrint('✅ User photo deleted: $filePath');
     } catch (e) {
       debugPrint('❌ Error deleting user photo: $e');
     }
@@ -408,11 +459,11 @@ class SupabaseStorageService {
 
   Future<bool> deleteProfileImage(String userId) async {
     try {
-      final path = 'profiles/profile_$userId.jpg';
+      final filePath = 'profiles/profile_$userId.jpg';
       
-      await _supabase.storage.from(bucketName).remove([path]);
+      await _supabase.storage.from(bucketName).remove([filePath]);
 
-      debugPrint('✅ Profile image deleted: $path');
+      debugPrint('✅ Profile image deleted: $filePath');
       return true;
     } catch (e) {
       debugPrint('❌ Error deleting profile image: $e');

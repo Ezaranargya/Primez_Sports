@@ -53,9 +53,9 @@ class FaqPage extends StatelessWidget {
                     'Fitur Komunitas adalah tempat untuk melihat postingan atau pembahasan sepatu dari berbagai brand seperti Nike, Adidas, Jordan, Puma, Under Armour, dan lainnya.',
               ),
               _buildFaqItem(
-                question: 'Apa isi fitur News?',
+                question: 'Apa isi fitur Berita?',
                 answer:
-                    'News berisi berita terbaru mengenai rilis sepatu, update model, teknologi baru, dan informasi menarik dari berbagai brand olahraga.',
+                    'Berita berisi informasi berita terbaru mengenai rilis sepatu, update model, teknologi baru, dan informasi menarik dari berbagai brand olahraga.',
               ),
               _buildFaqItem(
                 question: 'Apakah saya bisa mengganti username atau bio?',

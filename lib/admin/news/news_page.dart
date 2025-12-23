@@ -369,29 +369,36 @@ class _AdminNewsPageState extends State<AdminNewsPage> {
                 SizedBox(height: 8.h),
                 
                 
+                // FIXED: Wrapped the Row in Flexible/Expanded to prevent overflow
                 Row(
                   children: [
                     if (news.author.isNotEmpty) ...[
                       Icon(Icons.person_outline, size: 14.sp, color: Colors.grey[600]),
                       SizedBox(width: 4.w),
-                      Text(
-                        news.author,
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          color: Colors.grey[600],
-                          fontFamily: 'Poppins',
+                      Flexible(
+                        child: Text(
+                          news.author,
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            color: Colors.grey[600],
+                            fontFamily: 'Poppins',
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       SizedBox(width: 12.w),
                     ],
                     Icon(Icons.calendar_today, size: 14.sp, color: Colors.grey[600]),
                     SizedBox(width: 4.w),
-                    Text(
-                      formatDate.format(news.date),
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        color: Colors.grey[600],
-                        fontFamily: 'Poppins',
+                    Flexible(
+                      child: Text(
+                        formatDate.format(news.date),
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          color: Colors.grey[600],
+                          fontFamily: 'Poppins',
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

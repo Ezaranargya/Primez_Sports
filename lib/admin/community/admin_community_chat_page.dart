@@ -381,14 +381,14 @@ class AdminCommunityChatPage extends StatelessWidget {
                   if (mainCategory.isNotEmpty)
                     Chip(
                       label: Text(mainCategory),
-                      backgroundColor: Colors.purple[50],
-                      labelStyle: TextStyle(fontSize: 11.sp, color: Colors.purple[700]),
+                      backgroundColor: Colors.red.shade50,
+                      labelStyle: TextStyle(fontSize: 11.sp, color: Colors.black),
                     ),
                   if (subCategory.isNotEmpty)
                     Chip(
                       label: Text(subCategory),
-                      backgroundColor: Colors.orange[50],
-                      labelStyle: TextStyle(fontSize: 11.sp, color: Colors.orange[700]),
+                      backgroundColor: Colors.orange.shade50,
+                      labelStyle: TextStyle(fontSize: 11.sp, color: Colors.black),
                     ),
                 ],
               ),

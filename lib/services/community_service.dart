@@ -11,6 +11,7 @@ class CommunityService {
   final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
   final SupabaseStorageService _storage = SupabaseStorageService();
   
+  // ✅ IMPROVED: Better user info retrieval with consistent field names
   Future<Map<String, String>> getCurrentUserInfo() async {
     final user = _auth.currentUser;
     
@@ -23,17 +24,26 @@ class CommunityService {
       String email = user.email ?? '';
       String photoUrl = '';
       
+      // ✅ Get user data from Firestore
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
       
       if (userDoc.exists && userDoc.data() != null) {
         final data = userDoc.data()!;
+        
+        // ✅ Try multiple field names for username
         username = data['name'] ?? data['username'] ?? user.displayName ?? '';
-        photoUrl = data['photoUrl'] ?? user.photoURL ?? '';
+        
+        // ✅ Try multiple field names for photo URL (photoUrl, photo_url, photoURL)
+        photoUrl = data['photoUrl'] ?? data['photo_url'] ?? data['photoURL'] ?? user.photoURL ?? '';
+        
+        debugPrint('📸 User photo URL from Firestore: $photoUrl');
       } else {
         username = user.displayName ?? '';
         photoUrl = user.photoURL ?? '';
+        debugPrint('⚠️ User doc not found, using Firebase Auth data');
       }
       
+      // ✅ Fallback username if empty
       if (username.isEmpty || username == 'null') {
         if (email.isNotEmpty) {
           username = email.split('@')[0];
@@ -42,7 +52,10 @@ class CommunityService {
         }
       }
       
-      debugPrint('✅ User Info Retrieved: $username');
+      debugPrint('✅ User Info Retrieved:');
+      debugPrint('   UserId: ${user.uid}');
+      debugPrint('   Username: $username');
+      debugPrint('   PhotoUrl: ${photoUrl.isNotEmpty ? photoUrl : "EMPTY"}');
       
       return {
         'userId': user.uid,
@@ -50,9 +63,11 @@ class CommunityService {
         'userEmail': email,
         'userPhotoUrl': photoUrl,
       };
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ Error getting user info: $e');
+      debugPrint('Stack trace: $stackTrace');
       
+      // ✅ Fallback with basic info
       String fallbackUsername = user.displayName ?? user.email?.split('@')[0] ?? 'User${user.uid.substring(0, user.uid.length > 6 ? 6 : user.uid.length)}';
       
       return {
@@ -153,6 +168,7 @@ class CommunityService {
     debugPrint('   MainCategory: ${postData['mainCategory']}');
     debugPrint('   SubCategory: ${postData['subCategory']}');
     debugPrint('   Username: ${postData['username']}');
+    debugPrint('   UserPhotoUrl: ${postData['userPhotoUrl']}');
     debugPrint('   ImageUrl1: ${imageUrl ?? "No image"}');
     debugPrint('   Links Count: ${links.length}');
 
@@ -361,25 +377,41 @@ class CommunityService {
     });
   }
 
+  // ✅ FIXED: Add comment dengan userPhotoUrl yang benar
   Future<void> addComment({
     required String postId,
     required String comment,
   }) async {
-    final userInfo = await getCurrentUserInfo();
+    try {
+      final userInfo = await getCurrentUserInfo();
+      
+      final photoUrl = userInfo['userPhotoUrl'] ?? '';
+      
+      debugPrint('💬 Adding comment:');
+      debugPrint('   PostId: $postId');
+      debugPrint('   UserId: ${userInfo['userId']}');
+      debugPrint('   Username: ${userInfo['username']}');
+      debugPrint('   UserPhotoUrl: ${photoUrl.isNotEmpty ? photoUrl : "EMPTY"}');
+      debugPrint('   Comment: $comment');
 
-    await _firestore
-        .collection('posts')
-        .doc(postId)
-        .collection('comments')
-        .add({
-      'userId': userInfo['userId'],
-      'username': userInfo['username'],
-      'userPhotoUrl': userInfo['userPhotoUrl'],
-      'comment': comment,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-    
-    debugPrint('✅ Comment added to post: $postId');
+      await _firestore
+          .collection('posts')
+          .doc(postId)
+          .collection('comments')
+          .add({
+        'userId': userInfo['userId'],
+        'username': userInfo['username'],
+        'userPhotoUrl': photoUrl, // ✅ Pastikan field name konsisten
+        'comment': comment,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      
+      debugPrint('✅ Comment added successfully to post: $postId');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error adding comment: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Stream<List<Comment>> getComments(String postId) {
@@ -389,9 +421,15 @@ class CommunityService {
         .collection('comments')
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Comment.fromMap(doc.data(), doc.id))
-            .toList());
+        .map((snapshot) {
+          debugPrint('📦 Comments loaded: ${snapshot.docs.length}');
+          
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            debugPrint('💬 Comment data: userId=${data['userId']}, username=${data['username']}, photoUrl=${data['userPhotoUrl']}');
+            return Comment.fromMap(data, doc.id);
+          }).toList();
+        });
   }
 
   Future<void> deleteComment(String postId, String commentId) async {

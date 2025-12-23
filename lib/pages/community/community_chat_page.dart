@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // ✅ TAMBAHAN untuk Clipboard
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:my_app/theme/app_colors.dart';
@@ -43,7 +44,6 @@ class _UserCommunityChatPageState extends State<UserCommunityChatPage> {
         _isLoadingCategories = true;
       });
       
-      // Try to get categories from Firestore
       final snapshot = await FirebaseFirestore.instance
           .collection('categories')
           .doc('shoes')
@@ -68,7 +68,6 @@ class _UserCommunityChatPageState extends State<UserCommunityChatPage> {
         }
       }
       
-      // Fallback to default categories
       setState(() {
         _categoryMap = {
           'Running': ['Road Running', 'Trail Running', 'Track Running'],
@@ -81,7 +80,6 @@ class _UserCommunityChatPageState extends State<UserCommunityChatPage> {
       });
     } catch (e) {
       debugPrint('Error loading categories: $e');
-      // Fallback to default categories
       setState(() {
         _categoryMap = {
           'Running': ['Road Running', 'Trail Running', 'Track Running'],
@@ -305,7 +303,6 @@ class _UserCommunityChatPageState extends State<UserCommunityChatPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header dengan User Avatar dan Info
             Row(
               children: [
                 GestureDetector(
@@ -395,7 +392,6 @@ class _UserCommunityChatPageState extends State<UserCommunityChatPage> {
                 ),
               ),
 
-            // Categories
             if (post.mainCategory != null && post.mainCategory!.isNotEmpty || 
                 post.subCategory != null && post.subCategory!.isNotEmpty)
               Padding(
@@ -406,14 +402,14 @@ class _UserCommunityChatPageState extends State<UserCommunityChatPage> {
                     if (post.mainCategory != null && post.mainCategory!.isNotEmpty)
                       Chip(
                         label: Text(post.mainCategory!),
-                        backgroundColor: Colors.purple[50],
-                        labelStyle: TextStyle(fontSize: 11.sp, color: Colors.purple[700]),
+                        backgroundColor: Colors.red[50],
+                        labelStyle: TextStyle(fontSize: 11.sp, color: Colors.black),
                       ),
                     if (post.subCategory != null && post.subCategory!.isNotEmpty)
                       Chip(
                         label: Text(post.subCategory!),
-                        backgroundColor: Colors.orange[50],
-                        labelStyle: TextStyle(fontSize: 11.sp, color: Colors.orange[700]),
+                        backgroundColor: Colors.orange.shade50,
+                        labelStyle: TextStyle(fontSize: 11.sp, color: Colors.black),
                       ),
                   ],
                 ),
@@ -459,7 +455,6 @@ class _UserCommunityChatPageState extends State<UserCommunityChatPage> {
                 ),
               ),
 
-            // ✅ Tampilkan detail opsi pembelian dengan logo
             _buildPurchaseOptions(post.links),
 
             SizedBox(height: 8.h),
@@ -473,7 +468,6 @@ class _UserCommunityChatPageState extends State<UserCommunityChatPage> {
     );
   }
 
-  // ✅ METHOD - Untuk menampilkan opsi pembelian
   Widget _buildPurchaseOptions(List<PostLink> links) {
     if (links.isEmpty) return const SizedBox.shrink();
     
@@ -482,7 +476,6 @@ class _UserCommunityChatPageState extends State<UserCommunityChatPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               SizedBox(width: 6.w),
@@ -498,189 +491,340 @@ class _UserCommunityChatPageState extends State<UserCommunityChatPage> {
           ),
           SizedBox(height: 8.h),
           
-          // List of purchase options
           ...links.map((link) => _buildPurchaseLinkCard(link)),
         ],
       ),
     );
   }
 
- // ✅ METHOD - Card untuk setiap link pembelian dengan LOGO STORE dari Asset
-Widget _buildPurchaseLinkCard(PostLink link) {
-  // Debug print untuk melihat data
-  debugPrint('========== DEBUG LINK DATA ==========');
-  debugPrint('Store: ${link.store}');
-  debugPrint('Price: ${link.price}');
-  debugPrint('URL: ${link.url}');
-  debugPrint('=====================================');
-  
-  // Determine button color and logo asset based on store
-  Color buttonColor = Colors.grey;
-  String logoAsset = ''; // Ubah dari nullable ke empty string
-  final store = link.store ?? '';
-  
-  final storeLower = store.toLowerCase();
-  if (storeLower.contains('shopee')) {
-    buttonColor = Colors.orange;
-    logoAsset = 'assets/logo_shopee.png';
-    debugPrint('✅ Detected: Shopee');
-  } else if (storeLower.contains('tokopedia')) {
-    buttonColor = Colors.green;
-    logoAsset = 'assets/logo_tokopedia.png';
-    debugPrint('✅ Detected: Tokopedia');
-  } else if (storeLower.contains('blibli')) {
-    buttonColor = Colors.blue;
-    logoAsset = 'assets/logo_blibli.jpg';
-    debugPrint('✅ Detected: Blibli');
-  } else if (storeLower.contains('nike')) {
-    buttonColor = Colors.black;
-    logoAsset = 'assets/logo_nike.png';
-    debugPrint('✅ Detected: Nike');
-  } else if (storeLower.contains('adidas')) {
-    buttonColor = Colors.black;
-    logoAsset = 'assets/logo_adidas.png';
-    debugPrint('✅ Detected: Adidas');
-  } else if (storeLower.contains('jordan')) {
-    buttonColor = Colors.black;
-    logoAsset = 'assets/logo_jordan.png';
-    debugPrint('✅ Detected: Jordan');
-  } else if (storeLower.contains('puma')) {
-    buttonColor = Colors.black;
-    logoAsset = 'assets/logo_puma.png';
-    debugPrint('✅ Detected: Puma');
-  } else if (storeLower.contains('mizuno')) {
-    buttonColor = Colors.blue;
-    logoAsset = 'assets/logo_mizuno.png';
-    debugPrint('✅ Detected: Mizuno');
-  } else {
-    debugPrint('⚠️ Store tidak terdeteksi, menggunakan icon default');
-  }
+  Widget _buildPurchaseLinkCard(PostLink link) {
+    debugPrint('========== DEBUG LINK DATA ==========');
+    debugPrint('Store: ${link.store}');
+    debugPrint('Price: ${link.price}');
+    debugPrint('URL: ${link.url}');
+    debugPrint('=====================================');
+    
+    Color buttonColor = Colors.grey;
+    String logoAsset = '';
+    final store = link.store ?? '';
+    final url = link.url ?? '';
+    
+    final storeLower = store.toLowerCase();
+    final urlLower = url.toLowerCase();
+    
+    if (storeLower.contains('pro soccer') || storeLower.contains('official store') || 
+        urlLower.contains('prosoccer.com') || urlLower.contains('mzsports.com') || 
+        storeLower.contains('adidas official') || storeLower.contains('nike official') || 
+        storeLower.contains('mizuno official')) {
+      if (urlLower.contains('adidas') || storeLower.contains('adidas')) {
+        buttonColor = Colors.black;
+        logoAsset = 'assets/logo_adidas.png';
+      } else if (urlLower.contains('nike') || storeLower.contains('nike')) {
+        buttonColor = Colors.black;
+        logoAsset = 'assets/logo_nike.png';
+      } else if (urlLower.contains('puma') || storeLower.contains('puma')) {
+        buttonColor = Colors.black;
+        logoAsset = 'assets/logo_puma.png';
+      } else if (urlLower.contains('jordan') || storeLower.contains('jordan')) {
+        buttonColor = Colors.black;
+        logoAsset = 'assets/logo_jordan.png';
+      } else if (urlLower.contains('mizuno') || storeLower.contains('mizuno')) {
+        buttonColor = Colors.blue;
+        logoAsset = 'assets/logo_mizuno.png';
+      } else if (urlLower.contains('under') && urlLower.contains('armour')) {
+        buttonColor = Colors.black;
+        logoAsset = 'assets/logo_under_armour.png';
+      }
+    } else if (storeLower.contains('under armour') || storeLower.contains('underarmour')) {
+      buttonColor = Colors.black;
+      logoAsset = 'assets/logo_under_armour.png';
+    } else if (storeLower.contains('shopee')) {
+      buttonColor = Colors.orange;
+      logoAsset = 'assets/logo_shopee.png';
+    } else if (storeLower.contains('tokopedia')) {
+      buttonColor = Colors.green;
+      logoAsset = 'assets/logo_tokopedia.png';
+    } else if (storeLower.contains('blibli')) {
+      buttonColor = Colors.blue;
+      logoAsset = 'assets/logo_blibli.jpg';
+    } else if (storeLower.contains('nike')) {
+      buttonColor = Colors.black;
+      logoAsset = 'assets/logo_nike.png';
+    } else if (storeLower.contains('adidas')) {
+      buttonColor = Colors.black;
+      logoAsset = 'assets/logo_adidas.png';
+    } else if (storeLower.contains('jordan')) {
+      buttonColor = Colors.black;
+      logoAsset = 'assets/logo_jordan.png';
+    } else if (storeLower.contains('puma')) {
+      buttonColor = Colors.black;
+      logoAsset = 'assets/logo_puma.png';
+    } else if (storeLower.contains('mizuno')) {
+      buttonColor = Colors.blue;
+      logoAsset = 'assets/logo_mizuno.png';
+    }
 
-  return Container(
-    margin: EdgeInsets.only(bottom: 8.h),
-    padding: EdgeInsets.all(12.w),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(8.r),
-      border: Border.all(color: Colors.grey[300]!),
-    ),
-    child: InkWell(
-      onTap: () {
-        final url = link.url ?? '';
-        if (url.isNotEmpty) {
-          _launchURL(url);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Link pembelian tidak tersedia'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-      },
-      borderRadius: BorderRadius.circular(8.r),
-      child: Row(
-        children: [
-          // Store icon/logo - MENGGUNAKAN IMAGE ASSET (TIDAK TERPOTONG)
-          if (logoAsset.isNotEmpty)
-            Container(
-              width: 40.w,
-              height: 40.w,
-              padding: EdgeInsets.all(4.w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8.r),
+    return Container(
+      margin: EdgeInsets.only(bottom: 8.h),
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: InkWell(
+        onTap: () {
+          final url = link.url ?? '';
+          if (url.isNotEmpty) {
+            _launchURL(url);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Link pembelian tidak tersedia'),
+                backgroundColor: Colors.orange,
               ),
-              child: Image.asset(
-                logoAsset,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  debugPrint('❌ Error loading asset: $logoAsset');
-                  debugPrint('Error: $error');
-                  return Icon(Icons.store, size: 24.sp, color: buttonColor);
-                },
+            );
+          }
+        },
+        borderRadius: BorderRadius.circular(8.r),
+        child: Row(
+          children: [
+            if (logoAsset.isNotEmpty)
+              Container(
+                width: 40.w,
+                height: 40.w,
+                padding: EdgeInsets.all(4.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Image.asset(
+                  logoAsset,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(Icons.store, size: 24.sp, color: buttonColor);
+                  },
+                ),
+              )
+            else
+              Container(
+                width: 40.w,
+                height: 40.w,
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Icon(
+                  Icons.store,
+                  size: 24.sp,
+                  color: buttonColor,
+                ),
               ),
-            )
-          else
-            Container(
-              width: 40.w,
-              height: 40.w,
-              padding: EdgeInsets.all(8.w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Icon(
-                Icons.store,
-                size: 24.sp,
-                color: buttonColor,
-              ),
-            ),
-          SizedBox(width: 12.w),
-          
-          // Store name and price
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (store.isNotEmpty && store != 'Other')
+            SizedBox(width: 12.w),
+            
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (store.isNotEmpty && store != 'Other')
+                    Text(
+                      store,
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  SizedBox(height: 4.h),
                   Text(
-                    store,
+                    'Rp ${_formatPrice(link.price)}',
                     style: TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green[700],
                     ),
                   ),
-                SizedBox(height: 4.h),
-                Text(
-                  'Rp ${_formatPrice(link.price)}',
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green[700],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          
-          // Buy button arrow
-          Icon(
-            Icons.arrow_forward,
-            size: 20.sp,
-            color: buttonColor,
-          ),
-        ],
+            
+            Icon(
+              Icons.arrow_forward,
+              size: 20.sp,
+              color: buttonColor,
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-  // ✅ METHOD - Launch URL
+  // ✅ IMPROVED URL LAUNCHER METHOD
   Future<void> _launchURL(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        throw Exception('Cannot launch URL');
+    if (url.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Link tidak tersedia'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
-    } catch (e) {
-      debugPrint('❌ Error launching URL: $e');
+      return;
+    }
+
+    try {
+      // Clean and validate URL
+      String cleanUrl = url.trim();
+      
+      debugPrint('🔗 Original URL: $cleanUrl');
+      
+      // Add https:// if no protocol is specified
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        cleanUrl = 'https://$cleanUrl';
+        debugPrint('✅ Added protocol: $cleanUrl');
+      }
+
+      // Parse URI
+      final uri = Uri.parse(cleanUrl);
+      debugPrint('🔍 Parsed URI: ${uri.toString()}');
+      
+      // Validate URI scheme
+      if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+        throw Exception('URL tidak valid: ${uri.scheme}');
+      }
+
+      // Check if URL can be launched
+      debugPrint('🔄 Checking if URL can be launched...');
+      bool canLaunch = false;
+      
+      try {
+        canLaunch = await canLaunchUrl(uri);
+        debugPrint('✅ canLaunchUrl result: $canLaunch');
+      } catch (e) {
+        debugPrint('⚠️ canLaunchUrl check failed: $e');
+      }
+
+      if (!canLaunch) {
+        debugPrint('⚠️ canLaunchUrl returned false, trying anyway...');
+      }
+
+      // Try to launch with different modes
+      bool launched = false;
+      Exception? lastException;
+      
+      // Method 1: External Application
+      if (!launched) {
+        try {
+          debugPrint('🚀 Attempting LaunchMode.externalApplication...');
+          launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+          if (launched) {
+            debugPrint('✅ SUCCESS: Launched with externalApplication');
+            return;
+          }
+        } catch (e) {
+          debugPrint('❌ externalApplication failed: $e');
+          lastException = e as Exception;
+        }
+      }
+
+      // Method 2: Platform Default
+      if (!launched) {
+        try {
+          debugPrint('🚀 Attempting LaunchMode.platformDefault...');
+          launched = await launchUrl(
+            uri,
+            mode: LaunchMode.platformDefault,
+          );
+          if (launched) {
+            debugPrint('✅ SUCCESS: Launched with platformDefault');
+            return;
+          }
+        } catch (e) {
+          debugPrint('❌ platformDefault failed: $e');
+          lastException = e as Exception;
+        }
+      }
+
+      // Method 3: External Non-Browser Application
+      if (!launched) {
+        try {
+          debugPrint('🚀 Attempting LaunchMode.externalNonBrowserApplication...');
+          launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalNonBrowserApplication,
+          );
+          if (launched) {
+            debugPrint('✅ SUCCESS: Launched with externalNonBrowserApplication');
+            return;
+          }
+        } catch (e) {
+          debugPrint('❌ externalNonBrowserApplication failed: $e');
+          lastException = e as Exception;
+        }
+      }
+
+      if (!launched) {
+        throw lastException ?? Exception('Tidak dapat membuka link');
+      }
+
+    } catch (e, stackTrace) {
+      debugPrint('════════════════════════════════════════');
+      debugPrint('❌ FINAL ERROR launching URL');
+      debugPrint('URL: $url');
+      debugPrint('Error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      debugPrint('════════════════════════════════════════');
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal membuka link: $e'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Tidak bisa membuka link',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Pastikan browser atau aplikasi tersedia',
+                  style: TextStyle(fontSize: 12.sp),
+                ),
+              ],
+            ),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Salin Link',
+              textColor: Colors.white,
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: url));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('✅ Link berhasil disalin!'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
           ),
         );
       }
     }
   }
 
-  // Metode baru untuk navigasi ke halaman create post
   void _navigateToCreatePost(BuildContext context) {
     Navigator.push(
       context,
@@ -690,9 +834,7 @@ Widget _buildPurchaseLinkCard(PostLink link) {
     );
   }
 
-  // Metode baru untuk navigasi ke halaman edit post
   void _navigateToEditPost(BuildContext context, CommunityPost post) {
-    // Konversi CommunityPost ke Map untuk initialData
     final Map<String, dynamic> initialData = {
       'title': post.title,
       'content': post.content,
@@ -933,7 +1075,6 @@ Widget _buildPurchaseLinkCard(PostLink link) {
   String _formatPrice(dynamic price) {
     try {
       String priceStr = price.toString();
-      // Remove all non-digit characters
       priceStr = priceStr.replaceAll(RegExp(r'[^0-9]'), '');
       if (priceStr.isEmpty) return '0';
       final numPrice = int.parse(priceStr);

@@ -1,17 +1,13 @@
 name: my_app
 description: A new Flutter project.
 
-# The following line prevents the package from being accidentally published to pub.dev using `flutter pub publish`.
-# This is preferred for private packages.
 publish_to: "none"
 
-# The following defines the version and build number for your application.
 version: 1.0.0+1
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
 
-# Dependencies specify other packages that your package needs in order to work.
 dependencies:
   flutter:
     sdk: flutter
@@ -21,7 +17,7 @@ dependencies:
   iconsax: ^0.0.8
   font_awesome_flutter: ^10.7.0
   google_fonts: ^6.2.1
-  flutter_screenutil: ^5.9.3 # Utilitas untuk desain responsif
+  flutter_screenutil: ^5.9.3
 
   # --- State Management & Routing ---
   provider: ^6.1.5
@@ -34,6 +30,7 @@ dependencies:
   firebase_messaging: ^16.0.4
   firebase_storage: ^13.0.4
   flutter_local_notifications: ^19.5.0
+  firebase_app_check: ^0.4.1+2
 
   # --- Gambar & ML Kit ---
   image_picker: ^1.1.1
@@ -41,54 +38,53 @@ dependencies:
   google_mlkit_commons: ^0.11.0
   google_mlkit_text_recognition: ^0.15.0
 
-  # --- Utilitas, Jaringan, dan Lain-lain ---
+  # --- Utilitas & Jaringan ---
   http: ^1.2.0
   connectivity_plus: ^7.0.0
   url_launcher: ^6.3.2
   share_plus: ^12.0.1
-  app_links: ^6.4.1 # Menggunakan versi yang lebih baru (menghapus duplikasi)
+  app_links: ^6.4.1
+  
+  # --- UI Components ---
   smooth_page_indicator: ^1.1.0
   banner_carousel: ^1.2.1
+  readmore: ^2.2.0
+
+  # --- Storage & Cache ---
+  path_provider: ^2.1.2
+  cached_network_image: ^3.3.1
+  shared_preferences: ^2.5.3
 
   # --- Internasionalisasi ---
   flutter_localizations:
     sdk: flutter
   intl: any
   timeago: ^3.6.0
-  path_provider: ^2.1.2
-  cached_network_image: ^3.3.1
-  shared_preferences: ^2.5.3
-  readmore: ^2.2.0
+
+  # --- Backend ---
   supabase_flutter: ^2.9.1
-  firebase_app_check: ^0.4.1+2
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # The "flutter_lints" package below contains a set of recommended lints to encourage good coding practices.
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.4
 
-# Configuration for the flutter_launcher_icons package.
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/Primez_Sports.jpg"
   min_sdk_android: 21
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/Primez_Sports.jpg"
 
-# For information on the generic Dart part of this file, see:
-# https://dart.dev/tools/pub/pubspec
-
-# The following section is specific to Flutter.
 flutter:
   uses-material-design: true
 
-  # To add assets to your application, add an assets section.
   assets:
     - assets/
 
-  # To add custom fonts to your application, add a fonts section.
   fonts:
     - family: Poppins
       fonts:

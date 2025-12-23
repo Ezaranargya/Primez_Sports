@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:my_app/models/news_model.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/services/supabase_storage_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 class AdminNewsFormPage extends StatefulWidget {
   final News? news;
@@ -81,33 +83,64 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
     super.dispose();
   }
 
-  Future<void> _pickImage({bool isMainImage = false, int? contentIndex}) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1920,
-      maxHeight: 1080,
-      imageQuality: 85,
-    );
-
-    if (pickedFile != null) {
-      final file = File(pickedFile.path);
+  // FIX: Fungsi untuk menyalin file ke lokasi permanen
+  Future<File> _copyImageToAppDirectory(File imageFile) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(imageFile.path)}';
+      final newPath = path.join(appDir.path, fileName);
       
-      setState(() {
-        if (isMainImage) {
-          _mainImageFile = file;
-          _mainImageChanged = true;
-          debugPrint('📸 Main image selected');
-        } else if (contentIndex != null) {
-          _contentItems[contentIndex] = ContentBlock(
-            type: 'image',
-            value: file.path, 
-            caption: _contentItems[contentIndex].caption,
-            imageFile: file,
-          );
-          debugPrint('📸 Content image selected at index $contentIndex');
-        }
-      });
+      final newFile = await imageFile.copy(newPath);
+      debugPrint('✅ Image copied to permanent location: $newPath');
+      return newFile;
+    } catch (e) {
+      debugPrint('❌ Error copying image: $e');
+      return imageFile; // Return original if copy fails
+    }
+  }
+
+  Future<void> _pickImage({bool isMainImage = false, int? contentIndex}) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        final file = File(pickedFile.path);
+        
+        // FIX: Copy file to permanent location immediately
+        final permanentFile = await _copyImageToAppDirectory(file);
+        
+        setState(() {
+          if (isMainImage) {
+            _mainImageFile = permanentFile;
+            _mainImageChanged = true;
+            debugPrint('📸 Main image selected and stored: ${permanentFile.path}');
+          } else if (contentIndex != null) {
+            _contentItems[contentIndex] = ContentBlock(
+              type: 'image',
+              value: permanentFile.path, 
+              caption: _contentItems[contentIndex].caption,
+              imageFile: permanentFile,
+            );
+            debugPrint('📸 Content image selected at index $contentIndex: ${permanentFile.path}');
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error memilih gambar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -194,37 +227,83 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
     try {
       String? mainImageUrl = _existingMainImageUrl;
 
+      // FIX: Upload main image with proper error handling
       if (_mainImageFile != null && _mainImageChanged) {
         debugPrint('📤 Uploading main image to Supabase...');
+        debugPrint('   File path: ${_mainImageFile!.path}');
+        debugPrint('   File exists: ${await _mainImageFile!.exists()}');
+        
+        // Verify file exists before upload
+        if (!await _mainImageFile!.exists()) {
+          throw Exception('Main image file not found at path: ${_mainImageFile!.path}');
+        }
         
         mainImageUrl = await _storageService.uploadNewsImage(_mainImageFile!);
         
-        if (_existingMainImageUrl != null && _existingMainImageUrl!.isNotEmpty) {
-          await _storageService.deleteImage(_existingMainImageUrl!);
-          debugPrint('🗑️ Old main image deleted');
+        // FIX: Check if upload was successful
+        if (mainImageUrl == null || mainImageUrl.isEmpty) {
+          throw Exception('Failed to upload main image - received null or empty URL');
         }
         
-        debugPrint('✅ Main image uploaded: $mainImageUrl');
+        // Delete old image only after successful upload
+        if (_existingMainImageUrl != null && _existingMainImageUrl!.isNotEmpty) {
+          try {
+            await _storageService.deleteImage(_existingMainImageUrl!);
+            debugPrint('🗑️ Old main image deleted');
+          } catch (e) {
+            debugPrint('⚠️ Warning: Could not delete old image: $e');
+            // Don't fail the whole operation if delete fails
+          }
+        }
+        
+        debugPrint('✅ Main image uploaded successfully: $mainImageUrl');
       }
 
+      // FIX: Process content items with better error handling
       final processedContent = <ContentBlock>[];
       
-      for (var item in _contentItems) {
+      for (int i = 0; i < _contentItems.length; i++) {
+        final item = _contentItems[i];
+        
         if (item.type == 'image' && item.imageFile != null) {
-          debugPrint('📤 Uploading content image...');
+          debugPrint('📤 Uploading content image ${i + 1}...');
+          debugPrint('   File path: ${item.imageFile!.path}');
+          debugPrint('   File exists: ${await item.imageFile!.exists()}');
+          
+          // Verify file exists
+          if (!await item.imageFile!.exists()) {
+            debugPrint('⚠️ Content image file not found, skipping: ${item.imageFile!.path}');
+            // Skip this image or use placeholder
+            continue;
+          }
           
           final imageUrl = await _storageService.uploadNewsImage(item.imageFile!);
           
+          // FIX: Check if upload was successful
+          if (imageUrl == null || imageUrl.isEmpty) {
+            debugPrint('⚠️ Failed to upload content image ${i + 1}, skipping');
+            continue; // Skip this image instead of failing entire save
+          }
+          
           processedContent.add(ContentBlock(
             type: 'image',
-            value: imageUrl ?? '',
+            value: imageUrl,
             caption: item.caption,
           ));
           
-          debugPrint('✅ Content image uploaded: $imageUrl');
-        } else {
+          debugPrint('✅ Content image ${i + 1} uploaded: $imageUrl');
+        } else if (item.type == 'image' && item.value.isNotEmpty) {
+          // Keep existing image URL
+          processedContent.add(item);
+          debugPrint('✓ Keeping existing image URL: ${item.value}');
+        } else if (item.type == 'text') {
           processedContent.add(item);
         }
+      }
+
+      // FIX: Final validation before saving
+      if (mainImageUrl == null || mainImageUrl.isEmpty) {
+        throw Exception('Main image URL is required but is null or empty');
       }
 
       final news = News(
@@ -236,7 +315,7 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         date: _selectedDate,
         createdAt: widget.news?.createdAt ?? DateTime.now(),
         categories: _selectedCategories,
-        imageUrl1: mainImageUrl!,
+        imageUrl1: mainImageUrl,
         content: processedContent,
         readBy: widget.news?.readBy ?? [],
         isNew: widget.news == null ? true : widget.news!.isNew,
@@ -244,11 +323,13 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
 
       if (widget.news == null) {
         await FirebaseFirestore.instance.collection('news').add(news.toMap());
+        debugPrint('✅ New news created in Firestore');
       } else {
         await FirebaseFirestore.instance
             .collection('news')
             .doc(widget.news!.id)
             .update(news.toMap());
+        debugPrint('✅ News updated in Firestore');
       }
 
       if (mounted) {
@@ -264,18 +345,23 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         );
         Navigator.pop(context);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ Error saving news: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -364,11 +450,12 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Gambar Utama',
+              'Gambar Utama *',
               style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Poppins',
+                color: Colors.red[700],
               ),
             ),
             SizedBox(height: 12.h),
@@ -380,8 +467,64 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12.r),
                         child: _mainImageFile != null
-                            ? Image.file(_mainImageFile!, height: 200.h, width: double.infinity, fit: BoxFit.cover)
-                            : Image.network(_existingMainImageUrl!, height: 200.h, width: double.infinity, fit: BoxFit.cover),
+                            ? Image.file(
+                                _mainImageFile!, 
+                                height: 200.h, 
+                                width: double.infinity, 
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 200.h,
+                                    color: Colors.red[100],
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.error, size: 50, color: Colors.red),
+                                          SizedBox(height: 8.h),
+                                          Text('Error loading image', style: TextStyle(color: Colors.red)),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              )
+                            : Image.network(
+                                _existingMainImageUrl!, 
+                                height: 200.h, 
+                                width: double.infinity, 
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    height: 200.h,
+                                    color: Colors.grey[200],
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        value: loadingProgress.expectedTotalBytes != null
+                                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 200.h,
+                                    color: Colors.red[100],
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.broken_image, size: 50, color: Colors.red),
+                                          SizedBox(height: 8.h),
+                                          Text('Error loading image', style: TextStyle(color: Colors.red)),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                       ),
                     ),
                   Positioned(
@@ -399,7 +542,6 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
                       ),
                     ),
                   ),
-
                 ],
               )
             else
@@ -410,15 +552,23 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(color: Colors.grey[400]!),
+                    border: Border.all(color: Colors.red[300]!, width: 2),
                   ),
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_photo_alternate, size: 50.sp, color: Colors.grey),
+                        Icon(Icons.add_photo_alternate, size: 50.sp, color: Colors.red[300]),
                         SizedBox(height: 8.h),
-                        Text('Pilih Gambar', style: TextStyle(fontSize: 14.sp, fontFamily: 'Poppins')),
+                        Text(
+                          'Pilih Gambar Utama (Wajib)', 
+                          style: TextStyle(
+                            fontSize: 14.sp, 
+                            fontFamily: 'Poppins',
+                            color: Colors.red[700],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -479,7 +629,15 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Kategori', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+            Text(
+              'Kategori *', 
+              style: TextStyle(
+                fontSize: 16.sp, 
+                fontWeight: FontWeight.bold, 
+                fontFamily: 'Poppins',
+                color: _selectedCategories.isEmpty ? Colors.red[700] : Colors.black,
+              ),
+            ),
             SizedBox(height: 12.h),
             Wrap(
               spacing: 8.w,
@@ -556,43 +714,156 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Konten ${index + 1} - ${isImageType ? "Image" : "Text"}', 
-                     style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold)),
+                     style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
                 IconButton(
                   onPressed: () => _removeContentItem(index),
                   icon: const Icon(Icons.delete, color: Colors.red),
                 ),
               ],
             ),
+            SizedBox(height: 8.h),
             if (!isImageType)
               TextFormField(
                 initialValue: item.value,
                 maxLines: 4,
-                decoration: const InputDecoration(labelText: 'Teks', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Teks', 
+                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(fontFamily: 'Poppins'),
+                ),
                 onChanged: (value) {
                   _contentItems[index] = ContentBlock(type: 'text', value: value);
                 },
               )
             else ...[
-              if (item.imageFile != null || item.value.startsWith('http'))
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8.r),
-                  child: item.imageFile != null 
-                      ? Image.file(item.imageFile!, height: 150.h, width: double.infinity, fit: BoxFit.cover)
-                      : Image.network(item.value, height: 150.h, width: double.infinity, fit: BoxFit.cover),
+              // Gambar konten yang sudah ada atau baru dipilih
+              if (item.imageFile != null || (item.value.isNotEmpty && item.value.startsWith('http')))
+                Stack(
+                  children: [
+                    InkWell(
+                      onTap: () => _pickImage(contentIndex: index),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8.r),
+                        child: item.imageFile != null 
+                            ? Image.file(
+                                item.imageFile!, 
+                                height: 200.h, 
+                                width: double.infinity, 
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 200.h,
+                                    color: Colors.red[100],
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: const [
+                                          Icon(Icons.error, size: 50, color: Colors.red),
+                                          SizedBox(height: 8),
+                                          Text('Error loading image', style: TextStyle(color: Colors.red)),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              )
+                            : Image.network(
+                                item.value, 
+                                height: 200.h, 
+                                width: double.infinity, 
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 200.h,
+                                    color: Colors.grey[300],
+                                    child: const Center(
+                                      child: Icon(Icons.broken_image, size: 50),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                    ),
+                    // Overlay untuk menunjukkan gambar bisa diklik
+                    Positioned(
+                      bottom: 8.h,
+                      left: 8.w,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.edit, color: Colors.white, size: 16),
+                            SizedBox(width: 4.w),
+                            const Text(
+                              'Tap untuk mengubah',
+                              style: TextStyle(
+                                color: Colors.white, 
+                                fontSize: 12,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 )
+              // Placeholder untuk memilih gambar pertama kali
               else
                 InkWell(
                   onTap: () => _pickImage(contentIndex: index),
                   child: Container(
-                    height: 150.h,
+                    height: 200.h,
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
                       borderRadius: BorderRadius.circular(8.r),
-                      border: Border.all(color: Colors.grey[400]!),
+                      border: Border.all(color: Colors.grey[400]!, width: 2),
                     ),
-                    child: Center(child: Icon(Icons.add_photo_alternate, size: 40.sp)),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate, size: 50.sp, color: Colors.grey[600]),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'Pilih Gambar',
+                            style: TextStyle(
+                              fontSize: 14.sp, 
+                              fontFamily: 'Poppins',
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
+              // Caption field untuk gambar
+              SizedBox(height: 12.h),
+              TextFormField(
+                initialValue: item.caption ?? '',
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Caption (opsional)',
+                  hintText: 'Tambahkan keterangan gambar',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
+                  labelStyle: const TextStyle(fontFamily: 'Poppins'),
+                  hintStyle: TextStyle(fontSize: 12.sp, color: Colors.grey[500]),
+                ),
+                onChanged: (value) {
+                  _contentItems[index] = ContentBlock(
+                    type: 'image',
+                    value: item.value,
+                    caption: value,
+                    imageFile: item.imageFile,
+                  );
+                },
+              ),
             ],
           ],
         ),
@@ -612,7 +883,15 @@ class _AdminNewsFormPageState extends State<AdminNewsFormPage> {
         ),
         child: _isLoading
             ? const CircularProgressIndicator(color: Colors.white)
-            : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            : const Text(
+                'Simpan', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold, 
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontFamily: 'Poppins',
+                ),
+              ),
       ),
     );
   }

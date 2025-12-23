@@ -11,6 +11,7 @@ import 'package:my_app/pages/news/news_detail_page.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:my_app/pages/product/widgets/product_image.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class UserNewsPage extends StatefulWidget {
   const UserNewsPage({super.key});
@@ -20,15 +21,17 @@ class UserNewsPage extends StatefulWidget {
 }
 
 class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClientMixin {
-  int _currentBanner = 0;
-  final PageController _pageController = PageController();
-  Timer? _autoPlayTimer;
+  late PageController _pageController;
+  int _currentPage = 0;
 
   List<News> allNews = [];
   bool isLoading = true;
   String? userId;
   
   StreamSubscription<QuerySnapshot>? _newsSubscription;
+
+  static const int _infiniteMultiplier = 10000;
+  int get _initialPage => latestNews.isEmpty ? 0 : _infiniteMultiplier * latestNews.length;
 
   @override
   bool get wantKeepAlive => true;
@@ -38,7 +41,16 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
     super.initState();
     _getCurrentUser();
     _setupNewsListener();
-    _startAutoPlay();
+  }
+
+  void _initializePageController() {
+    if (latestNews.isNotEmpty) {
+      _pageController = PageController(
+        initialPage: _initialPage,
+        viewportFraction: 0.9,
+      );
+      _startAutoPlay();
+    }
   }
 
   void _getCurrentUser() {
@@ -78,6 +90,8 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
                 allNews = allNewsList;
                 isLoading = false;
               });
+              
+              _initializePageController();
               
               final unread = unreadNewsCount;
               print('📊 Unread count updated: $unread');
@@ -133,25 +147,22 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
   }
 
   void _startAutoPlay() {
-    _autoPlayTimer?.cancel();
-    _autoPlayTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (!mounted) return;
-      if (latestNews.isEmpty) return;
-      final itemCount = latestNews.length;
-      if (itemCount <= 1) return;
+    if (latestNews.isEmpty) return;
+    Future.delayed(const Duration(seconds: 3), _autoSlide);
+  }
 
-      setState(() {
-        _currentBanner = (_currentBanner + 1) % itemCount;
-      });
+  void _autoSlide() {
+    if (!mounted || latestNews.isEmpty || !_pageController.hasClients) return;
 
-      if (_pageController.hasClients) {
-        _pageController.animateToPage(
-          _currentBanner,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
+    final currentPageValue = _pageController.page ?? _initialPage.toDouble();
+
+    _pageController.animateToPage(
+      currentPageValue.toInt() + 1,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+
+    Future.delayed(const Duration(seconds: 3), _autoSlide);
   }
 
   Future<void> _navigateToDetail(News news) async {
@@ -174,8 +185,9 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
 
   @override
   void dispose() {
-    _autoPlayTimer?.cancel();
-    _pageController.dispose();
+    if (latestNews.isNotEmpty) {
+      _pageController.dispose();
+    }
     _newsSubscription?.cancel();
     super.dispose();
   }
@@ -231,22 +243,18 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
                 )
               : RefreshIndicator(
                   onRefresh: fetchNews,
-                  child: CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Column(
-                          children: [
-                            if (trendingNews.isNotEmpty)
-                              _buildTrendingSection('Trending', trendingNews),
-                            
-                            if (latestNews.isNotEmpty)
-                              _buildLatestSection('Terbaru', latestNews),
-                            
-                            SizedBox(height: 80.h),
-                          ],
-                        ),
-                      ),
-                    ],
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        if (trendingNews.isNotEmpty)
+                          _buildTrendingSection('Trending', trendingNews),
+                        
+                        if (latestNews.isNotEmpty)
+                          _buildLatestSection('Terbaru', latestNews),
+                        
+                        SizedBox(height: 80.h),
+                      ],
+                    ),
                   ),
                 ),
     );
@@ -256,29 +264,59 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SizedBox(height: 16.h),
+        // Title
         Padding(
-          padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 12.h),
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
           child: Text(
             title,
             style: TextStyle(
+              fontFamily: 'Poppins',
               fontSize: 20.sp,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Poppins',
               color: Colors.black87,
             ),
           ),
         ),
-        SizedBox(
-          height: 240.h,
-          child: ListView.separated(
+        SizedBox(height: 12.h),
+
+        // Card Container with horizontal scroll
+        Container(
+          width: double.infinity,
+          margin: EdgeInsets.symmetric(horizontal: 12.w),
+          padding: EdgeInsets.all(12.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            itemCount: newsList.length,
-            separatorBuilder: (_, __) => SizedBox(width: 12.w),
-            itemBuilder: (context, index) {
-              final news = newsList[index];
-              return _buildTrendingCard(news);
-            },
+            child: Row(
+              children: List.generate(newsList.length, (index) {
+                final news = newsList[index];
+                return Row(
+                  children: [
+                    _buildTrendingCard(news),
+
+                    // Divider between cards
+                    if (index != newsList.length - 1)
+                      Container(
+                        height: 120.h,
+                        width: 1.2.w,
+                        margin: EdgeInsets.symmetric(horizontal: 10.w),
+                        color: Colors.grey.shade300,
+                      ),
+                  ],
+                );
+              }),
+            ),
           ),
         ),
       ],
@@ -289,68 +327,52 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
     return GestureDetector(
       onTap: () => _navigateToDetail(news),
       child: Container(
-        width: 160.w,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+        width: 115.w,
+        color: Colors.white,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Image
             ClipRRect(
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(12.r),
-                topRight: Radius.circular(12.r),
-              ),
+              borderRadius: BorderRadius.circular(8.r),
               child: ProductImage(
                 image: news.imageUrl1,
-                width: 160.w,
-                height: 120.h,
-                fit: BoxFit.contain,
-              ),
-            ),
-            
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(12.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Text(
-                      DateFormat('dd MMM yyyy').format(news.date),
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                        fontFamily: 'Poppins',
-                        height: 1.8,
-                      ),
-                    ),
-                    
-                    SizedBox(height: 6.h),
-                    Text(
-                      news.title,
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                        fontFamily: 'Poppins',
-                        height: 1.5,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                width: double.infinity,
+                height: 100.h,
+                fit: BoxFit.cover,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(10),
                 ),
               ),
+            ),
+            SizedBox(height: 6.h),
+
+            // Date
+            Text(
+              DateFormat('dd MMM yyyy').format(news.date),
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 3.h),
+
+            // Title
+            Text(
+              news.title,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+                fontFamily: 'Poppins',
+                height: 1.2,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -362,148 +384,204 @@ class _UserNewsPageState extends State<UserNewsPage> with AutomaticKeepAliveClie
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SizedBox(height: 20.h),
         Padding(
-          padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 12.h),
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
           child: Text(
             title,
             style: TextStyle(
+              fontFamily: 'Poppins',
               fontSize: 20.sp,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Poppins',
               color: Colors.black87,
             ),
           ),
         ),
+        SizedBox(height: 12.h),
         _buildCarousel(newsList),
       ],
     );
   }
 
   Widget _buildCarousel(List<News> newsList) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          margin: EdgeInsets.symmetric(horizontal: 16.w),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    if (newsList.isEmpty) {
+      return Container(
+        height: 180.h,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(15.r),
+        ),
+        child: Center(
+          child: Text(
+            'No News Available',
+            style: TextStyle(color: Colors.grey[600]),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12.r),
-            child: SizedBox(
-              height: 200.h,
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() => _currentBanner = index);
-                },
-                itemCount: newsList.length,
-                itemBuilder: (context, index) {
-                  final news = newsList[index];
+        ),
+      );
+    }
 
-                  return GestureDetector(
-                    onTap: () => _navigateToDetail(news),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        ProductImage(
-                          image: news.imageUrl1,
-                          width: double.infinity,
-                          height: 200.h,
-                          fit: BoxFit.contain,
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Colors.black.withOpacity(0.7),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 16.h,
-                          left: 16.w,
-                          right: 16.w,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                news.title,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Poppins',
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black.withOpacity(0.5),
-                                      blurRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (news.subtitle.isNotEmpty) ...[
-                                SizedBox(height: 4.h),
-                                Text(
-                                  news.subtitle,
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.9),
-                                    fontSize: 12.sp,
-                                    fontFamily: 'Poppins',
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ],
-                          ),
+    return Column(
+      children: [
+        SizedBox(
+          height: 180.h,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: null,
+            onPageChanged: (index) {
+              setState(() => _currentPage = index % newsList.length);
+            },
+            itemBuilder: (context, index) {
+              final actualIndex = index % newsList.length;
+              final news = newsList[actualIndex];
+
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.w),
+                child: GestureDetector(
+                  onTap: () => _navigateToDetail(news),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(15.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                  );
-                },
-              ),
-            ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15.r),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Background color
+                          Container(color: Colors.grey[200]),
+                          
+                          // News Image
+                          ProductImage(
+                            image: news.imageUrl1,
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            borderRadius: BorderRadius.circular(15.r),
+                          ),
+                          
+                          // Gradient overlay
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.black.withOpacity(0.4),
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.6),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          // Title at top
+                          Positioned(
+                            top: 20.h,
+                            left: 20.w,
+                            right: 20.w,
+                            child: Text(
+                              news.title,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Poppins',
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.5),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+
+                          // Date and Read More at bottom
+                          Positioned(
+                            bottom: 20.h,
+                            left: 20.w,
+                            right: 20.w,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  DateFormat('dd MMM yyyy').format(news.date),
+                                  style: TextStyle(
+                                    color: AppColors.backgroundColor,
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Poppins',
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black.withOpacity(0.5),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 16.w,
+                                    vertical: 8.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20.r),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    'Baca selengkapnya',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w600,
+                                      fontFamily: 'Poppins',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
 
-        SizedBox(height: 10.h),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(newsList.length, (index) {
-            bool isActive = index == _currentBanner;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: EdgeInsets.symmetric(horizontal: 4.w),
-              height: isActive ? 10.w : 8.w,
-              width: isActive ? 10.w : 8.w,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isActive ? AppColors.primary : Colors.transparent,
-                border: Border.all(
-                  color: AppColors.primary,
-                  width: 1.5,
-                ),
-              ),
-            );
-          }),
+        SizedBox(height: 16.h),
+
+        // Page Indicator
+        SmoothPageIndicator(
+          controller: _pageController,
+          count: newsList.length,
+          effect: WormEffect(
+            dotHeight: 8.h,
+            dotWidth: 8.w,
+            spacing: 8.w,
+            activeDotColor: AppColors.primary,
+            dotColor: Colors.grey.withOpacity(0.5),
+          ),
         ),
-        SizedBox(height: 12.h),
       ],
     );
   }

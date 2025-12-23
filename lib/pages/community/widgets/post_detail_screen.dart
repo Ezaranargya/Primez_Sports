@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // ✅ TAMBAHAN untuk Clipboard
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_app/models/community_post_model.dart';
 import 'package:my_app/models/comment_model.dart';
@@ -7,6 +8,7 @@ import 'package:my_app/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:my_app/pages/profile/profile_page.dart';
+import 'package:google_fonts/google_fonts.dart'; // ✅ TAMBAHAN untuk Google Fonts
 
 class PostDetailScreen extends StatefulWidget {
   final CommunityPost post;
@@ -343,6 +345,170 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 
+  // ✅ IMPROVED URL LAUNCHER METHOD
+  Future<void> _launchURL(String url) async {
+    if (url.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Link tidak tersedia'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      // Clean and validate URL
+      String cleanUrl = url.trim();
+      
+      debugPrint('🔗 Original URL: $cleanUrl');
+      
+      // Add https:// if no protocol is specified
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        cleanUrl = 'https://$cleanUrl';
+        debugPrint('✅ Added protocol: $cleanUrl');
+      }
+
+      // Parse URI
+      final uri = Uri.parse(cleanUrl);
+      debugPrint('🔍 Parsed URI: ${uri.toString()}');
+      
+      // Validate URI scheme
+      if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+        throw Exception('URL tidak valid: ${uri.scheme}');
+      }
+
+      // Check if URL can be launched
+      debugPrint('🔄 Checking if URL can be launched...');
+      bool canLaunch = false;
+      
+      try {
+        canLaunch = await canLaunchUrl(uri);
+        debugPrint('✅ canLaunchUrl result: $canLaunch');
+      } catch (e) {
+        debugPrint('⚠️ canLaunchUrl check failed: $e');
+      }
+
+      if (!canLaunch) {
+        debugPrint('⚠️ canLaunchUrl returned false, trying anyway...');
+      }
+
+      // Try to launch with different modes
+      bool launched = false;
+      Exception? lastException;
+      
+      // Method 1: External Application
+      if (!launched) {
+        try {
+          debugPrint('🚀 Attempting LaunchMode.externalApplication...');
+          launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+          if (launched) {
+            debugPrint('✅ SUCCESS: Launched with externalApplication');
+            return;
+          }
+        } catch (e) {
+          debugPrint('❌ externalApplication failed: $e');
+          lastException = e as Exception;
+        }
+      }
+
+      // Method 2: Platform Default
+      if (!launched) {
+        try {
+          debugPrint('🚀 Attempting LaunchMode.platformDefault...');
+          launched = await launchUrl(
+            uri,
+            mode: LaunchMode.platformDefault,
+          );
+          if (launched) {
+            debugPrint('✅ SUCCESS: Launched with platformDefault');
+            return;
+          }
+        } catch (e) {
+          debugPrint('❌ platformDefault failed: $e');
+          lastException = e as Exception;
+        }
+      }
+
+      // Method 3: External Non-Browser Application
+      if (!launched) {
+        try {
+          debugPrint('🚀 Attempting LaunchMode.externalNonBrowserApplication...');
+          launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalNonBrowserApplication,
+          );
+          if (launched) {
+            debugPrint('✅ SUCCESS: Launched with externalNonBrowserApplication');
+            return;
+          }
+        } catch (e) {
+          debugPrint('❌ externalNonBrowserApplication failed: $e');
+          lastException = e as Exception;
+        }
+      }
+
+      if (!launched) {
+        throw lastException ?? Exception('Tidak dapat membuka link');
+      }
+
+    } catch (e, stackTrace) {
+      debugPrint('════════════════════════════════════════');
+      debugPrint('❌ FINAL ERROR launching URL');
+      debugPrint('URL: $url');
+      debugPrint('Error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      debugPrint('════════════════════════════════════════');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Tidak bisa membuka link',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Pastikan browser atau aplikasi tersedia',
+                  style: TextStyle(fontSize: 12.sp),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Salin Link',
+              textColor: Colors.white,
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: url));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('✅ Link berhasil disalin!'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -449,16 +615,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           Container(
                             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                             decoration: BoxDecoration(
-                              color: Colors.purple.shade50,
+                              color: Colors.red.shade100,
                               borderRadius: BorderRadius.circular(16.r),
-                              border: Border.all(color: Colors.purple.shade200),
                             ),
                             child: Text(
                               widget.post.mainCategory!,
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.purple.shade700,
                               ),
                             ),
                           ),
@@ -475,7 +639,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.orange.shade700,
                               ),
                             ),
                           ),
@@ -495,35 +658,40 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       margin: EdgeInsets.symmetric(horizontal: 16.w),
                       padding: EdgeInsets.all(16.w),
                       decoration: BoxDecoration(
-                        color: Colors.green.shade50,
                         borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(color: Colors.green.shade200, width: 2),
                       ),
-                      child: Row(
-                        children: [
-                          Text(
-                            'Harga:',
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              color: Colors.grey.shade700,
-                              fontWeight: FontWeight.w500,
+                      child: Container(
+                        padding: EdgeInsets.all(16.w),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,                
+                          borderRadius: BorderRadius.circular(12.r), 
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Harga:',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            formatRupiah(int.tryParse(widget.post.content) ?? 0),
-                            style: TextStyle(
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green.shade700,
+                            SizedBox(width: 8.w),
+                            Text(
+                              formatRupiah(int.tryParse(widget.post.content) ?? 0),
+                              style: TextStyle(
+                                fontSize: 20.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   SizedBox(height: 16.h),
 
-                  // Deskripsi Produk
+                  // Deskripsi Produk - ✅ UPDATED WITH GOOGLE FONTS
                   if (widget.post.description != null && widget.post.description!.isNotEmpty)
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -541,9 +709,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           SizedBox(height: 8.h),
                           Text(
                             widget.post.description!,
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              height: 1.5,
+                            textAlign: TextAlign.start,
+                            textWidthBasis: TextWidthBasis.parent,
+                            style: GoogleFonts.inter(
+                              fontSize: 15.sp,
+                              height: 1.75,
+                              letterSpacing: 0.2,
+                              wordSpacing: 0,
                               color: Colors.grey.shade700,
                             ),
                           ),
@@ -879,9 +1051,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   SizedBox(height: 4.h),
                   Text(
                     comment.comment,
-                    style: TextStyle(
+                    textAlign: TextAlign.start,
+                    textWidthBasis: TextWidthBasis.parent,
+                    style: GoogleFonts.inter(
                       fontSize: 13.sp,
-                      height: 1.4,
+                      height: 1.75,
+                      letterSpacing: 0.2,
+                      wordSpacing: 0,
                       color: Colors.black87,
                     ),
                   ),
@@ -896,7 +1072,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Widget _buildPurchaseLink(PostLink link) {
     Color buttonColor = Colors.red;
-    // Safe null check for link.store
     final store = link.store ?? '';
     if (store.toLowerCase().contains('lazada')) {
       buttonColor = Colors.blue;
@@ -910,7 +1085,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       padding: EdgeInsets.only(bottom: 8.h),
       child: InkWell(
         onTap: () {
-          // Safe null check for URL
           final url = link.url ?? '';
           if (url.isNotEmpty) {
             _launchURL(url);
@@ -927,9 +1101,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         child: Container(
           padding: EdgeInsets.all(12.w),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
+            color: Colors.grey.shade100,
             borderRadius: BorderRadius.circular(8.r),
-            border: Border.all(color: Colors.grey[300]!),
           ),
           child: Row(
             children: [
@@ -945,7 +1118,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         color: Colors.black87,
                       ),
                     ),
-                    // Safe null check for store display
                     if (store.isNotEmpty)
                       Padding(
                         padding: EdgeInsets.only(top: 4.h),
@@ -987,27 +1159,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _launchURL(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        throw Exception('Cannot launch URL');
-      }
-    } catch (e) {
-      debugPrint('❌ Error launching URL: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal membuka link: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   @override

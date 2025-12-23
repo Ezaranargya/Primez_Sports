@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:my_app/theme/app_colors.dart';
 import 'package:my_app/services/auth_service.dart';
 import 'package:my_app/services/supabase_storage_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -84,6 +86,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  /// Check internet connection
+  Future<bool> _checkInternetConnection() async {
+    try {
+      final result = await InternetAddress.lookup('google.com');
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        debugPrint('✅ Internet connected');
+        return true;
+      }
+    } catch (e) {
+      debugPrint('❌ No internet connection: $e');
+      return false;
+    }
+    return false;
+  }
+
+  /// Pick image and save to permanent location
   Future<void> _pickImage() async {
     try {
       final XFile? image = await picker.pickImage(
@@ -95,11 +113,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       if (image == null) return;
 
+      debugPrint('📸 Image picked from gallery: ${image.path}');
+
+      // Langsung baca bytes dari XFile
+      final bytes = await image.readAsBytes();
+      debugPrint('📦 Read ${bytes.length} bytes from image');
+      
+      // Simpan ke app directory untuk menghindari file cache terhapus
+      final Directory appDir = await getApplicationDocumentsDirectory();
+      final String fileName = 'temp_picked_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final String permanentPath = path.join(appDir.path, fileName);
+      
+      final File permanentFile = File(permanentPath);
+      await permanentFile.writeAsBytes(bytes);
+      
+      debugPrint('✅ Image saved to permanent location: $permanentPath');
+      debugPrint('   File exists: ${await permanentFile.exists()}');
+
       setState(() {
-        _newImageFile = File(image.path);
+        _newImageFile = permanentFile;
       });
 
-      debugPrint('✅ Image selected: ${image.path}');
+      debugPrint('✅ Image selection complete');
     } catch (e) {
       debugPrint('❌ Error picking image: $e');
       if (mounted) {
@@ -147,6 +182,27 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // CEK INTERNET DULU jika ada foto yang akan di-upload
+    if (_newImageFile != null) {
+      final hasInternet = await _checkInternetConnection();
+      if (!hasInternet) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('❌ Tidak ada koneksi internet. Mohon cek WiFi/data seluler Anda.'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     setState(() {
       _isSaving = true;
       _isLoading = true;
@@ -167,13 +223,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (_newImageFile != null) {
         debugPrint('📤 Uploading new photo to Supabase...');
         
+        // Hapus foto lama jika ada
         if (_currentPhotoUrl != null && 
             _currentPhotoUrl!.isNotEmpty && 
             _currentPhotoUrl!.startsWith('http')) {
-          await _storageService.deleteImage(_currentPhotoUrl!);
-          debugPrint('🗑️ Old photo deleted');
+          try {
+            await _storageService.deleteImage(_currentPhotoUrl!);
+            debugPrint('🗑️ Old photo deleted');
+          } catch (e) {
+            debugPrint('⚠️ Could not delete old photo: $e');
+          }
         }
 
+        // Upload foto baru
         finalPhotoUrl = await _storageService.uploadProfileImage(
           _newImageFile!,
           user.uid,
@@ -185,15 +247,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
         debugPrint('✅ Photo uploaded: $finalPhotoUrl');
       } else if (_currentPhotoUrl == '') {
+        // User memilih untuk hapus foto
         if (_currentPhotoUrl != null && 
             _currentPhotoUrl!.isNotEmpty && 
             _currentPhotoUrl!.startsWith('http')) {
-          await _storageService.deleteImage(_currentPhotoUrl!);
-          debugPrint('🗑️ Photo deleted');
+          try {
+            await _storageService.deleteImage(_currentPhotoUrl!);
+            debugPrint('🗑️ Photo deleted');
+          } catch (e) {
+            debugPrint('⚠️ Could not delete photo: $e');
+          }
         }
         finalPhotoUrl = '';
       }
 
+      // Update Firestore
       final updates = <String, dynamic>{
         'username': newUsername,
         'name': newUsername,
@@ -211,17 +279,31 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       debugPrint('✅ Firestore updated');
 
+      // Update username di posts
       if (newUsername.isNotEmpty) {
-        await _authService.updateUsername(newUsername);
-        debugPrint('✅ Username updated in posts');
+        try {
+          await _authService.updateUsername(newUsername);
+          debugPrint('✅ Username updated in posts');
+        } catch (e) {
+          debugPrint('⚠️ Could not update username in posts: $e');
+        }
       }
 
+      // Update photo URL di posts
       if (finalPhotoUrl != null && finalPhotoUrl.isNotEmpty) {
-        await _authService.updatePhotoUrl(finalPhotoUrl, isBase64: false);
-        debugPrint('✅ Photo URL updated in posts');
+        try {
+          await _authService.updatePhotoUrl(finalPhotoUrl, isBase64: false);
+          debugPrint('✅ Photo URL updated in posts');
+        } catch (e) {
+          debugPrint('⚠️ Could not update photo in posts: $e');
+        }
       } else if (finalPhotoUrl == '') {
-        await _authService.removeProfilePhoto();
-        debugPrint('✅ Photo removed from posts');
+        try {
+          await _authService.removeProfilePhoto();
+          debugPrint('✅ Photo removed from posts');
+        } catch (e) {
+          debugPrint('⚠️ Could not remove photo from posts: $e');
+        }
       }
 
       if (!mounted) return;
@@ -247,6 +329,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
             content: Text('❌ Error: $e'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.r),
+            ),
           ),
         );
       }

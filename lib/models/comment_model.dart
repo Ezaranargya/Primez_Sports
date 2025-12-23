@@ -17,12 +17,13 @@ class Comment {
     required this.createdAt,
   });
 
+  // ✅ FIXED: Konsisten dengan field yang disimpan di Firestore
   factory Comment.fromMap(Map<String, dynamic> map, String id) {
     return Comment(
       id: id,
-      userId: map['userId'] ?? '',
-      username: map['username'] ?? '',
-      userPhotoUrl: map['userPhotoUrl'],
+      userId: map['userId'] ?? '', // ✅ Sesuai dengan yang disimpan di service
+      username: map['username'] ?? 'Anonymous',
+      userPhotoUrl: map['userPhotoUrl'], // ✅ Sesuai dengan yang disimpan di service
       comment: map['comment'] ?? '',
       createdAt: map['createdAt'] is Timestamp
           ? (map['createdAt'] as Timestamp).toDate()
