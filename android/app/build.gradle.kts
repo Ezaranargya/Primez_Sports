@@ -25,9 +25,14 @@ android {
         versionCode = 1
         versionName = "1.0"
         multiDexEnabled = true
+        
+        // ❌ HAPUS atau COMMENT bagian ini:
+        // ndk {
+        //     abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+        // }
     }
 
-    // ✅ TAMBAHKAN: Split APK by ABI untuk mengurangi ukuran
+    // ✅ Pakai splits abi saja
     splits {
         abi {
             isEnable = true
